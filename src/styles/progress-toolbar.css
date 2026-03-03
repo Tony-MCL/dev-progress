@@ -1,0 +1,244 @@
+/* src/styles/progress-toolbar.css */
+
+.ptb-root {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 34px;
+  position: relative;
+  z-index: 10999;
+}
+
+.ptb-left,
+.ptb-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Wrapper for dropdown */
+.ptb-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Top button: "Fil" */
+.ptb-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  height: 28px;
+  padding: 0 8px;
+
+  border: 0;
+  background: transparent;
+  color: var(--mcl-text);
+
+  cursor: pointer;
+  user-select: none;
+
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1;
+
+  border-radius: 8px;
+}
+
+.ptb-menu-btn:hover,
+.ptb-menu-btn.is-open {
+  font-weight: 600;
+}
+
+.ptb-menu-btn:focus {
+  outline: none;
+}
+
+.ptb-menu-caret {
+  font-size: 12px;
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+/* Popover */
+.ptb-menu-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 2000;
+
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 12px;
+
+  border: 1px solid color-mix(in srgb, var(--mcl-outline) 90%, transparent);
+  background: var(--mcl-surface);
+  box-shadow: var(--elev-2);
+}
+
+/* Each row in the menu */
+.ptb-menu-itemwrap {
+  position: relative;
+}
+
+.ptb-menu-item {
+  width: 100%;
+  text-align: left;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+
+  background: transparent;
+  color: var(--mcl-text);
+
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ptb-menu-item:hover {
+  background: color-mix(in srgb, var(--mcl-outline) 18%, transparent);
+}
+
+.ptb-menu-item:focus {
+  outline: none;
+}
+
+.ptb-menu-item-label {
+  white-space: nowrap;
+}
+
+.ptb-menu-item-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ptb-menu-item-hint {
+  opacity: 0.7;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ptb-menu-item-arrow {
+  opacity: 0.8;
+  font-size: 12px;
+  transform: translateY(-1px);
+}
+
+/* Divider */
+.ptb-menu-divider {
+  height: 1px;
+  margin: 6px 6px;
+  background: color-mix(in srgb, var(--mcl-outline) 28%, transparent);
+}
+
+/* Submenu (the “sidebar”) */
+.ptb-submenu {
+  position: absolute;
+  top: -6px; /* align with parent menu padding */
+  left: calc(100% + 8px);
+  z-index: 2100;
+
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 12px;
+
+  border: 1px solid color-mix(in srgb, var(--mcl-outline) 90%, transparent);
+  background: var(--mcl-surface);
+  box-shadow: var(--elev-2);
+}
+
+/* Ghost buttons for future menu labels */
+.ptb-ghost-btn {
+  height: 28px;
+  padding: 0 8px;
+
+  border: 0;
+  background: transparent;
+  color: var(--mcl-text);
+
+  opacity: 0.55;
+  cursor: not-allowed;
+
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+}
+
+/* ===== Modal: overwrite confirm ===== */
+.ptb-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 16px;
+}
+
+.ptb-modal {
+  width: min(420px, 92vw);
+  background: var(--mcl-surface);
+  color: var(--mcl-text);
+
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--mcl-outline) 75%, transparent);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+
+  padding: 14px 14px 12px;
+}
+
+.ptb-modal-title {
+  font-weight: 800;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.ptb-modal-text {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-bottom: 12px;
+}
+
+.ptb-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ptb-btn {
+  border: 1px solid color-mix(in srgb, var(--mcl-outline) 60%, transparent);
+  border-radius: 10px;
+  padding: 8px 10px;
+
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ptb-btn--cancel {
+  background: #d83a3a;
+  color: white;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.ptb-btn--confirm {
+  background: #2e9b4f;
+  color: white;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.ptb-btn:focus {
+  outline: none;
+}

@@ -1,0 +1,373 @@
+/* src/styles/gantt.css */
+
+/* =========================================================
+   GANTT ROW HEIGHT CONTRACT (IMPORTANT)
+   --------------------------------------------------------- */
+.gv-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Safety: keep box sizing consistent in gantt subtree */
+.gv-root,
+.gv-root * {
+  box-sizing: border-box;
+}
+
+/* Viktig: IKKE gi denne en fast "wide" width.
+   Wide canvas ligger inni (timeline3/rows). */
+.gv-content {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+/* =========================================================
+   ✅ Header: fast høyde uansett zoom
+   ---------------------------------------------------------
+   Total høyde er ALLTID 3 bånd.
+   Ved 2 linjer skjuler vi bunnbåndet og lar de 2 andre
+   bli høyere via --gv-band-count=2.
+   Ved 1 linje skjuler vi midt+bunn og lar topp bli full høyde
+   via --gv-band-count=1.
+   ========================================================= */
+
+:root {
+  --gv-band-h: 19px;
+}
+
+/* Sticky i felles Y-scroll */
+.gv-header-stack {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  background: var(--mcl-table-header, #d7c2a8);
+  border: 1px solid var(--mcl-outline, rgba(0, 0, 0, 0.15));
+  border-bottom: none;
+
+  /* Klipp header-canvas så den aldri kan tegne utenfor Gantt-panelet */
+  overflow: hidden;
+}
+
+/* Fast totalhøyde: 3 * band-h */
+.gv-timeline3 {
+  position: relative;
+  height: calc(var(--gv-band-h) * 3);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Felles band-stil.
+   NB: høyden styres av hvor mange band som faktisk er synlige
+   (1/2/3) via --gv-band-count */
+.gv-band {
+  position: relative;
+  height: calc((var(--gv-band-h) * 3) / var(--gv-band-count, 3));
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--mcl-outline, rgba(0, 0, 0, 0.15));
+  overflow: hidden;
+  z-index: 2;
+}
+
+/* 2-linjer: skjul bunnbånd, fjern border på midtbånd (det blir "siste") */
+.gv-lines-2 .gv-band--day {
+  display: none;
+}
+.gv-lines-2 .gv-band--week {
+  border-bottom: none;
+}
+
+/* 1-linje: skjul midt + bunn, fjern border på topp */
+.gv-lines-1 .gv-band--week,
+.gv-lines-1 .gv-band--day {
+  display: none;
+}
+.gv-lines-1 .gv-band--month {
+  border-bottom: none;
+}
+
+/* Month/Week bruker segments (absolute) */
+.gv-seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Day band er en ekte grid-linje */
+.gv-band--day {
+  padding: 0;
+}
+
+.gv-day {
+  height: 100%;
+  border-left: 1px solid var(--mcl-outline, rgba(0, 0, 0, 0.25));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--mcl-muted, rgba(0, 0, 0, 0.55));
+  white-space: nowrap;
+}
+
+/* =========================================================
+   Weekend + Today overlays
+   ========================================================= */
+
+.gv-weekend-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.gv-weekend {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.085);
+  box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.10),
+              inset -1px 0 0 rgba(0, 0, 0, 0.10);
+}
+
+.gv-today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 2px solid rgba(255, 64, 64, 0.85);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* =========================================================
+   Rows area
+   ========================================================= */
+
+.gv-rows-clip {
+  border: 1px solid var(--mcl-outline, rgba(0, 0, 0, 0.15));
+  border-top: none;
+  background: var(--mcl-surface, #fff);
+  overflow: hidden;
+}
+
+.gv-rows {
+  position: relative;
+}
+
+.gv-row {
+  position: relative;
+  height: var(--tc-row-h, 28px);
+  border-bottom: 1px solid var(--mcl-outline, rgba(0, 0, 0, 0.15));
+}
+
+/* Grid behind bars */
+.gv-row-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  background-image: linear-gradient(
+    to right,
+    var(--mcl-outline, rgba(0, 0, 0, 0.22)) 1px,
+    transparent 1px
+  );
+  background-size: var(--gv-grid-size, var(--gv-px-per-day, 24px)) 100%;
+  background-repeat: repeat;
+
+  opacity: 0.90;
+  z-index: 2;
+}
+
+.gv-row-grid.is-off {
+  background-image: none !important;
+}
+
+/* =========================================================
+   Month grid lines (DOM)
+   ========================================================= */
+.gv-mgrid {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.gv-mgrid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px solid var(--mcl-outline, rgba(0, 0, 0, 0.25));
+  opacity: 0.95;
+}
+
+.gv-mgrid-line.is-year {
+  border-left-width: 2px;
+  opacity: 0.98;
+}
+
+/* =========================================================
+   Vertical grid lines (DOM)
+   ========================================================= */
+
+.gv-vlines {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.gv-vline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px solid var(--mcl-outline, rgba(0, 0, 0, 0.25));
+  opacity: 0.95;
+}
+
+/* =========================================================
+   GANTT BAR – STRONG 3D / "PIPE" EFFECT
+   ========================================================= */
+
+.gv-bar {
+  position: absolute;
+  top: 6px;
+  height: calc(var(--tc-row-h, 28px) - 12px);
+  border-radius: 999px;
+  z-index: 4;
+  overflow: hidden;
+  transform: translateZ(0);
+
+  background: var(--gv-bar-fill, var(--mcl-accent, #a78666));
+
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  outline: 1px solid rgba(255, 255, 255, 0.08);
+  outline-offset: -2px;
+
+  box-shadow:
+    0 12px 22px rgba(0, 0, 0, 0.26),
+    0 2px 0 rgba(255, 255, 255, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.22);
+
+ display: flex;
+ align-items: center;
+ padding: 0 8px; /* litt luft uten å endre høyde-kontrakten */
+}
+
+.gv-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.78) 0%,
+    rgba(255, 255, 255, 0.34) 16%,
+    rgba(255, 255, 255, 0.12) 38%,
+    rgba(255, 255, 255, 0.00) 60%
+  );
+
+  mix-blend-mode: screen;
+  opacity: 0.95;
+}
+
+.gv-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.00) 0%,
+    rgba(0, 0, 0, 0.10) 52%,
+    rgba(0, 0, 0, 0.32) 100%
+  );
+
+  mix-blend-mode: multiply;
+  opacity: 0.92;
+}
+
+.gv-bar-text {
+  position: relative;
+  z-index: 5; /* over ::before/::after overlays */
+  pointer-events: none;
+
+  font-size: 11px;     /* ett hakk ned */
+  font-weight: 600;    /* litt mindre “tung” enn 700 */
+  line-height: 1;      /* viktig: unngår baseline-drift */
+  transform: translateY(-0.5px); /* mikrofiks: optisk midt i “pille” */
+
+  letter-spacing: 0.1px;
+
+  color: inherit; /* viktig */
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================================================
+   Milestones (start date set, end date empty)
+   ========================================================= */
+
+.gv-ms {
+  position: absolute;
+  top: 6px; /* matcher barTop i depRender */
+  width: 12px;
+  height: 12px;
+
+  /* style: diamond */
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
+
+  background: var(--gv-bar-fill, #b98a3a);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(0, 0, 0, 0.22);
+
+  cursor: default;
+}
+
+/* =========================================================
+   Dependencies (connectors)
+   ========================================================= */
+
+.gv-links {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.gv-link {
+  fill: none;
+  stroke: var(--mcl-link, rgba(30, 30, 30, 0.55));
+  color: var(--mcl-link, rgba(30, 30, 30, 0.55));
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.gv-link--bad {
+  stroke: var(--mcl-link-bad, rgba(220, 60, 60, 0.70));
+  color: var(--mcl-link-bad, rgba(220, 60, 60, 0.70));
+  stroke-dasharray: 4 3;
+}

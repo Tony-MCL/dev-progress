@@ -1,0 +1,24 @@
+name = "mcl-progress-platform-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-29"
+
+# Sett ruter/domene senere når du vil
+# routes = [{ pattern = "api.manageprogress.no/*", zone_name = "manageprogress.no" }]
+
+[vars]
+PRODUCT_ID = "progress"
+TRIAL_DAYS = "10"
+RETENTION_DAYS = "90"
+
+# Firebase project
+FIREBASE_PROJECT_ID = "YOUR_FIREBASE_PROJECT_ID"
+
+# Stripe
+STRIPE_PRICE_MONTH = "price_xxx_month"
+STRIPE_PRICE_YEAR  = "price_xxx_year"
+
+# CORS
+ALLOWED_ORIGINS = "https://manageprogress.no,https://app.manageprogress.no,http://localhost:5173"
+
+[triggers]
+crons = ["0 3 * * *"] # daglig kl 03:00 UTC
