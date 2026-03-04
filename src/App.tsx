@@ -29,6 +29,7 @@ import { useProgressRowEditing } from "./progress/app/useProgressRowEditing";
 import { useProgressViewModel } from "./progress/app/useProgressViewModel";
 import { useProgressActions } from "./progress/app/useProgressActions";
 import { useSplitPane } from "./progress/app/useSplitPane";
+import { useGanttUiSettings } from "./progress/app/useGanttUiSettings";
 import CloudProjectLibraryModal from "./progress/CloudProjectLibraryModal";
 import ProjectLibraryModal from "./progress/ProjectLibraryModal";
 import { useAuthUser } from "./auth/useAuthUser";
@@ -37,14 +38,7 @@ import { setOptimisticPlan } from "./orgs/optimisticPlan";
 import { createIndexedDbProjectStore } from "./storage/indexedDbProjectStore";
 import type { ProgressProjectSnapshotV1 } from "./storage/projectDbTypes";
 import { PROGRESS_KEYS } from "./storage/progressLocalKeys";
-import {
-  lsReadString,
-  lsWriteString,
-  lsReadNumber,
-  lsWriteNumber,
-  lsReadBool,
-  lsWriteBool,
-} from "./storage/localSettings";
+import { lsReadString, lsWriteString } from "./storage/localSettings";
 
 import {
   type AppColumnDef,
@@ -294,53 +288,6 @@ export default function App() {
     lsWriteString("progress_currentCloudProjectId", currentCloudProjectId);
   }, [currentCloudProjectId]);
 
-  // GANTT view options (13 zoom trinn, styrt kun av pxPerDay. nivå 11: default/reset zoom)
-  const ganttZoomLevels = [3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40] as const;
-
-  const [ganttZoomIdx, setGanttZoomIdx] = useState<number>(() => {
-    return Math.floor(
-      lsReadNumber(PROGRESS_KEYS.ganttZoomIdx, 11, {
-        min: 0,
-        max: ganttZoomLevels.length - 1,
-      })
-    );
-  });
-
-  const [ganttWeekendShade, setGanttWeekendShade] = useState<boolean>(() => {
-    return lsReadBool(PROGRESS_KEYS.ganttWeekendShade, true);
-  });
-  const [ganttTodayLine, setGanttTodayLine] = useState<boolean>(() => {
-    return lsReadBool(PROGRESS_KEYS.ganttTodayLine, true);
-  });
-
-  useEffect(() => {
-    lsWriteNumber(PROGRESS_KEYS.ganttZoomIdx, ganttZoomIdx);
-  }, [ganttZoomIdx]);
-  useEffect(() => {
-    lsWriteBool(PROGRESS_KEYS.ganttWeekendShade, ganttWeekendShade);
-  }, [ganttWeekendShade]);
-  useEffect(() => {
-    lsWriteBool(PROGRESS_KEYS.ganttTodayLine, ganttTodayLine);
-  }, [ganttTodayLine]);
-
-  const [ganttShowBarText, setGanttShowBarText] = useState<boolean>(() => {
-    return lsReadBool(PROGRESS_KEYS.ganttShowBarText, true);
-  });
-
-  const [ganttDefaultBarColor, setGanttDefaultBarColor] = useState<string>(() => {
-    return lsReadString(PROGRESS_KEYS.ganttDefaultBarColor, "#b98a3a") || "#b98a3a";
-  });
-
-  useEffect(() => {
-    lsWriteBool(PROGRESS_KEYS.ganttShowBarText, ganttShowBarText);
-  }, [ganttShowBarText]);
-
-  useEffect(() => {
-    lsWriteString(PROGRESS_KEYS.ganttDefaultBarColor, ganttDefaultBarColor);
-  }, [ganttDefaultBarColor]);
-
-  const ganttPxPerDay = ganttZoomLevels[ganttZoomIdx] ?? 24;
-
   const [visibleRowIds, setVisibleRowIds] = useState<string[] | undefined>(
     undefined
   );
@@ -376,6 +323,27 @@ export default function App() {
   const ganttSpacerRef = useRef<HTMLDivElement | null>(null);
   // ============================
   // BLOCK: APP_STATE (END)
+  // ============================
+
+  // ============================
+  // BLOCK: GANTT_UI_SETTINGS (START)
+  // ============================
+  const {
+    ganttZoomLevels,
+    ganttZoomIdx,
+    setGanttZoomIdx,
+    ganttPxPerDay,
+    ganttWeekendShade,
+    setGanttWeekendShade,
+    ganttTodayLine,
+    setGanttTodayLine,
+    ganttShowBarText,
+    setGanttShowBarText,
+    ganttDefaultBarColor,
+    setGanttDefaultBarColor,
+  } = useGanttUiSettings();
+  // ============================
+  // BLOCK: GANTT_UI_SETTINGS (END)
   // ============================
 
   // ============================
