@@ -28,6 +28,7 @@ import { useProgressProjectIO } from "./progress/app/useProgressProjectIO";
 import { useProgressRowEditing } from "./progress/app/useProgressRowEditing";
 import { useProgressViewModel } from "./progress/app/useProgressViewModel";
 import { useProgressActions } from "./progress/app/useProgressActions";
+import { useSplitPane } from "./progress/app/useSplitPane";
 import CloudProjectLibraryModal from "./progress/CloudProjectLibraryModal";
 import ProjectLibraryModal from "./progress/ProjectLibraryModal";
 import { useAuthUser } from "./auth/useAuthUser";
@@ -58,7 +59,6 @@ import AppDatePickerPopover from "./progress/AppDatePickerPopover";
 
 import { safeParseJSON } from "./core/utils/fileIO";
 import { useBottomHScrollVar } from "./core/utils/useBottomHScrollVar";
-import { clamp01to100 } from "./progress/ganttDateUtils";
 import { recomputeAllRows } from "./progress/autoSchedule";
 import {
   DurationAdjustPopover,
@@ -422,65 +422,17 @@ export default function App() {
   });
 
   // ============================
-  // BLOCK: SPLIT_STATE_HANDLERS (START)
+  // BLOCK: SPLIT_PANE (START)
   // ============================
-  const splitGridRef = useRef<HTMLDivElement | null>(null);
-  const [splitLeft, setSplitLeft] = useState<number>(() => {
-    return clamp01to100(lsReadNumber(PROGRESS_KEYS.splitLeft, 50));
-  });
-
-  useEffect(() => {
-    lsWriteNumber(PROGRESS_KEYS.splitLeft, splitLeft);
-  }, [splitLeft]);
-
-  const setFromClientX = (clientX: number) => {
-    const grid = splitGridRef.current;
-    if (!grid) return;
-    const r = grid.getBoundingClientRect();
-    const w = Math.max(1, r.width);
-    const x = clientX - r.left;
-    const pct = (x / w) * 100;
-    setSplitLeft(clamp01to100(pct));
-  };
-
-  const onDividerPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-    setFromClientX(e.clientX);
-
-    const onMove = (ev: PointerEvent) => setFromClientX(ev.clientX);
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-    };
-
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-  };
-
-  const onDividerKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
-    const step = e.shiftKey ? 5 : 1;
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      setSplitLeft((v) => clamp01to100(v - step));
-    }
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      setSplitLeft((v) => clamp01to100(v + step));
-    }
-    if (e.key === "Home") {
-      e.preventDefault();
-      setSplitLeft(0);
-    }
-    if (e.key === "End") {
-      e.preventDefault();
-      setSplitLeft(100);
-    }
-  };
+  const {
+    splitGridRef,
+    splitLeft,
+    setSplitLeft,
+    onDividerPointerDown,
+    onDividerKeyDown,
+  } = useSplitPane();
   // ============================
-  // BLOCK: SPLIT_STATE_HANDLERS (END)
+  // BLOCK: SPLIT_PANE (END)
   // ============================
 
   // ============================
