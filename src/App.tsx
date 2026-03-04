@@ -15,7 +15,6 @@ import type {
   ColumnDef,
   RowData,
   Selection,
-  TableCoreDatePickerRequest,
   TableCoreDatePreview,
 } from "./core/TableTypes";
 
@@ -27,6 +26,7 @@ import GanttView from "./progress/GanttView";
 import ProgressToolbar from "./progress/ProgressToolbar";
 import PrintPreviewOverlay from "./print2/PrintPreviewOverlay";
 import ColumnManagerModal from "./progress/ColumnManagerModal";
+import { useDatePickerPopover } from "./progress/app/useDatePickerPopover";
 import CalendarModal, { type CalendarEntry } from "./progress/CalendarModal";
 import ProjectModal, { type ProjectInfo } from "./progress/ProjectModal";
 import { useProgressProjectIO } from "./progress/app/useProgressProjectIO";
@@ -855,25 +855,8 @@ export default function App() {
   // ============================
   // BLOCK: DURATION + WEEKEND FLOW (END)
   // ============================
-  // ============================
-  // BLOCK: DATEPICKER_POPOVER (START)
-  // ============================
-  const [datePickReq, setDatePickReq] = useState<TableCoreDatePickerRequest | null>(null);
-  const datePickReqRef = useRef<TableCoreDatePickerRequest | null>(null);
-  useEffect(() => {
-    datePickReqRef.current = datePickReq;
-  }, [datePickReq]);
-
-  const closeDatePickerUI = useCallback(() => {
-    setDatePickReq(null);
-  }, []);
-  // TableCore -> App: åpne datepicker som popover (App eier UI)
-  const onRequestDatePicker = useCallback((req: TableCoreDatePickerRequest) => {
-    setDatePickReq(req);
-  }, []);
-  // ============================
-  // BLOCK: DATEPICKER_POPOVER (END)
-  // ============================
+  const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
+    useDatePickerPopover();
   
     const {
     buildSnapshot,
