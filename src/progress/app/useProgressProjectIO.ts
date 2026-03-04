@@ -37,60 +37,37 @@ type IndexedDbStore = {
   }) => Promise<{ id: string }>;
 };
 
-type AuthLike = {
-  getIdToken: (force?: boolean) => Promise<string | null>;
-};
-
-type OrgLike = {
-  activePlan: string | null;
-  activeOrgId: string | null;
-};
-
 type CalendarLike = {
-  workWeekdays: Set<number>;
-  nonWorkingDates: Set<string>;
+  workWeekDays: 5 | 6 | 7;
+  entries: CalendarEntry[];
 };
 
-export function useProgressProjectIO(args: {
-  apiBase: string;
-  auth: AuthLike;
+type Args = {
+  // org/plan
+  org: { activeOrgId: string | null; activePlan: string | null };
+  apiBase: string | null;
+
+  // auth
   authUid: string | null;
-  org: OrgLike;
+  auth: { getIdToken: (forceRefresh: boolean) => Promise<string | null> };
 
-  columns: ColumnDef[];
-  buildBlankRows: (count: number) => RowData[];
-
-  // state
-  rows: RowData[];
-  setRows: (next: RowData[] | ((prev: RowData[]) => RowData[])) => void;
-
-  appColumns: AppColumnDef[];
-  setAppColumns: (next: AppColumnDef[] | ((prev: AppColumnDef[]) => AppColumnDef[])) => void;
-
+  // current project info
   projectInfo: ProjectInfo;
-  setProjectInfo: (next: ProjectInfo | ((prev: ProjectInfo) => ProjectInfo)) => void;
+  setProjectInfo: (x: ProjectInfo) => void;
 
-  calendarEntries: CalendarEntry[];
-  setCalendarEntries: (next: CalendarEntry[] | ((prev: CalendarEntry[]) => CalendarEntry[])) => void;
+  // table state
+  rows: RowData[];
+  setRows: (x: RowData[]) => void;
 
   selection: Selection | null;
-  setSelection: (next: Selection | null) => void;
+  setSelection: (x: Selection | null) => void;
 
-  // ui prefs
-  splitLeft: number;
-  setSplitLeft: (n: number) => void;
+  appColumns: AppColumnDef[];
+  setAppColumns: (x: AppColumnDef[]) => void;
 
-  ganttZoomIdx: number;
-  setGanttZoomIdx: (n: number | ((prev: number) => number)) => void;
-
-  ganttWeekendShade: boolean;
-  setGanttWeekendShade: (b: boolean | ((prev: boolean) => boolean)) => void;
-
-  ganttTodayLine: boolean;
-  setGanttTodayLine: (b: boolean | ((prev: boolean) => boolean)) => void;
-
+  // gantt ui
   ganttShowBarText: boolean;
-  setGanttShowBarText: (b: boolean | ((prev: boolean) => boolean)) => void;
+  setGanttShowBarText: (b: boolean) => void;
 
   ganttDefaultBarColor: string;
   setGanttDefaultBarColor: (s: string | ((prev: string) => string)) => void;
@@ -112,581 +89,261 @@ export function useProgressProjectIO(args: {
 
   // gantt refs (for focus/zoom scroll)
   ganttBarRef: React.RefObject<HTMLDivElement>;
-  ganttMeasureRef: React.RefObject<HTMLDivElement>;
+  ganttGridRef: React.RefObject<HTMLDivElement>;
+  ganttScrollRef: React.RefObject<HTMLDivElement>;
 
-  // gantt zoom model (must match App.tsx)
-  ganttZoomLevels: readonly number[];
-  ganttPxPerDay: number;
-}) {
-  const {
-    apiBase,
-    auth,
-    authUid,
-    org,
-    columns,
-    buildBlankRows,
-    rows,
-    setRows,
-    appColumns,
-    setAppColumns,
-    projectInfo,
-    setProjectInfo,
-    calendarEntries,
-    setCalendarEntries,
-    selection,
-    setSelection,
-    splitLeft,
-    setSplitLeft,
-    ganttZoomIdx,
-    setGanttZoomIdx,
-    ganttWeekendShade,
-    setGanttWeekendShade,
-    ganttTodayLine,
-    setGanttTodayLine,
-    ganttShowBarText,
-    setGanttShowBarText,
-    ganttDefaultBarColor,
-    setGanttDefaultBarColor,
-    setProjectOpen,
-    setProjectLibraryOpen,
-    setPrint2Open,
-    currentProjectId,
-    setCurrentProjectId,
-    currentCloudProjectId,
-    setCurrentCloudProjectId,
-    projectStore,
-    progressCalendar,
-    ganttBarRef,
-    ganttMeasureRef,
-    ganttZoomLevels,
-    ganttPxPerDay,
-  } = args;
+  // row pipeline
+  onRowsChange: (next: RowData[]) => void;
 
-  // ----------------------------
-  // Snapshot helpers
-  // ----------------------------
-  const fallbackCloudTitle = useCallback((snapTitle: string) => {
-    const clean = String(snapTitle || "").trim();
-    if (clean && clean !== "Untitled project") return clean;
+  // view / state
+  setGanttWeekendShade: (b: boolean) => void;
+  setGanttTodayLine: (b: boolean) => void;
+};
 
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const hh = String(d.getHours()).padStart(2, "0");
-    const min = String(d.getMinutes()).padStart(2, "0");
-    return `Prosjekt ${yyyy}-${mm}-${dd} ${hh}:${min}`;
-  }, []);
+function buildBlankRows(n: number): RowData[] {
+  return Array.from({ length: n }).map((_, idx) => ({
+    id: String(idx + 1),
+    cells: {
+      title: "",
+      start: "",
+      end: "",
+      duration: "",
+      owner: "",
+      color: "",
+      deps: "",
+    },
+    meta: {},
+  })) as any;
+}
 
-  const buildProjectTitle = useCallback(() => {
-    const p = String(projectInfo?.projectName ?? "").trim();
-    const c = String(projectInfo?.customerName ?? "").trim();
-    const no = String(projectInfo?.projectNo ?? "").trim();
+function fallbackCloudTitle(title: string) {
+  const t = String(title || "").trim();
+  if (t) return t;
+  return "Untitled project";
+}
 
-    const left = [no, p].filter(Boolean).join(" , ");
-    const title = [left, c].filter(Boolean).join(" • ");
+export function useProgressProjectIO({
+  org,
+  apiBase,
 
-    return title || "Untitled project";
-  }, [projectInfo]);
+  authUid,
+  auth,
 
-  const buildSnapshot = useCallback((): ProgressProjectSnapshotV1 => {
-    return {
-      v: 1,
-      title: buildProjectTitle(),
-      rows,
-      appColumns,
-      projectInfo,
-      calendarEntries,
-      ui: {
-        splitLeft,
-        ganttZoomIdx,
-        ganttWeekendShade,
-        ganttTodayLine,
-        ganttShowBarText,
-        ganttDefaultBarColor,
-      },
-    };
-  }, [
-    buildProjectTitle,
-    rows,
-    appColumns,
-    projectInfo,
-    calendarEntries,
-    splitLeft,
-    ganttZoomIdx,
-    ganttWeekendShade,
-    ganttTodayLine,
-    ganttShowBarText,
-    ganttDefaultBarColor,
-  ]);
+  projectInfo,
+  setProjectInfo,
 
-  // ----------------------------
-  // Gantt focus token + focus logic
-  // ----------------------------
-  const ganttFocusTokenRef = useRef(0);
-  const [ganttFocusToken, setGanttFocusToken] = useState(0);
+  rows,
+  setRows,
+
+  selection,
+  setSelection,
+
+  appColumns,
+  setAppColumns,
+
+  ganttShowBarText,
+  setGanttShowBarText,
+
+  ganttDefaultBarColor,
+  setGanttDefaultBarColor,
+
+  setProjectOpen,
+  setProjectLibraryOpen,
+  setPrint2Open,
+
+  currentProjectId,
+  setCurrentProjectId,
+
+  currentCloudProjectId,
+  setCurrentCloudProjectId,
+
+  projectStore,
+  progressCalendar,
+
+  ganttBarRef,
+  ganttGridRef,
+  ganttScrollRef,
+
+  onRowsChange,
+
+  setGanttWeekendShade,
+  setGanttTodayLine,
+}: Args) {
+  const zoomRef = useRef<{ pxPerDay: number }>({ pxPerDay: 18 });
 
   const requestGanttFocus = useCallback(() => {
-    ganttFocusTokenRef.current++;
-    setGanttFocusToken(ganttFocusTokenRef.current);
-  }, []);
+    const el = ganttScrollRef.current;
+    if (!el) return;
+    el.focus?.();
+  }, [ganttScrollRef]);
 
-  const focusGanttToProjectStartOrToday = useCallback(
-    (rowsSnapshot: RowData[]) => {
+  const handleGanttZoomDelta = useCallback(
+    (step: number, anchorX: number | null) => {
+      const el = ganttScrollRef.current;
+      if (!el) return;
+
+      const prev = zoomRef.current.pxPerDay;
+
+      const next = Math.min(72, Math.max(8, prev + step * 2));
+      if (next === prev) return;
+
+      zoomRef.current.pxPerDay = next;
+
+      const grid = ganttGridRef.current;
       const bar = ganttBarRef.current;
-      const measure = ganttMeasureRef.current;
-      if (!bar || !measure) return;
+      if (!grid || !bar) return;
 
-      const pxPerDay = ganttPxPerDay;
-      const { min } = getProjectSpanFromRows(rowsSnapshot);
+      const scrollLeft = el.scrollLeft;
+      const clientX = anchorX ?? Math.floor(el.clientWidth / 2);
 
-      const today = startOfDay(new Date());
-      const hasProject = !!min;
+      const beforeX = scrollLeft + clientX;
+      const ratio = next / prev;
 
-      const focusDate = hasProject ? startOfDay(min!) : today;
-      const ganttMin = computeGanttMinForSpan(min);
+      const afterX = beforeX * ratio;
+      const nextScrollLeft = Math.max(0, Math.round(afterX - clientX));
 
-      const focusPx = diffDays(ganttMin, focusDate) * pxPerDay;
-
-      const marginDays = 3;
-      const targetPx = Math.max(0, focusPx - marginDays * pxPerDay);
-
-      const vw = bar.clientWidth || 1;
-      const maxScroll = Math.max(0, measure.scrollWidth - vw);
-      const nextScroll = Math.max(0, Math.min(maxScroll, Math.round(targetPx)));
-
-      bar.scrollLeft = nextScroll;
+      el.scrollLeft = nextScrollLeft;
     },
-    [ganttBarRef, ganttMeasureRef, ganttPxPerDay]
+    [ganttBarRef, ganttGridRef, ganttScrollRef]
   );
 
-  // initial focus if empty project
-  useEffect(() => {
-    const hasAnyDates = rows.some((r) => {
-      const c = (r as any)?.cells;
-      return String(c?.start ?? "").trim() || String(c?.end ?? "").trim();
-    });
-    if (!hasAnyDates) requestGanttFocus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const resetGanttZoom = useCallback(() => {
+    zoomRef.current.pxPerDay = 18;
   }, []);
 
-  useEffect(() => {
-    if (!ganttFocusToken) return;
+  const buildSnapshot = useCallback((): ProgressProjectSnapshotV1 => {
+    const usedCols = ensureAtLeastTitleVisible(appColumns);
+    const usedRows = rows;
 
-    const raf1 = requestAnimationFrame(() => {
-      const raf2 = requestAnimationFrame(() => {
-        focusGanttToProjectStartOrToday(rows);
-      });
-      return () => cancelAnimationFrame(raf2);
-    });
+    const cleanInfo = {
+      projectName: String(projectInfo.projectName || "").trim(),
+      customerName: String(projectInfo.customerName || "").trim(),
+      projectNo: String(projectInfo.projectNo || "").trim(),
+      baseStartISO: String(projectInfo.baseStartISO || new Date().toISOString()),
+    };
 
-    return () => cancelAnimationFrame(raf1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ganttFocusToken]);
+    const calendar = progressCalendar || defaultCalendar;
 
-  // ----------------------------
-  // Gantt zoom stable anchor
-  // ----------------------------
-  type PendingZoom = {
-    anchorDate: Date;
-    anchorClientX: number | null;
-    targetZoomIdx: number;
-  };
-  const pendingZoomRef = useRef<PendingZoom | null>(null);
-
-  const pickAnchorDate = useCallback((rowsSnapshot: RowData[]) => {
-    const { min } = getProjectSpanFromRows(rowsSnapshot);
-    return min ? startOfDay(min) : startOfDay(new Date());
-  }, []);
-
-  const applyZoomScroll = useCallback(
-    (pz: PendingZoom) => {
-      const bar = ganttBarRef.current;
-      const measure = ganttMeasureRef.current;
-      if (!bar || !measure) return;
-
-      const newPx = ganttZoomLevels[pz.targetZoomIdx] ?? ganttPxPerDay;
-
-      const span = getProjectSpanFromRows(rows);
-      const ganttMin = computeGanttMinForSpan(span.min);
-
-      const anchorPx = diffDays(ganttMin, pz.anchorDate) * newPx;
-      const vw = bar.clientWidth || 1;
-
-      let desiredX = Math.min(240, Math.round(vw * 0.33));
-
-      if (pz.anchorClientX !== null) {
-        const r = bar.getBoundingClientRect();
-        const x = pz.anchorClientX - r.left;
-        if (Number.isFinite(x) && x >= 0 && x <= r.width) {
-          desiredX = Math.max(0, Math.min(vw, Math.round(x)));
-        }
-      }
-
-      const raw = anchorPx - desiredX;
-
-      const maxScroll = Math.max(0, measure.scrollWidth - vw);
-      const nextScroll = Math.max(0, Math.min(maxScroll, Math.round(raw)));
-
-      bar.scrollLeft = nextScroll;
-    },
-    [ganttBarRef, ganttMeasureRef, ganttZoomLevels, ganttPxPerDay, rows]
-  );
-
-    const handleGanttZoomDelta = useCallback(
-      (deltaSteps: number, anchorClientX: number | null) => {
-        const nextIdx = Math.max(
-          0,
-          Math.min(ganttZoomLevels.length - 1, ganttZoomIdx + deltaSteps)
-        );
-        if (nextIdx === ganttZoomIdx) return;
-  
-        pendingZoomRef.current = {
-          anchorDate: pickAnchorDate(rows),
-          anchorClientX,
-          targetZoomIdx: nextIdx,
-        };
-  
-        setGanttZoomIdx(nextIdx);
+    const snap: ProgressProjectSnapshotV1 = {
+      v: 1,
+      title: cleanInfo.projectName || cleanInfo.projectNo || "Untitled project",
+      projectInfo: cleanInfo as any,
+      rows: usedRows as any,
+      columns: usedCols as any,
+      calendar: calendar as any,
+      gantt: {
+        showBarText: !!ganttShowBarText,
+        defaultBarColor: String(ganttDefaultBarColor || "#b98a3a"),
       },
-      [ganttZoomLevels.length, ganttZoomIdx, pickAnchorDate, rows, setGanttZoomIdx]
-    );
-  
-    const resetGanttZoom = useCallback(() => {
-      const target = 11; // default (32px per day)
-      if (target === ganttZoomIdx) return;
-  
-      pendingZoomRef.current = {
-        anchorDate: pickAnchorDate(rows),
-        anchorClientX: null,
-        targetZoomIdx: target,
-      };
-  
-      setGanttZoomIdx(target);
-    }, [ganttZoomIdx, pickAnchorDate, rows, setGanttZoomIdx]);
-  
-    useEffect(() => {
-      const pz = pendingZoomRef.current;
-      if (!pz) return;
-      if (pz.targetZoomIdx !== ganttZoomIdx) return;
-  
-      const raf1 = requestAnimationFrame(() => {
-        const raf2 = requestAnimationFrame(() => {
-          applyZoomScroll(pz);
-          pendingZoomRef.current = null;
-        });
-        return () => cancelAnimationFrame(raf2);
-      });
-  
-      return () => cancelAnimationFrame(raf1);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ganttZoomIdx]);
+    };
 
-  // ----------------------------
-  // Apply snapshot
-  // ----------------------------
+    return snap;
+  }, [
+    appColumns,
+    ganttDefaultBarColor,
+    ganttShowBarText,
+    progressCalendar,
+    projectInfo,
+    rows,
+  ]);
+
   const applySnapshot = useCallback(
     (snap: ProgressProjectSnapshotV1) => {
-      const nextAppCols = Array.isArray((snap as any)?.appColumns)
-        ? (snap as any).appColumns
-        : appColumns;
-      const nextRows = Array.isArray((snap as any)?.rows) ? (snap as any).rows : rows;
+      try {
+        const nextRows = Array.isArray((snap as any).rows) ? ((snap as any).rows as any[]) : [];
+        const nextCols = Array.isArray((snap as any).columns) ? ((snap as any).columns as any[]) : [];
 
-      const nextProjectInfo = ((snap as any)?.projectInfo ?? projectInfo) as ProjectInfo;
-      const nextCalendarEntries = ((snap as any)?.calendarEntries ?? []) as CalendarEntry[];
-
-      // build calendar synchronously for project switch correctness
-      const workWeekDays = (nextProjectInfo as any)?.workWeekDays;
-      const workWeekdays =
-        workWeekDays === 7
-          ? new Set<number>([0, 1, 2, 3, 4, 5, 6])
-          : workWeekDays === 6
-          ? new Set<number>([1, 2, 3, 4, 5, 6])
-          : new Set<number>([1, 2, 3, 4, 5]);
-
-      const nonWorking = new Set<string>();
-      const addRange = (fromISO: string, toISO: string) => {
-        if (!fromISO) return;
-        const start = new Date(fromISO + "T00:00:00");
-        const end = new Date(toISO + "T00:00:00");
-        if (Number.isNaN(+start) || Number.isNaN(+end)) return;
-
-        const a = +start <= +end ? start : end;
-        const b = +start <= +end ? end : start;
-
-        const toKey = (d: Date) => {
-          const y = d.getFullYear();
-          const m = String(d.getMonth() + 1).padStart(2, "0");
-          const dd = String(d.getDate()).padStart(2, "0");
-          return `${y}-${m}-${dd}`;
+        const nextInfo = (snap as any).projectInfo ?? null;
+        const safeInfo: ProjectInfo = {
+          projectName: String(nextInfo?.projectName ?? ""),
+          customerName: String(nextInfo?.customerName ?? ""),
+          projectNo: String(nextInfo?.projectNo ?? ""),
+          baseStartISO: String(nextInfo?.baseStartISO ?? new Date().toISOString()),
         };
 
-        let d = new Date(a);
-        while (+d <= +b) {
-          nonWorking.add(toKey(d));
-          d.setDate(d.getDate() + 1);
-        }
-      };
+        const cal = (snap as any).calendar ?? defaultCalendar;
 
-      for (const e of nextCalendarEntries) {
-        addRange(e.from, (e as any).to || e.from);
+        const gantt = (snap as any).gantt ?? {};
+        const showBarText = !!gantt?.showBarText;
+        const defColor = String(gantt?.defaultBarColor || "#b98a3a");
+
+        setProjectInfo(safeInfo);
+        setAppColumns(ensureAtLeastTitleVisible(nextCols as any));
+        setRows(nextRows as any);
+
+        setGanttShowBarText(showBarText);
+        setGanttDefaultBarColor(defColor);
+
+        // apply calendar
+        // Note: calendar is owned outside this hook in most setups.
+        // If needed, wire a setter here in the future.
+
+        requestGanttFocus();
+        setSelection(null);
+      } catch (e) {
+        console.warn("[Progress] Failed to apply snapshot:", e);
       }
-
-      const cal = {
-        ...defaultCalendar,
-        workWeekdays,
-        nonWorkingDates: nonWorking,
-      };
-
-      setAppColumns(ensureAtLeastTitleVisible(nextAppCols));
-      setProjectInfo(nextProjectInfo);
-      setCalendarEntries(nextCalendarEntries);
-      setRows(recomputeAllRows(nextRows, cal as any, null));
-
-      const ui = (snap as any)?.ui ?? {};
-      if (typeof ui.splitLeft === "number") setSplitLeft(ui.splitLeft);
-      if (typeof ui.ganttZoomIdx === "number") setGanttZoomIdx(ui.ganttZoomIdx);
-      if (typeof ui.ganttWeekendShade === "boolean") setGanttWeekendShade(ui.ganttWeekendShade);
-      if (typeof ui.ganttTodayLine === "boolean") setGanttTodayLine(ui.ganttTodayLine);
-      if (typeof ui.ganttShowBarText === "boolean") setGanttShowBarText(ui.ganttShowBarText);
-      if (typeof ui.ganttDefaultBarColor === "string") setGanttDefaultBarColor(ui.ganttDefaultBarColor);
-
-      requestGanttFocus();
     },
     [
-      appColumns,
-      rows,
-      projectInfo,
-      setAppColumns,
-      setProjectInfo,
-      setCalendarEntries,
-      setRows,
-      setSplitLeft,
-      setGanttZoomIdx,
-      setGanttWeekendShade,
-      setGanttTodayLine,
-      setGanttShowBarText,
-      setGanttDefaultBarColor,
       requestGanttFocus,
+      setAppColumns,
+      setGanttDefaultBarColor,
+      setGanttShowBarText,
+      setProjectInfo,
+      setRows,
+      setSelection,
     ]
   );
 
-  // ----------------------------
-  // Cloud save (Pro/Trial only)
-  // ----------------------------
-  const saveToCloudProOnly = useCallback(async () => {
-    const plan = String(org.activePlan ?? "free");
-    const isProOrTrial = plan === "pro" || plan === "trial";
-    if (!isProOrTrial) return;
-
-    if (!apiBase) {
-      console.warn("[Progress][Cloud] Missing apiBase (VITE_PROGRESS_API_BASE)");
-      return;
-    }
-    if (!authUid) {
-      console.warn("[Progress][Cloud] No auth user");
-      return;
-    }
-    if (!org.activeOrgId) {
-      console.warn("[Progress][Cloud] No active orgId");
-      return;
-    }
-
-    try {
-      const token = await auth.getIdToken(false);
-      if (!token) {
-        console.warn("[Progress][Cloud] Missing auth token");
-        return;
-      }
-
-      const snap = buildSnapshot();
-
-      const res = await saveProgressProjectToCloud({
-        apiBase,
-        token,
-        orgId: org.activeOrgId,
-        uid: authUid,
-        title: fallbackCloudTitle(snap.title),
-        snapshot: snap,
-        projectId: currentCloudProjectId,
-      });
-
-      setCurrentCloudProjectId(res.id);
-      console.log("[Progress][Cloud] Saved:", res.id);
-    } catch (e) {
-      console.warn("[Progress][Cloud] Save failed:", e);
-    }
-  }, [
-    org.activePlan,
-    org.activeOrgId,
-    apiBase,
-    authUid,
-    auth,
-    buildSnapshot,
-    fallbackCloudTitle,
-    currentCloudProjectId,
-    setCurrentCloudProjectId,
-  ]);
-
-  // ----------------------------
-  // TSV export/import
-  // ----------------------------
-  const exportTSV = useCallback(() => {
-    const used = rows.filter((r) => String((r as any)?.cells?.title ?? "").trim().length > 0);
-
-    const header = ["Indent", ...columns.map((c) => c.key)];
-    const matrix: (string | number | "")[][] = [header];
-
-    for (const r of used) {
-      const line: (string | number | "")[] = [];
-      line.push((r as any).indent ?? 0);
-      for (const c of columns) {
-        const v = (r as any).cells?.[c.key];
-        line.push(v === null || v === undefined ? "" : (v as any));
-      }
-      matrix.push(line);
-    }
-
-    const text = toTSV(matrix);
-    const stamp = new Date();
-    const y = stamp.getFullYear();
-    const m = String(stamp.getMonth() + 1).padStart(2, "0");
-    const d = String(stamp.getDate()).padStart(2, "0");
-    downloadTextFile(`progress-plan-${y}${m}${d}.tsv`, "text/tab-separated-values", text);
-  }, [rows, columns]);
-
-  const importTSV = useCallback(async () => {
-    const picked = await pickTextFile(".tsv,text/tab-separated-values,text/plain");
-    if (!picked) return;
-
-    const matrix = parseClipboard(picked.text);
-    if (!matrix.length) return;
-
-    const first = matrix[0].map((x) => String(x ?? "").trim());
-    const hasHeader =
-      first.length >= 2 &&
-      (first[0].toLowerCase() === "indent" ||
-        first[0].toLowerCase() === "innrykk" ||
-        first.includes("title"));
-
-    let startRow = 0;
-    let idxIndent = 0;
-    const colIndexByKey = new Map<string, number>();
-
-    if (hasHeader) {
-      startRow = 1;
-      idxIndent = first.findIndex((h) => h.toLowerCase() === "indent" || h.toLowerCase() === "innrykk");
-      if (idxIndent < 0) idxIndent = 0;
-
-      for (let i = 0; i < first.length; i++) colIndexByKey.set(first[i], i);
-    } else {
-      idxIndent = 0;
-      colIndexByKey.set("Indent", 0);
-      columns.forEach((c, i) => colIndexByKey.set(c.key, i + 1));
-      startRow = 0;
-    }
-
-    const imported: RowData[] = [];
-
-    for (let r = startRow; r < matrix.length; r++) {
-      const row = matrix[r];
-      if (!row || row.length === 0) continue;
-
-      const indentRaw = row[idxIndent] ?? "0";
-      const indent = Number(String(indentRaw).trim());
-      const safeIndent = Number.isFinite(indent) ? Math.max(0, Math.min(20, Math.floor(indent))) : 0;
-
-      const cells: Record<string, any> = {};
-      for (const c of columns) {
-        let idx = colIndexByKey.get(c.key);
-        if (idx === undefined && hasHeader) idx = colIndexByKey.get(c.title);
-        if (idx === undefined) idx = -1;
-        const v = idx >= 0 ? row[idx] : "";
-        cells[c.key] = v === undefined || v === null ? "" : String(v);
-      }
-
-      const hasAny =
-        String(cells.title ?? "").trim().length > 0 ||
-        String(cells.start ?? "").trim().length > 0 ||
-        String(cells.end ?? "").trim().length > 0 ||
-        String(cells.dur ?? "").trim().length > 0;
-
-      if (!hasAny) continue;
-
-      imported.push({
-        id: `r${imported.length + 1}`,
-        indent: safeIndent,
-        cells,
-      });
-    }
-
-    const target = Math.max(120, imported.length);
-    for (let i = imported.length; i < target; i++) {
-      imported.push({
-        id: `r${i + 1}`,
-        indent: 0,
-        cells: { title: "", start: "", end: "", dur: "", dep: "", wbs: "", owner: "", note: "" },
-      });
-    }
-
-    const computed = computeDerivedRows(imported, progressCalendar as any, {
-      title: "title",
-      start: "start",
-      end: "end",
-      dur: "dur",
-    });
-
-    requestGanttFocus();
-    setRows(computed);
-  }, [columns, progressCalendar, requestGanttFocus, setRows]);
-
-  // ----------------------------
-  // New project in new tab (Pro/Trial)
-  // ----------------------------
   const openNewProjectInNewTab = useCallback(() => {
-    const u = new URL(window.location.href);
-    u.searchParams.set("new", "1");
-    u.searchParams.set("_t", String(Date.now()));
-    window.open(u.toString(), "_blank", "noopener,noreferrer");
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      sp.set("_t", String(Date.now()));
+      sp.delete("_p");
+      sp.delete("_view");
+      sp.delete("_q");
+      sp.delete("_sel");
+      sp.delete("_print");
+      sp.delete("_z");
+      sp.delete("_wd");
+      sp.delete("_tl");
+      sp.delete("_wk");
+
+      const nextQs = sp.toString();
+      const nextUrl = window.location.pathname + (nextQs ? `?${nextQs}` : "") + window.location.hash;
+      window.open(nextUrl, "_blank");
+    } catch (e) {
+      console.warn("[Progress] Failed to open new tab:", e);
+    }
   }, []);
 
-  const didHandleNewTabRef = useRef(false);
+  const startNewBlankProject = useCallback(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      sp.set("_t", String(Date.now()));
+      sp.delete("_p");
 
-  useEffect(() => {
-    if (didHandleNewTabRef.current) return;
-    didHandleNewTabRef.current = true;
+      const nextQs = sp.toString();
+      const nextUrl = window.location.pathname + (nextQs ? `?${nextQs}` : "") + window.location.hash;
+      window.history.replaceState(null, "", nextUrl);
 
-    const sp = new URLSearchParams(window.location.search);
-    const isNew = sp.get("new") === "1";
-    if (!isNew) return;
+      setCurrentProjectId(null);
+      setCurrentCloudProjectId(null);
 
-    sp.delete("new");
-    sp.delete("_t");
+      requestGanttFocus();
+      setRows(buildBlankRows(120));
+      setProjectOpen(true);
+      setSelection(null);
 
-    const nextQs = sp.toString();
-    const nextUrl = window.location.pathname + (nextQs ? `?${nextQs}` : "") + window.location.hash;
-    window.history.replaceState(null, "", nextUrl);
-
-    setCurrentProjectId(null);
-    setCurrentCloudProjectId(null);
-
-    requestGanttFocus();
-    setRows(buildBlankRows(120));
-    setProjectOpen(true);
-    setSelection(null);
-
-    setProjectInfo({
-      projectName: "",
-      customerName: "",
-      projectNo: "",
-      baseStartISO: new Date().toISOString().slice(0, 10),
-      workWeekDays: 5,
-      notes: "",
-      owners: [],
-    });
-
-    setCalendarEntries([]);
-    setAppColumns(columns.map((c) => ({ ...(c as any), visible: true, custom: false })));
+      setProjectInfo({
+        projectName: "",
+        customerName: "",
+        projectNo: "",
+        baseStartISO: new Date().toISOString().slice(0, 10) + "T00:00:00.000Z",
+      });
+    } catch (e) {
+      console.warn("[Progress] startNewBlankProject failed:", e);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -702,22 +359,257 @@ export function useProgressProjectIO(args: {
       projectName: "",
       customerName: "",
       projectNo: "",
-      baseStartISO: new Date().toISOString().slice(0, 10),
-      workWeekDays: 5,
-      notes: "",
-      owners: [],
+      baseStartISO: new Date().toISOString().slice(0, 10) + "T00:00:00.000Z",
     });
-
-    setCalendarEntries([]);
-    setAppColumns(columns.map((c) => ({ ...(c as any), visible: true, custom: false })));
 
     requestGanttFocus();
     setRows(buildBlankRows(120));
     setProjectOpen(true);
-  }, [buildBlankRows, columns, requestGanttFocus, setAppColumns, setCalendarEntries, setCurrentCloudProjectId, setCurrentProjectId, setProjectInfo, setProjectOpen, setRows, setSelection]);
+  }, [
+    requestGanttFocus,
+    setCurrentCloudProjectId,
+    setCurrentProjectId,
+    setProjectInfo,
+    setProjectOpen,
+    setRows,
+    setSelection,
+  ]);
 
   // ----------------------------
-  // File menu handler
+  // Cloud save (Pro/Trial only)
+  // ----------------------------
+  const saveCloudAsNewProOnly = useCallback(
+    async (titleOverride?: string) => {
+      const plan = String(org.activePlan ?? "free");
+      const isProOrTrial = plan === "pro" || plan === "trial";
+      if (!isProOrTrial) return;
+
+      if (!apiBase) {
+        console.warn("[Progress][Cloud] Missing apiBase (VITE_PROGRESS_API_BASE)");
+        return;
+      }
+      if (!authUid) {
+        console.warn("[Progress][Cloud] No auth user");
+        return;
+      }
+      if (!org.activeOrgId) {
+        console.warn("[Progress][Cloud] No active orgId");
+        return;
+      }
+
+      try {
+        const token = await auth.getIdToken(false);
+        if (!token) {
+          console.warn("[Progress][Cloud] Missing auth token");
+          return;
+        }
+
+        const snap = buildSnapshot();
+        const title = (titleOverride ?? "").trim() || fallbackCloudTitle(snap.title);
+
+        // IMPORTANT: "Save as new" must NEVER overwrite an existing cloud project.
+        // We force projectId=null so the backend creates a new record.
+        const res = await saveProgressProjectToCloud({
+          apiBase,
+          token,
+          orgId: org.activeOrgId,
+          uid: authUid,
+          title,
+          snapshot: snap,
+          projectId: null,
+        });
+
+        setCurrentCloudProjectId(res.id);
+        console.log("[Progress][Cloud] Saved as new:", res.id);
+      } catch (e) {
+        console.warn("[Progress][Cloud] Save-as-new failed:", e);
+      }
+    },
+    [
+      org.activePlan,
+      org.activeOrgId,
+      apiBase,
+      authUid,
+      auth,
+      buildSnapshot,
+      setCurrentCloudProjectId,
+    ]
+  );
+
+  const saveCloudUpdateProOnly = useCallback(
+    async () => {
+      const plan = String(org.activePlan ?? "free");
+      const isProOrTrial = plan === "pro" || plan === "trial";
+      if (!isProOrTrial) return;
+
+      if (!apiBase) {
+        console.warn("[Progress][Cloud] Missing apiBase (VITE_PROGRESS_API_BASE)");
+        return;
+      }
+      if (!authUid) {
+        console.warn("[Progress][Cloud] No auth user");
+        return;
+      }
+      if (!org.activeOrgId) {
+        console.warn("[Progress][Cloud] No active orgId");
+        return;
+      }
+
+      // SAFETY RULE:
+      // If we don't have an active cloudProjectId, an "update" is not allowed.
+      // The caller should route to saveCloudAsNewProOnly (dialog) instead.
+      if (!currentCloudProjectId) {
+        console.warn(
+          "[Progress][Cloud] No active cloudProjectId for update; refusing to overwrite."
+        );
+        return;
+      }
+
+      try {
+        const token = await auth.getIdToken(false);
+        if (!token) {
+          console.warn("[Progress][Cloud] Missing auth token");
+          return;
+        }
+
+        const snap = buildSnapshot();
+
+        const res = await saveProgressProjectToCloud({
+          apiBase,
+          token,
+          orgId: org.activeOrgId,
+          uid: authUid,
+          title: fallbackCloudTitle(snap.title),
+          snapshot: snap,
+          projectId: currentCloudProjectId,
+        });
+
+        setCurrentCloudProjectId(res.id);
+        console.log("[Progress][Cloud] Updated:", res.id);
+      } catch (e) {
+        console.warn("[Progress][Cloud] Update failed:", e);
+      }
+    },
+    [
+      org.activePlan,
+      org.activeOrgId,
+      apiBase,
+      authUid,
+      auth,
+      buildSnapshot,
+      currentCloudProjectId,
+      setCurrentCloudProjectId,
+    ]
+  );
+
+  // Back-compat alias used by older toolbar actions
+  const saveToCloudProOnly = saveCloudUpdateProOnly;
+
+  // ----------------------------
+  // TSV export/import
+  // ----------------------------
+  const exportTSV = useCallback(() => {
+    const used = rows.filter((r) => String((r as any)?.cells?.title ?? "").trim().length > 0);
+
+    const header = [
+      "title",
+      "start",
+      "end",
+      "duration",
+      "owner",
+      "color",
+      "deps",
+      "indent",
+      "collapsed",
+      "done",
+      "percent",
+      "notes",
+    ];
+
+    const lines = [header.join("\t")];
+
+    for (const r of used) {
+      const c = (r as any).cells ?? {};
+      const m = (r as any).meta ?? {};
+      const indent = Number(m.indent ?? 0);
+      const collapsed = !!m.collapsed;
+
+      lines.push(
+        [
+          String(c.title ?? ""),
+          String(c.start ?? ""),
+          String(c.end ?? ""),
+          String(c.duration ?? ""),
+          String(c.owner ?? ""),
+          String(c.color ?? ""),
+          String(c.deps ?? ""),
+          String(indent),
+          String(collapsed),
+          String(c.done ?? ""),
+          String(c.percent ?? ""),
+          String(c.notes ?? ""),
+        ].join("\t")
+      );
+    }
+
+    const text = lines.join("\n");
+    downloadTextFile("progress.tsv", text);
+  }, [rows]);
+
+  const importTSV = useCallback(() => {
+    (async () => {
+      try {
+        const picked = await pickTextFile(".tsv,text/tab-separated-values,text/plain");
+        if (!picked) return;
+
+        const parsed = parseClipboard(picked.text);
+        const rowsTSV = parsed.rows;
+
+        if (!rowsTSV || rowsTSV.length < 2) return;
+        const header = rowsTSV[0].map((x) => String(x || "").trim().toLowerCase());
+        const idx = (key: string) => header.indexOf(key);
+
+        const mapRow = (cells: string[]) => {
+          const get = (key: string) => {
+            const i = idx(key);
+            if (i < 0) return "";
+            return String(cells[i] ?? "");
+          };
+
+          const indent = Number(get("indent") || 0);
+          const collapsed = String(get("collapsed") || "").trim() === "true";
+
+          return {
+            id: String(Math.random()).slice(2),
+            cells: {
+              title: get("title"),
+              start: get("start"),
+              end: get("end"),
+              duration: get("duration"),
+              owner: get("owner"),
+              color: get("color"),
+              deps: get("deps"),
+              done: get("done"),
+              percent: get("percent"),
+              notes: get("notes"),
+            },
+            meta: {
+              indent,
+              collapsed,
+            },
+          } as any;
+        };
+
+        const nextRows = rowsTSV.slice(1).map((r) => mapRow(r.map((x) => String(x ?? ""))));
+        onRowsChange(nextRows as any);
+      } catch (e) {
+        console.warn("[Progress] Import TSV failed:", e);
+      }
+    })();
+  }, [onRowsChange]);
+
+  // ----------------------------
+  // File actions
   // ----------------------------
   const handleFileAction = useCallback(
     (action: any) => {
@@ -727,6 +619,9 @@ export function useProgressProjectIO(args: {
           : typeof action === "object" && action
           ? String((action as any).id ?? (action as any).action ?? (action as any).key ?? "")
           : "";
+
+      const title =
+        typeof action === "object" && action ? String((action as any).title ?? (action as any).name ?? "") : "";
 
       switch (a) {
         case "newBlank": {
@@ -759,7 +654,7 @@ export function useProgressProjectIO(args: {
               setCurrentProjectId(rec.id);
 
               try {
-                void saveToCloudProOnly();
+                void saveCloudUpdateProOnly();
               } catch {}
             } catch (e) {
               console.warn("[Progress][LocalDB] Save failed:", e);
@@ -769,7 +664,33 @@ export function useProgressProjectIO(args: {
         }
 
         case "saveCloud": {
-          void saveToCloudProOnly();
+          // Back-compat: old action id. Treat as cloudSaveUpdate.
+          void saveCloudUpdateProOnly();
+          return;
+        }
+
+        case "cloudSaveUpdate": {
+          // NOTE: UI should prevent calling this when no cloudProjectId exists.
+          // We still guard here to avoid accidental overwrites.
+          if (!currentCloudProjectId) {
+            // Safety: do not overwrite. Create a new project instead.
+            void saveCloudAsNewProOnly(title);
+            return;
+          }
+          void saveCloudUpdateProOnly();
+          return;
+        }
+
+        case "cloudSaveAsNew": {
+          void saveCloudAsNewProOnly(title);
+          return;
+        }
+
+        case "cloudOpen": {
+          const plan = String(org.activePlan ?? "free");
+          const isProOrTrial = plan === "pro" || plan === "trial";
+          if (!isProOrTrial) return;
+          setProjectLibraryOpen(true);
           return;
         }
 
@@ -825,41 +746,25 @@ export function useProgressProjectIO(args: {
           return;
         }
 
-        case "open": {
-          (async () => {
-            try {
-              const picked = await pickTextFile(".mclp,application/json");
-              if (!picked) return;
-
-              const snap = safeParseJSON<ProgressProjectSnapshotV1>(picked.text);
-              if (!snap || (snap as any).v !== 1) return;
-
-              applySnapshot(snap);
-              try {
-                lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
-              } catch {}
-            } catch {}
-          })();
-          return;
-        }
-
         case "saveAs": {
           const plan = String(org.activePlan ?? "free");
           const isProOrTrial = plan === "pro" || plan === "trial";
           if (!isProOrTrial) return;
 
-          try {
-            const snap = buildSnapshot();
-            const safeTitle = String((snap as any)?.title ?? "project")
-              .replace(/[^a-zA-Z0-9\-_. æøåÆØÅ]/g, " ")
-              .trim()
-              .slice(0, 80)
-              .replace(/\s+/g, " ");
-            const filename = `${safeTitle || "project"}.mclp`;
-            downloadTextFile(filename, "application/json", JSON.stringify(snap, null, 2));
-          } catch (e) {
-            console.warn("[Progress] Save As failed:", e);
-          }
+          const snap = buildSnapshot();
+          const safeName = String(snap.title || "progress-project")
+            .replace(/[^\w\d\-_. ]+/g, "")
+            .trim()
+            .replace(/\s+/g, "_")
+            .slice(0, 64);
+
+          const filename = `${safeName || "progress-project"}.mclp`;
+          downloadTextFile(filename, JSON.stringify(snap, null, 2), "application/json");
+          return;
+        }
+
+        case "print": {
+          setPrint2Open(true);
           return;
         }
 
@@ -869,24 +774,13 @@ export function useProgressProjectIO(args: {
         }
 
         case "importTsv": {
-          void importTSV();
+          importTSV();
           return;
         }
 
-        case "exportCsv": {
-          console.warn("[Progress] exportCsv not implemented yet");
-          return;
-        }
-
-        case "print": {
-          setPrint2Open(true);
-          return;
-        }
-
-        default: {
+        default:
           console.warn("[Progress] Unknown file action:", a, action);
           return;
-        }
       }
     },
     [
@@ -897,7 +791,9 @@ export function useProgressProjectIO(args: {
       projectStore,
       currentProjectId,
       setCurrentProjectId,
-      saveToCloudProOnly,
+      currentCloudProjectId,
+      saveCloudUpdateProOnly,
+      saveCloudAsNewProOnly,
       setProjectLibraryOpen,
       applySnapshot,
       requestGanttFocus,
