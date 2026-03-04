@@ -333,41 +333,54 @@ export function useProgressProjectIO(args: {
     [ganttBarRef, ganttMeasureRef, ganttZoomLevels, ganttPxPerDay, rows]
   );
 
-  const handleGanttZoomDelta = useCallback(
-    (deltaSteps: number, anchorClientX: number | null) => {
-      const nextIdx = Math.max(
-        0,
-        Math.min(ganttZoomLevels.length - 1, ganttZoomIdx + deltaSteps)
-      );
-      if (nextIdx === ganttZoomIdx) return;
-
+    const handleGanttZoomDelta = useCallback(
+      (deltaSteps: number, anchorClientX: number | null) => {
+        const nextIdx = Math.max(
+          0,
+          Math.min(ganttZoomLevels.length - 1, ganttZoomIdx + deltaSteps)
+        );
+        if (nextIdx === ganttZoomIdx) return;
+  
+        pendingZoomRef.current = {
+          anchorDate: pickAnchorDate(rows),
+          anchorClientX,
+          targetZoomIdx: nextIdx,
+        };
+  
+        setGanttZoomIdx(nextIdx);
+      },
+      [ganttZoomLevels.length, ganttZoomIdx, pickAnchorDate, rows, setGanttZoomIdx]
+    );
+  
+    const resetGanttZoom = useCallback(() => {
+      const target = 11; // default (32px per day)
+      if (target === ganttZoomIdx) return;
+  
       pendingZoomRef.current = {
         anchorDate: pickAnchorDate(rows),
-        anchorClientX,
-        targetZoomIdx: nextIdx,
+        anchorClientX: null,
+        targetZoomIdx: target,
       };
-
-      setGanttZoomIdx(nextIdx);
-    },
-    [ganttZoomLevels.length, ganttZoomIdx, pickAnchorDate, rows, setGanttZoomIdx]
-  );
-
-  useEffect(() => {
-    const pz = pendingZoomRef.current;
-    if (!pz) return;
-    if (pz.targetZoomIdx !== ganttZoomIdx) return;
-
-    const raf1 = requestAnimationFrame(() => {
-      const raf2 = requestAnimationFrame(() => {
-        applyZoomScroll(pz);
-        pendingZoomRef.current = null;
+  
+      setGanttZoomIdx(target);
+    }, [ganttZoomIdx, pickAnchorDate, rows, setGanttZoomIdx]);
+  
+    useEffect(() => {
+      const pz = pendingZoomRef.current;
+      if (!pz) return;
+      if (pz.targetZoomIdx !== ganttZoomIdx) return;
+  
+      const raf1 = requestAnimationFrame(() => {
+        const raf2 = requestAnimationFrame(() => {
+          applyZoomScroll(pz);
+          pendingZoomRef.current = null;
+        });
+        return () => cancelAnimationFrame(raf2);
       });
-      return () => cancelAnimationFrame(raf2);
-    });
-
-    return () => cancelAnimationFrame(raf1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ganttZoomIdx]);
+  
+      return () => cancelAnimationFrame(raf1);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ganttZoomIdx]);
 
   // ----------------------------
   // Apply snapshot
@@ -903,6 +916,7 @@ export function useProgressProjectIO(args: {
 
     requestGanttFocus,
     handleGanttZoomDelta,
+    resetGanttZoom,
 
     openNewProjectInNewTab, // exposed (useful in UI actions)
     resetToBlankProject, // exposed
