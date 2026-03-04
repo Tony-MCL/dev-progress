@@ -1,285 +1,334 @@
-Progress – App.tsx Refactor Notes
+Progress – App.tsx Refactor Notes (Updated)
 Background
 
-App.tsx in the Progress application had grown very large and difficult to maintain.
-The file contained well over 2000 lines of mixed responsibilities:
+App.tsx i Progress-app’en hadde vokst seg stor og vanskelig å vedlikeholde (tidligere >2000 linjer) med blandede ansvar:
 
-UI rendering
+UI rendering (layout, modaler, popovers)
 
-Gantt control logic
+Gantt kontroll (zoom, visningsinnstillinger)
 
-project save/load logic
+prosjekt save/load (lokalt og cloud)
 
 date picker state
 
-popovers
+row editing (onCellCommit, warnings, auto schedule)
 
-table editing logic
+localStorage / persist
 
-cloud interaction
+actions/kommandoer fra toolbar
 
-local storage
+Dette gjorde det vanskelig å:
 
-zoom handling
+navigere trygt i fila
 
-modal control
+endre features uten side-effekter
 
-This made it difficult to:
+bruke AI-verktøy pga. kontekstgrenser
 
-navigate the file
+holde ryddig skille mellom features
 
-modify features safely
+Målet er praktisk vedlikeholdbarhet, ikke arkitektonisk “perfeksjon”.
 
-work with AI tools like ChatGPT (context limits)
+Mål / constraints:
 
-maintain clear separation between features
+Filer helst rundt 400–900 linjer
 
-The goal of this refactor is not architectural purity, but practical maintainability.
+Samle relatert funksjonalitet i få, tydelige moduler
 
-Target constraints:
+Unngå at hver liten ting krever 10 filer
 
-No single file should exceed roughly 700–800 lines
+Bevare eksisterende oppførsel
 
-Related functionality should stay together
+AppShell-reglene gjelder fortsatt (AppShell read-only)
 
-Avoid spreading one feature across many files
+Resultat etter refaktor
 
-Preserve existing behaviour
+App.tsx er nå primært:
 
-The AppShell architecture rules remain unchanged.
+“Orchestrator” som kobler sammen state + hooks
 
-What Was Done In This Refactor
-1. Import Block Cleanup
+Renderer layout (JSX) og sender props videre
 
-The original App.tsx had accumulated a large number of imports, some of which were duplicated or no longer used.
+Har kun den “tynne” koblingen mellom TableCore ↔ Gantt ↔ modaler
 
-Actions taken:
+Tunge blokker som ofte endres er flyttet ut i egne hooks.
 
-Imports were grouped into logical blocks.
+Hva som ble gjort (opprinnelig + denne chatten)
+1) Import-blokk ryddet og gruppert (tidligere refaktor)
 
-Duplicate imports were removed.
+Hvor: src/App.tsx
+Hva: Imports ble gruppert logisk (React, core, progress, storage/cloud, commands, domain, UI, utils, styles), duplikater fjernet og oversikt forbedret.
 
-Unused imports were cleaned up where safe.
+2) Cloud / Project IO flyttet ut (tidligere refaktor)
 
-The structure now follows this pattern:
+Ny modul: src/progress/app/useProgressProjectIO.ts
 
-React / hooks
-core components
-progress components
-storage / cloud
-table commands
-progress domain logic
-UI popovers
-utilities
-styles
+Flyttet ut av App.tsx:
 
-This makes the dependency structure of the file easier to read.
+bygge snapshot (prosjektdata)
 
-2. Cloud / Project IO Logic Extraction
+apply snapshot
 
-Project save/load functionality was extracted into a separate hook.
+lagring/åpning (lokalt og cloud / Pro-only)
 
-New module:
+file actions (import/export)
 
-src/progress/app/useProgressProjectIO.ts
+Gantt zoom helper-funksjoner (zoom delta, reset)
 
-This hook now owns functionality related to:
+“request focus” til Gantt
 
-project snapshot creation
-
-applying snapshots
-
-cloud saving
-
-file menu actions
-
-gantt zoom helpers
-
-project open / save behaviour
-
-The hook returns:
-
-buildSnapshot
-applySnapshot
-saveToCloudProOnly
-requestGanttFocus
-handleGanttZoomDelta
-handleFileAction
-
-App.tsx now consumes these through:
+App.tsx bruker nå:
 
 const {
-  buildSnapshot,
   applySnapshot,
-  saveToCloudProOnly,
   requestGanttFocus,
   handleGanttZoomDelta,
+  resetGanttZoom,
   handleFileAction,
 } = useProgressProjectIO(...);
+3) Date Picker UI state flyttet ut (tidligere refaktor)
 
-This removed a large amount of project storage logic from App.tsx.
+Ny modul: src/progress/app/useDatePickerPopover.ts
 
-3. Date Picker UI State Extraction
+Flyttet ut av App.tsx:
 
-Date picker UI state previously lived inside App.tsx.
+datePickReq + ref
 
-This was extracted to:
+open/close av date picker UI
 
-src/progress/app/useDatePickerPopover.ts
-
-This hook manages:
-
-datePickReq
-datePickReqRef
-closeDatePickerUI
 onRequestDatePicker
 
-App.tsx now simply uses:
+App.tsx bruker nå:
+
+const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
+  useDatePickerPopover();
+Nye endringer i denne chatten
+4) Split-pane (mellom tabell og Gantt) flyttet ut
+
+Ny modul: src/progress/app/useSplitPane.ts
+
+Flyttet ut av App.tsx:
+
+splitLeft state + persist (localStorage)
+
+ref til split-grid
+
+pointer drag handler
+
+keyboard handler (ArrowLeft/Right, Home/End)
+
+prosentberegning fra mus-posisjon → --split-left
+
+App.tsx bruker nå:
 
 const {
-  datePickReq,
-  closeDatePickerUI,
-  onRequestDatePicker
-} = useDatePickerPopover();
+  splitGridRef,
+  splitLeft,
+  setSplitLeft,
+  onDividerPointerDown,
+  onDividerKeyDown,
+} = useSplitPane();
 
-This keeps the App responsible for rendering the popover UI, but removes the internal state management.
+Note: vi måtte justere typing på ref for å få grønn build igjen.
 
-4. Gantt Action Handling Simplified
+5) ViewModel (derived data) flyttet ut
 
-handleGanttAction remains in App.tsx but now delegates zoom behaviour to the IO hook:
+Modul: src/progress/app/useProgressViewModel.ts (allerede opprettet i refaktoren)
 
-handleGanttZoomDelta(...)
+Flyttet ut av App.tsx:
 
-This keeps the UI action handler simple while centralizing zoom logic.
+ownerOptions / ownerColorMap
 
-Current Structure of App.tsx
+progressCalendar (workWeekDays + non-working dates fra calendar entries)
 
-After the changes made so far, App.tsx is primarily responsible for:
+deps (dependency compute)
 
-Application State
+visibleColumnsPatched (owner som select + options)
 
-rows
+printColumnsPatched (sørger for start/end også når skjult)
 
-columns
+headerInfo (tekstlinja over tabell/gantt)
 
-selection
+App.tsx bruker nå:
 
-gantt zoom state
+const {
+  ownerColorMap,
+  progressCalendar,
+  deps,
+  visibleColumnsPatched,
+  printColumnsPatched,
+  headerInfo,
+} = useProgressViewModel({ ... });
+6) Row editing (onRowsChange + onCellCommit + popovers) flyttet ut
 
-project metadata
+Modul: src/progress/app/useProgressRowEditing.ts
 
-calendar entries
+Flyttet ut av App.tsx:
 
-modal visibility
+onRowsChange (recomputeAllRows + freeze)
 
-UI Rendering
+onCellCommit (helgevarsel + duration popover)
 
-TableCore
+state + refs for DurPopover og WeekendPopover
 
-GanttView
+apply/cancel logic for weekend justering
 
-toolbars
+apply/close logic for duration justering
 
-modals
+“lastPointer” tracking (for popover-posisjon)
 
-popovers
+App.tsx bruker nå:
 
-Event Wiring
+const {
+  durPop,
+  weekendPop,
+  onRowsChange,
+  onCellCommit,
+  applyWeekendChoice,
+  cancelWeekendAdjust,
+  applyDurationChoice,
+  closeDurationPopover,
+} = useProgressRowEditing({ ... });
 
-table change handlers
+Dette er en av de viktigste vedlikeholdsvinnene, fordi dette er typisk logikk vi endrer ofte.
 
-gantt actions
+7) Actions/kommando-routing flyttet ut
 
-modal triggers
+Modul: src/progress/app/useProgressActions.ts
 
-Heavy domain logic has begun to move into hooks.
+Flyttet ut av App.tsx:
 
-What Was Intentionally NOT Moved (Yet)
+handleGanttAction
 
-The following logic is still in App.tsx and may be refactored later:
+handleCalendarAction
 
-Row editing logic
-onCellCommit
-weekend warnings
-duration adjustments
+handleProjectAction
 
-These interact deeply with the table model and were left in place to avoid introducing regressions.
+handleTableAction
 
-Row recomputation
-recomputeAllRows
+App.tsx gir hooken “primitive handlers” og state-settere (som setProjectOpen, setColMgrOpen, onRowsChange, handleGanttZoomDelta, osv.) og hooken gjør switch/case mapping.
 
-Still triggered directly from App.tsx.
+App.tsx bruker nå:
 
-Next Possible Refactor Steps
+const {
+  handleGanttAction,
+  handleCalendarAction,
+  handleProjectAction,
+  handleTableAction,
+} = useProgressActions({ ... });
+8) Gantt UI settings (zoom + toggles + farge) flyttet ut
 
-Future refactoring could further extract:
+Ny modul: src/progress/app/useGanttUiSettings.ts
 
-1. Row Editing Logic
+Flyttet ut av App.tsx:
 
-Possible hook:
+ganttZoomLevels + ganttZoomIdx
 
-useProgressRowEditing.ts
+ganttPxPerDay (derived fra zoom)
 
-Would contain:
+ganttWeekendShade
 
-onCellCommit
+ganttTodayLine
 
-weekend adjustment logic
+ganttShowBarText
 
-duration adjustment logic
+ganttDefaultBarColor
 
-This is a larger move and should be done carefully.
+localStorage persist for alt over
 
-2. Render Layout Extraction
+App.tsx bruker nå:
 
-The JSX render structure could be extracted to:
+const {
+  ganttZoomLevels,
+  ganttZoomIdx,
+  setGanttZoomIdx,
+  ganttPxPerDay,
+  ganttWeekendShade,
+  setGanttWeekendShade,
+  ganttTodayLine,
+  setGanttTodayLine,
+  ganttShowBarText,
+  setGanttShowBarText,
+  ganttDefaultBarColor,
+  setGanttDefaultBarColor,
+} = useGanttUiSettings();
 
-AppLayout.tsx
+Dette er perfekt å ha isolert, fordi Gantt UI er et område vi kommer til å tweake.
 
-This would isolate the visual layout from the application logic.
+Nåværende “hvor bor hva” (kart)
+App.tsx eier nå:
 
-3. Gantt Behaviour
+“top-level state” som trenger å være i App (rows, selection, modals)
 
-Zoom / scroll behaviour could eventually move into:
+hook-wiring (kobler hooks sammen)
 
-useGanttController.ts
+JSX layout (rendering av TableCore/GanttView/modaler)
 
-But this is optional.
+noen få små wrapper callbacks (f.eks. openFreeProject, startNewBlankProject)
 
-Important Design Principles For This Project
+Hooks/Moduler eier:
+Ansvar	Fil
+Project IO + snapshots + file actions + zoom helpers	src/progress/app/useProgressProjectIO.ts
+Date picker popover state	src/progress/app/useDatePickerPopover.ts
+Split-pane (drag + keyboard + persist)	src/progress/app/useSplitPane.ts
+ViewModel / derived data (calendar, deps, owner, patched columns, headerInfo)	src/progress/app/useProgressViewModel.ts
+Row editing (commit, warnings, popovers, recompute flow)	src/progress/app/useProgressRowEditing.ts
+Action routing (switch/case for toolbar actions)	src/progress/app/useProgressActions.ts
+Gantt UI settings + persist	src/progress/app/useGanttUiSettings.ts
+Prinsipper vi fulgte (viktig)
 
-This refactor follows the existing project rules:
+AppShell er “read-only”: ingen Progress-spesifikk logikk inn i AppShell
 
-AppShell is read-only
+TableCore holdes “hellig”: ingen domene-logikk der
 
-No app-specific logic is added to:
+Domene/semantikk ligger i app-laget (progress/*)
 
-Header
-Toolbar
-TableCore
-App owns semantics
+Løsningen skal være kjedelig, tydelig og robust
 
-All domain logic stays inside the Progress app layer.
+Små, verifiserbare steg: alltid grønn build mellom steg
 
-Keep solutions boring
+Hvorfor dette er lettere å jobbe med nå
 
-The goal is not clever architecture, but:
+App.tsx kan leses som en “oppskrift”:
 
-maintainability
+init state → derived viewmodel → handlers → render
 
-clarity
+Om du skal endre “owner”-flyt: gå til useProgressViewModel
 
-safe iteration
+Om du skal endre helgevarsel/duration: gå til useProgressRowEditing
 
-Summary
+Om du skal endre split-behaviour: gå til useSplitPane
 
-This refactor began the process of breaking down a large App.tsx into smaller logical units.
+Om du skal endre zoom/toggles/farge: gå til useGanttUiSettings
 
-So far the following responsibilities have been separated:
+Om du skal endre hva en knapp gjør: gå til useProgressActions
 
-Responsibility	Location
-Project IO / Cloud	useProgressProjectIO
-DatePicker UI State	useDatePickerPopover
-Main application orchestration	App.tsx
+Neste mulige steg (men vi stoppet her nå)
 
-Further extractions are possible but should be done gradually to avoid introducing instability.
+Dette er “nice to have”, ikke nødvendig nå:
+
+samle table column reorder/width persist i egen hook (hvis du vil)
+
+vurdere å dele JSX i “AppLayout.tsx” kun hvis App.tsx blir for stor igjen
+
+Oppsummering
+
+Vi startet med en App.tsx som var vanskelig å navigere og vedlikeholde.
+
+Vi har nå en struktur der de mest endringsutsatte delene er flyttet ut i egne, tydelig navngitte hooks:
+
+Project IO
+
+Date picker state
+
+Split-pane
+
+ViewModel / derived data
+
+Row editing
+
+Actions
+
+Gantt UI settings
+
+App.tsx er igjen et sted du kan finne frem i uten å bli svimmel, og endringer skjer i riktig “bolk” uten at alt blir blandet sammen.
