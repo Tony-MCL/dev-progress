@@ -30,6 +30,7 @@ import { useDatePickerPopover } from "./progress/app/useDatePickerPopover";
 import CalendarModal, { type CalendarEntry } from "./progress/CalendarModal";
 import ProjectModal, { type ProjectInfo } from "./progress/ProjectModal";
 import { useProgressProjectIO } from "./progress/app/useProgressProjectIO";
+import { useProgressRowEditing } from "./progress/app/useProgressRowEditing";
 import CloudProjectLibraryModal from "./progress/CloudProjectLibraryModal";
 import ProjectLibraryModal from "./progress/ProjectLibraryModal";
 import { useAuthUser } from "./auth/useAuthUser";
@@ -64,8 +65,6 @@ import {
   computeDependencies,
   defaultCalendar,
   formatDMY,
-  parseDMYLoose,
-  addWorkdays,
 } from "./progress/ProgressCore";
 
 import AppDatePickerPopover, {
@@ -76,7 +75,6 @@ import { safeParseJSON, downloadTextFile, pickTextFile } from "./core/utils/file
 import { useBottomHScrollVar } from "./core/utils/useBottomHScrollVar";
 import {
   addDays,
-  startOfDay,
   addMonths,
   diffDays,
   getProjectSpanFromRows,
@@ -87,8 +85,6 @@ import { recomputeAllRows } from "./progress/autoSchedule";
 import {
   DurationAdjustPopover,
   WeekendAdjustPopover,
-  type DurPopoverState,
-  type WeekendPopoverState,
 } from "./progress/AdjustPopovers";
 
 import { parseClipboard, toTSV } from "./core/utils/clipboard";
@@ -114,18 +110,18 @@ export default function App() {
   // AUTH + API BASE
   // ============================
   const auth = useAuthUser();
-  
+
   // TS-guard: useAuthUser typing can end up as "never" in some builds.
   // Normalize uid/email safely without changing runtime behavior.
   const authUserObj = (auth as any)?.user as { uid?: string; email?: string } | null;
   const authUid = authUserObj?.uid ?? null;
   const authEmail = authUserObj?.email ?? null;
-  
+
   const apiBase = useMemo(() => {
     const raw = String(import.meta.env.VITE_PROGRESS_API_BASE || "").trim();
     return raw ? raw.replace(/\/+$/g, "") : "";
   }, []);
-  
+
   const org = useOrgContext(authUid, auth.getIdToken);
 
   // ============================
@@ -478,7 +474,7 @@ export default function App() {
   useEffect(() => {
     lsWriteString(PROGRESS_KEYS.ganttDefaultBarColor, ganttDefaultBarColor);
   }, [ganttDefaultBarColor]);
-  
+
   const ganttPxPerDay = ganttZoomLevels[ganttZoomIdx] ?? 24;
 
   const [visibleRowIds, setVisibleRowIds] = useState<string[] | undefined>(
@@ -675,190 +671,30 @@ export default function App() {
   // ============================
 
   // ============================
-  // BLOCK: DURATION + WEEKEND FLOW (START)
+  // BLOCK: ROW_EDITING (START)
   // ============================
-  const [durPop, setDurPop] = useState<DurPopoverState | null>(null);
-  const durPopRef = useRef<DurPopoverState | null>(null);
-  useEffect(() => {
-    durPopRef.current = durPop;
-  }, [durPop]);
-
-  const [weekendPop, setWeekendPop] = useState<WeekendPopoverState | null>(null);
-  const weekendPopRef = useRef<WeekendPopoverState | null>(null);
-  useEffect(() => {
-    weekendPopRef.current = weekendPop;
-  }, [weekendPop]);
-
-  const lastPointerRef = useRef<{ x: number; y: number }>({ x: 24, y: 24 });
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      lastPointerRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
-  }, []);
-
-  const isClosedWeekendDate = (d: Date) => {
-    const day = d.getDay();
-    const isWeekend = day === 0 || day === 6;
-    if (!isWeekend) return false;
-
-    // Trigger kun hvis denne helgedagen faktisk er stengt i prosjektets kalender
-    return !progressCalendar.workWeekdays.has(day);
-  };
-
-  const onRowsChange = (next: RowData[]) => {
-    const freeze = durPopRef.current?.row ?? weekendPopRef.current?.row ?? null;
-    const computed = recomputeAllRows(next, progressCalendar, freeze);
-    setRows(computed);
-  };
-
-  const onCellCommit = (evt: any) => {
-    if (!evt) return;
-
-    // weekend warning for start/end
-    if (evt.columnKey === "start" || evt.columnKey === "end") {
-      const rowIndex: number = evt.row;
-      const r = rows[rowIndex];
-      if (!r) return;
-
-      const rawNext = evt.next;
-      const parsed = parseDMYLoose(String(rawNext ?? ""));
-      if (!parsed) return;
-
-      if (isClosedWeekendDate(parsed)) {
-        const p = lastPointerRef.current;
-        setWeekendPop({
-          row: rowIndex,
-          columnKey: evt.columnKey,
-          prevValue: evt.prev,
-          rawNextValue: rawNext,
-          parsedDate: parsed,
-          x: p.x,
-          y: p.y,
-        });
-        return;
-      }
-    }
-
-    // duration popover
-    if (evt.columnKey !== "dur") return;
-
-    const rowIndex: number = evt.row;
-    const newDur = Number(evt.next);
-    if (!Number.isFinite(newDur) || newDur <= 0) return;
-
-    const r = rows[rowIndex];
-    if (!r) return;
-
-    const s = parseDMYLoose(String((r as any).cells.start ?? ""));
-    const e = parseDMYLoose(String((r as any).cells.end ?? ""));
-    if (!s || !e) return;
-
-    const p = lastPointerRef.current;
-    setDurPop({
-      row: rowIndex,
-      newDur: Math.round(newDur),
-      x: p.x,
-      y: p.y,
-    });
-  };
-
-  const applyWeekendChoice = (choice: "prevWorkday" | "nextWorkday") => {
-    const p = weekendPopRef.current;
-    if (!p) return;
-
-    const idx = p.row;
-    const key = p.columnKey;
-
-    const base = startOfDay(p.parsedDate);
-    const adjusted =
-      choice === "prevWorkday"
-        ? addWorkdays(base, -1, progressCalendar)
-        : addWorkdays(base, +1, progressCalendar);
-
-    const next = rows.map((rr, i) =>
-      i === idx ? { ...rr, cells: { ...(rr as any).cells } } : rr
-    );
-
-    (next[idx] as any).cells[key] = formatDMY(adjusted);
-
-    const computed = recomputeAllRows(next, progressCalendar, null);
-    setWeekendPop(null);
-    setRows(computed);
-  };
-
-  const cancelWeekendAdjust = () => {
-    const p = weekendPopRef.current;
-    if (!p) {
-      setWeekendPop(null);
-      return;
-    }
-
-    const idx = p.row;
-    const key = p.columnKey;
-
-    const next = rows.map((rr, i) =>
-      i === idx ? { ...rr, cells: { ...(rr as any).cells } } : rr
-    );
-
-    (next[idx] as any).cells[key] = p.prevValue ?? "";
-
-    const computed = recomputeAllRows(next, progressCalendar, null);
-    setWeekendPop(null);
-    setRows(computed);
-  };
-
-  const applyDurationChoice = (choice: "moveStart" | "moveEnd") => {
-    const p = durPopRef.current;
-    if (!p) return;
-
-    const idx = p.row;
-    const newDur = p.newDur;
-
-    const cur = rows[idx] as any;
-    if (!cur) {
-      setDurPop(null);
-      return;
-    }
-
-    const s = parseDMYLoose(String(cur?.cells?.start ?? ""));
-    const e = parseDMYLoose(String(cur?.cells?.end ?? ""));
-    if (!s || !e) {
-      setDurPop(null);
-      return;
-    }
-
-    const next = rows.map((rr, i) =>
-      i === idx ? { ...rr, cells: { ...(rr as any).cells } } : rr
-    ) as any[];
-
-    if (choice === "moveEnd") {
-      const newEnd = addWorkdays(s, newDur - 1, progressCalendar);
-      next[idx].cells.end = formatDMY(newEnd);
-      next[idx].cells.dur = newDur;
-    } else {
-      const newStart = addWorkdays(e, -(newDur - 1), progressCalendar);
-      next[idx].cells.start = formatDMY(newStart);
-      next[idx].cells.dur = newDur;
-    }
-
-    const computed = recomputeAllRows(next as any, progressCalendar, null);
-    setDurPop(null);
-    setRows(computed);
-  };
-
-  const closeDurationPopover = () => {
-    setDurPop(null);
-    setRows((prev) => recomputeAllRows(prev, progressCalendar, null));
-  };
+  const {
+    durPop,
+    weekendPop,
+    onRowsChange,
+    onCellCommit,
+    applyWeekendChoice,
+    cancelWeekendAdjust,
+    applyDurationChoice,
+    closeDurationPopover,
+  } = useProgressRowEditing({
+    rows,
+    setRows,
+    progressCalendar,
+  });
   // ============================
-  // BLOCK: DURATION + WEEKEND FLOW (END)
+  // BLOCK: ROW_EDITING (END)
   // ============================
+
   const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
     useDatePickerPopover();
-  
-    const {
+
+  const {
     buildSnapshot,
     applySnapshot,
     saveToCloudProOnly,
@@ -933,45 +769,46 @@ export default function App() {
     ganttPxPerDay,
   });
 
-const handleGanttAction = (action: any) => {
-  const a =
-    typeof action === "string"
-      ? action
-      : typeof action === "object" && action
-      ? String(
-          (action as any).id ??
-            (action as any).action ??
-            (action as any).key ??
-            ""
-        )
-      : "";
+  const handleGanttAction = (action: any) => {
+    const a =
+      typeof action === "string"
+        ? action
+        : typeof action === "object" && action
+        ? String(
+            (action as any).id ??
+              (action as any).action ??
+              (action as any).key ??
+              ""
+          )
+        : "";
 
-  switch (a) {
-    case "zoomIn":
-      handleGanttZoomDelta(+1, null);
-      return;
+    switch (a) {
+      case "zoomIn":
+        handleGanttZoomDelta(+1, null);
+        return;
 
-    case "zoomOut":
-      handleGanttZoomDelta(-1, null);
-      return;
+      case "zoomOut":
+        handleGanttZoomDelta(-1, null);
+        return;
 
-    case "zoomReset":
-      resetGanttZoom();
-      return;
+      case "zoomReset":
+        resetGanttZoom();
+        return;
 
-    case "toggleWeekend":
-      setGanttWeekendShade((v) => !v);
-      return;
+      case "toggleWeekend":
+        setGanttWeekendShade((v) => !v);
+        return;
 
-    case "toggleTodayLine":
-      setGanttTodayLine((v) => !v);
-      return;
+      case "toggleTodayLine":
+        setGanttTodayLine((v) => !v);
+        return;
 
-    default:
-      console.warn("[Progress] Unknown gantt action:", a, action);
-      return;
-  }
-};
+      default:
+        console.warn("[Progress] Unknown gantt action:", a, action);
+        return;
+    }
+  };
+
   const handleCalendarAction = (action: any) => {
     const a =
       typeof action === "string"
@@ -1012,18 +849,18 @@ const handleGanttAction = (action: any) => {
       case "projectManage":
         setProjectOpen(true);
         return;
-    
+
       // ✅ NY: "Åpne prosjekt" knappen
       case "openProject": {
         const plan = String(org.activePlan ?? "free");
         const isPro = plan === "pro" || plan === "trial";
-    
+
         if (isPro) {
           // Pro/Trial: åpner prosjektlisten (IndexedDB nå, Firestore senere)
           setProjectLibraryOpen(true);
           return;
         }
-    
+
         // Free: åpner sitt ene arbeidsprosjekt fra localStorage
         try {
           const raw = lsReadString(PROGRESS_KEYS.freeProjectSnapshotV1, null);
@@ -1033,13 +870,13 @@ const handleGanttAction = (action: any) => {
             return;
           }
         } catch {}
-    
+
         // Hvis Free ikke har noe lagret ennå: start blankt
         requestGanttFocus();
         setRows(buildBlankRows(120));
         return;
       }
-    
+
       default:
         console.warn("[Progress] Unknown project action:", a, action);
         return;
@@ -1131,13 +968,10 @@ const handleGanttAction = (action: any) => {
             onGanttAction={handleGanttAction}
             onCalendarAction={handleCalendarAction}
             onProjectAction={handleProjectAction}
-
             workWeekDays={projectInfo.workWeekDays}
             onSetWorkWeekDays={(next) => setProjectInfo((p) => ({ ...p, workWeekDays: next }))}
-
             ganttShowBarText={ganttShowBarText}
             onSetGanttShowBarText={setGanttShowBarText}
-
             ganttDefaultBarColor={ganttDefaultBarColor}
             onSetGanttDefaultBarColor={setGanttDefaultBarColor}
           />
@@ -1172,23 +1006,23 @@ const handleGanttAction = (action: any) => {
                           headerInfoText={headerInfo}
                           onVisibleRowIdsChange={setVisibleRowIds}
                           onSelectionChange={setSelection}
-                      
+
                           // ✅ NY: Oppdater prosjektets kolonnebredder når brukeren resizer/flytter kolonner
                           onColumnsChange={(nextCols: ColumnDef[]) => {
                             setAppColumns((prev) => {
                               // nextCols kommer fra TableCore (typisk "synlige kolonner") og har korrekt rekkefølge + ev. nye widths
                               const nextByKey = new Map(nextCols.map((c) => [c.key, c]));
                               const nextKeys = nextCols.map((c) => c.key);
-                          
+
                               const prevByKey = new Map(prev.map((c) => [c.key, c]));
-                          
+
                               // 1) Bygg ny rekkefølge basert på nextCols (dvs. drag/drop-rekkefølgen)
                               const reorderedVisible = nextKeys
                                 .map((key) => {
                                   const prevCol = prevByKey.get(key);
                                   const nextCol = nextByKey.get(key);
                                   if (!prevCol || !nextCol) return null;
-                          
+
                                   // behold alle app-eide properties, men ta med width fra TableCore når den finnes
                                   return {
                                     ...prevCol,
@@ -1196,11 +1030,11 @@ const handleGanttAction = (action: any) => {
                                   } as ColumnDef;
                                 })
                                 .filter(Boolean) as ColumnDef[];
-                          
+
                               // 2) Behold kolonner som ikke var i nextCols (typisk skjulte), uten å miste dem
                               const seen = new Set(nextKeys);
                               const untouched = prev.filter((c) => !seen.has(c.key));
-                          
+
                               return [...reorderedVisible, ...untouched];
                             });
                           }}
@@ -1305,9 +1139,9 @@ const handleGanttAction = (action: any) => {
         nextText={t("app.weekendPopover.nextWorkday")}
         cancelText={t("app.weekendPopover.cancel")}
       />
-      
+
       <AppDatePickerPopover req={datePickReq as any} onRequestClose={closeDatePickerUI} />
-      
+
       <ColumnManagerModal
         open={colMgrOpen}
         columns={appColumns}
@@ -1377,7 +1211,7 @@ const handleGanttAction = (action: any) => {
           logoSrc={undefined}
           showWatermark={!isPaid}
           watermarkSvgSrc={watermarkUrl}
-          defaultBarColor={ganttDefaultBarColor} 
+          defaultBarColor={ganttDefaultBarColor}
           onClose={() => setPrint2Open(false)}
         />
       ) : null}
@@ -1392,7 +1226,7 @@ const handleGanttAction = (action: any) => {
           >
             {t("app.footer.copyright")}
           </a>
-      
+
           <span className="app-footer-links">
             <a
               href={`${LINKS.mcl}/#brukervilkar`}
@@ -1401,9 +1235,9 @@ const handleGanttAction = (action: any) => {
             >
               {t("app.footer.terms")}
             </a>
-      
+
             <span className="app-footer-separator">•</span>
-      
+
             <a
               href={`${LINKS.mcl}/#personvern`}
               target="_blank"
@@ -1412,7 +1246,7 @@ const handleGanttAction = (action: any) => {
               {t("app.footer.privacy")}
             </a>
           </span>
-      
+
           <span className="app-footer-icon" aria-hidden="true">
             ☕
           </span>
