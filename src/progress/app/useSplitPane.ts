@@ -7,7 +7,7 @@ import { lsReadNumber, lsWriteNumber } from "../../storage/localSettings";
 import { clamp01to100 } from "../ganttDateUtils";
 
 type Result = {
-  splitGridRef: React.RefObject<HTMLDivElement | null>;
+  splitGridRef: React.RefObject<HTMLDivElement>;
   splitLeft: number;
   setSplitLeft: React.Dispatch<React.SetStateAction<number>>;
   onDividerPointerDown: React.PointerEventHandler<HTMLDivElement>;
@@ -15,7 +15,9 @@ type Result = {
 };
 
 export function useSplitPane(): Result {
-  const splitGridRef = useRef<HTMLDivElement | null>(null);
+  // Typen må være RefObject<HTMLDivElement> for å passe direkte på ref={...}
+  // (selv om current i praksis kan være null før mount).
+  const splitGridRef = useRef<HTMLDivElement>(null as any);
 
   const [splitLeft, setSplitLeft] = useState<number>(() => {
     return clamp01to100(lsReadNumber(PROGRESS_KEYS.splitLeft, 50));
@@ -26,8 +28,9 @@ export function useSplitPane(): Result {
   }, [splitLeft]);
 
   const setFromClientX = (clientX: number) => {
-    const grid = splitGridRef.current;
+    const grid = splitGridRef.current as HTMLDivElement | null;
     if (!grid) return;
+
     const r = grid.getBoundingClientRect();
     const w = Math.max(1, r.width);
     const x = clientX - r.left;
