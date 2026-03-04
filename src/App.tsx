@@ -11,12 +11,7 @@ import React, {
   useCallback,
 } from "react";
 import TableCore from "./core/TableCore";
-import type {
-  ColumnDef,
-  RowData,
-  Selection,
-  TableCoreDatePreview,
-} from "./core/TableTypes";
+import type { ColumnDef, RowData, Selection } from "./core/TableTypes";
 
 import Header from "./components/Header";
 import HelpPanel from "./components/HelpPanel";
@@ -32,6 +27,7 @@ import ProjectModal, { type ProjectInfo } from "./progress/ProjectModal";
 import { useProgressProjectIO } from "./progress/app/useProgressProjectIO";
 import { useProgressRowEditing } from "./progress/app/useProgressRowEditing";
 import { useProgressViewModel } from "./progress/app/useProgressViewModel";
+import { useProgressActions } from "./progress/app/useProgressActions";
 import CloudProjectLibraryModal from "./progress/CloudProjectLibraryModal";
 import ProjectLibraryModal from "./progress/ProjectLibraryModal";
 import { useAuthUser } from "./auth/useAuthUser";
@@ -54,25 +50,15 @@ import {
   ensureAtLeastTitleVisible,
   applyColumnsToRows,
   addCustomColumn,
-  addRowAtEnd,
-  addRowBelowSelection,
-  deleteSelectedRows,
 } from "./progress/tableCommands";
 
-import {
-  computeDerivedRows,
-  defaultCalendar,
-} from "./progress/ProgressCore";
+import { computeDerivedRows, defaultCalendar } from "./progress/ProgressCore";
 
-import AppDatePickerPopover, {
-  type DatePickerRequest,
-} from "./progress/AppDatePickerPopover";
+import AppDatePickerPopover from "./progress/AppDatePickerPopover";
 
 import { safeParseJSON } from "./core/utils/fileIO";
 import { useBottomHScrollVar } from "./core/utils/useBottomHScrollVar";
-import {
-  clamp01to100,
-} from "./progress/ganttDateUtils";
+import { clamp01to100 } from "./progress/ganttDateUtils";
 import { recomputeAllRows } from "./progress/autoSchedule";
 import {
   DurationAdjustPopover,
@@ -133,8 +119,6 @@ export default function App() {
         body: JSON.stringify({ product: "progress" }),
       });
 
-      // 409/400 kan være "already started" / "already has trial" osv.
-      // Vi prøver likevel å lese JSON hvis den finnes.
       let data: any = null;
       try {
         data = await r.json();
@@ -145,7 +129,6 @@ export default function App() {
       if (r.ok) return data;
 
       if (r.status === 409 || r.status === 400) {
-        // best effort – backend kan sende nyttig payload her også
         return data;
       }
 
@@ -159,21 +142,16 @@ export default function App() {
 
   const registerAndStartTrial = useCallback(
     async (email: string, password: string) => {
-      // 1) register in Firebase Auth
       await auth.register(email, password);
 
-      // 2) get token (force)
       const token = await auth.getIdToken(true);
       if (!token) throw new Error("No auth token after registration");
 
-      // 3) start trial via Worker (writes to Firestore)
       const started = await startTrialOnBackend(token);
 
-      // 4) optimistic UI (instant "trial" pill) — best effort
       const uidFromStart = String(started?.uid || authUid || "").trim();
       if (uidFromStart) setOptimisticPlan(uidFromStart, "trial");
 
-      // 5) force refresh so verify picks it up and caches it
       await org.refresh({ force: true });
 
       return true;
@@ -188,8 +166,6 @@ export default function App() {
     if (!auth.ready) return;
     if (!authUid) return;
 
-    // Force refresh plan whenever user becomes available (login/register),
-    // so the header pill updates without manual page refresh.
     void Promise.resolve(
       (org as any).refresh?.({ force: true }) ?? (org as any).refresh?.()
     );
@@ -602,168 +578,57 @@ export default function App() {
     ganttPxPerDay,
   });
 
-  const handleGanttAction = (action: any) => {
-    const a =
-      typeof action === "string"
-        ? action
-        : typeof action === "object" && action
-        ? String(
-            (action as any).id ??
-              (action as any).action ??
-              (action as any).key ??
-              ""
-          )
-        : "";
-
-    switch (a) {
-      case "zoomIn":
-        handleGanttZoomDelta(+1, null);
-        return;
-
-      case "zoomOut":
-        handleGanttZoomDelta(-1, null);
-        return;
-
-      case "zoomReset":
-        resetGanttZoom();
-        return;
-
-      case "toggleWeekend":
-        setGanttWeekendShade((v) => !v);
-        return;
-
-      case "toggleTodayLine":
-        setGanttTodayLine((v) => !v);
-        return;
-
-      default:
-        console.warn("[Progress] Unknown gantt action:", a, action);
-        return;
-    }
-  };
-
-  const handleCalendarAction = (action: any) => {
-    const a =
-      typeof action === "string"
-        ? action
-        : typeof action === "object" && action
-        ? String(
-            (action as any).id ??
-              (action as any).action ??
-              (action as any).key ??
-              ""
-          )
-        : "";
-
-    switch (a) {
-      case "calendarManage":
-        setCalendarOpen(true);
-        return;
-      default:
-        console.warn("[Progress] Unknown calendar action:", a, action);
-        return;
-    }
-  };
-
-  const handleProjectAction = (action: any) => {
-    const a =
-      typeof action === "string"
-        ? action
-        : typeof action === "object" && action
-        ? String(
-            (action as any).id ??
-              (action as any).action ??
-              (action as any).key ??
-              ""
-          )
-        : "";
-
-    switch (a) {
-      case "projectManage":
-        setProjectOpen(true);
-        return;
-
-      // ✅ NY: "Åpne prosjekt" knappen
-      case "openProject": {
-        const plan = String(org.activePlan ?? "free");
-        const isPro = plan === "pro" || plan === "trial";
-
-        if (isPro) {
-          // Pro/Trial: åpner prosjektlisten (IndexedDB nå, Firestore senere)
-          setProjectLibraryOpen(true);
-          return;
-        }
-
-        // Free: åpner sitt ene arbeidsprosjekt fra localStorage
-        try {
-          const raw = lsReadString(PROGRESS_KEYS.freeProjectSnapshotV1, null);
-          const snap = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
-          if (snap && (snap as any).v === 1) {
-            applySnapshot(snap);
-            return;
-          }
-        } catch {}
-
-        // Hvis Free ikke har noe lagret ennå: start blankt
-        requestGanttFocus();
-        setRows(buildBlankRows(120));
-        return;
+  // ============================
+  // BLOCK: ACTIONS (START)
+  // ============================
+  const openFreeProject = useCallback(() => {
+    try {
+      const raw = lsReadString(PROGRESS_KEYS.freeProjectSnapshotV1, null);
+      const snap = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
+      if (snap && (snap as any).v === 1) {
+        applySnapshot(snap);
+        return true;
       }
+    } catch {}
+    return false;
+  }, [applySnapshot]);
 
-      default:
-        console.warn("[Progress] Unknown project action:", a, action);
-        return;
-    }
-  };
+  const startNewBlankProject = useCallback(() => {
+    requestGanttFocus();
+    setRows(buildBlankRows(120));
+  }, [requestGanttFocus, setRows]);
 
-  const handleTableAction = (action: any) => {
-    const a =
-      typeof action === "string"
-        ? action
-        : typeof action === "object" && action
-        ? String(
-            (action as any).id ??
-              (action as any).action ??
-              (action as any).key ??
-              ""
-          )
-        : "";
+  const {
+    handleGanttAction,
+    handleCalendarAction,
+    handleProjectAction,
+    handleTableAction,
+  } = useProgressActions({
+    activePlan: org.activePlan,
 
-    switch (a) {
-      case "columnsManage": {
-        setColMgrOpen(true);
-        return;
-      }
+    rows,
+    selection,
+    appColumns,
+    setAppColumns,
 
-      case "addRowEnd": {
-        const nextCols = ensureAtLeastTitleVisible(appColumns);
-        const nextRows = addRowAtEnd(rows, nextCols, 120);
-        setAppColumns(nextCols);
-        onRowsChange(applyColumnsToRows(nextCols, nextRows));
-        return;
-      }
+    onRowsChange,
 
-      case "addRowBelow": {
-        const nextCols = ensureAtLeastTitleVisible(appColumns);
-        const nextRows = addRowBelowSelection(rows, nextCols, selection, 120);
-        setAppColumns(nextCols);
-        onRowsChange(applyColumnsToRows(nextCols, nextRows));
-        return;
-      }
+    handleGanttZoomDelta,
+    resetGanttZoom,
+    setGanttWeekendShade,
+    setGanttTodayLine,
 
-      case "deleteSelectedRows": {
-        const nextCols = ensureAtLeastTitleVisible(appColumns);
-        const nextRows = deleteSelectedRows(rows, nextCols, selection, 120);
-        setAppColumns(nextCols);
-        onRowsChange(applyColumnsToRows(nextCols, nextRows));
-        return;
-      }
+    setColMgrOpen,
+    setCalendarOpen,
+    setProjectOpen,
+    setProjectLibraryOpen,
 
-      default:
-        console.warn("[Progress] Unknown table action:", a, action);
-        return;
-    }
-  };
+    openFreeProject,
+    startNewBlankProject,
+  });
+  // ============================
+  // BLOCK: ACTIONS (END)
+  // ============================
 
   // ============================
   // BLOCK: JSX (START)
@@ -1011,7 +876,7 @@ export default function App() {
           currentId={currentCloudProjectId}
           onSetCurrentId={setCurrentCloudProjectId}
           onClose={() => setProjectLibraryOpen(false)}
-          onOpenProject={(rec) => {
+          onOpenProject={(rec: any) => {
             setCurrentProjectId(rec.id);
             applySnapshot(rec.snapshot);
           }}
@@ -1026,7 +891,7 @@ export default function App() {
           currentId={currentProjectId}
           onSetCurrentId={setCurrentProjectId}
           onClose={() => setProjectLibraryOpen(false)}
-          onOpenProject={(rec) => {
+          onOpenProject={(rec: any) => {
             setCurrentProjectId(rec.id);
             applySnapshot(rec.snapshot);
           }}
