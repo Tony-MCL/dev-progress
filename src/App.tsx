@@ -882,6 +882,7 @@ export default function App() {
 
     requestGanttFocus,
     handleGanttZoomDelta,
+    resetGanttZoom,
 
     handleFileAction,
   } = useProgressProjectIO({
@@ -949,49 +950,45 @@ export default function App() {
     ganttPxPerDay,
   });
 
-  const handleGanttAction = (action: any) => {
-    const a =
-      typeof action === "string"
-        ? action
-        : typeof action === "object" && action
-        ? String(
-            (action as any).id ??
-              (action as any).action ??
-              (action as any).key ??
-              ""
-          )
-        : "";
+const handleGanttAction = (action: any) => {
+  const a =
+    typeof action === "string"
+      ? action
+      : typeof action === "object" && action
+      ? String(
+          (action as any).id ??
+            (action as any).action ??
+            (action as any).key ??
+            ""
+        )
+      : "";
 
-    switch (a) {
-      case "zoomIn":
-        handleGanttZoomDelta(+1, null);
-        return;
-      case "zoomOut":
-        handleGanttZoomDelta(-1, null);
-        return;
-      case "zoomReset": {
-        const target = 11; // default (32px per day)
-        if (target === ganttZoomIdx) return;
-        pendingZoomRef.current = {
-          anchorDate: pickAnchorDate(rows),
-          anchorClientX: null,
-          targetZoomIdx: target,
-        };
-        setGanttZoomIdx(target);
-        return;
-      }
-      case "toggleWeekend":
-        setGanttWeekendShade((v) => !v);
-        return;
-      case "toggleTodayLine":
-        setGanttTodayLine((v) => !v);
-        return;
-      default:
-        console.warn("[Progress] Unknown gantt action:", a, action);
-        return;
-    }
-  };
+  switch (a) {
+    case "zoomIn":
+      handleGanttZoomDelta(+1, null);
+      return;
 
+    case "zoomOut":
+      handleGanttZoomDelta(-1, null);
+      return;
+
+    case "zoomReset":
+      resetGanttZoom();
+      return;
+
+    case "toggleWeekend":
+      setGanttWeekendShade((v) => !v);
+      return;
+
+    case "toggleTodayLine":
+      setGanttTodayLine((v) => !v);
+      return;
+
+    default:
+      console.warn("[Progress] Unknown gantt action:", a, action);
+      return;
+  }
+};
   const handleCalendarAction = (action: any) => {
     const a =
       typeof action === "string"
