@@ -31,6 +31,7 @@ import CalendarModal, { type CalendarEntry } from "./progress/CalendarModal";
 import ProjectModal, { type ProjectInfo } from "./progress/ProjectModal";
 import { useProgressProjectIO } from "./progress/app/useProgressProjectIO";
 import { useProgressRowEditing } from "./progress/app/useProgressRowEditing";
+import { useProgressViewModel } from "./progress/app/useProgressViewModel";
 import CloudProjectLibraryModal from "./progress/CloudProjectLibraryModal";
 import ProjectLibraryModal from "./progress/ProjectLibraryModal";
 import { useAuthUser } from "./auth/useAuthUser";
@@ -38,7 +39,6 @@ import { useOrgContext } from "./orgs/useOrgContext";
 import { setOptimisticPlan } from "./orgs/optimisticPlan";
 import { createIndexedDbProjectStore } from "./storage/indexedDbProjectStore";
 import type { ProgressProjectSnapshotV1 } from "./storage/projectDbTypes";
-import { saveProgressProjectToCloud } from "./cloud/cloudProjects";
 import { PROGRESS_KEYS } from "./storage/progressLocalKeys";
 import {
   lsReadString,
@@ -51,7 +51,6 @@ import {
 
 import {
   type AppColumnDef,
-  getVisibleColumns,
   ensureAtLeastTitleVisible,
   applyColumnsToRows,
   addCustomColumn,
@@ -62,23 +61,16 @@ import {
 
 import {
   computeDerivedRows,
-  computeDependencies,
   defaultCalendar,
-  formatDMY,
 } from "./progress/ProgressCore";
 
 import AppDatePickerPopover, {
   type DatePickerRequest,
 } from "./progress/AppDatePickerPopover";
 
-import { safeParseJSON, downloadTextFile, pickTextFile } from "./core/utils/fileIO";
+import { safeParseJSON } from "./core/utils/fileIO";
 import { useBottomHScrollVar } from "./core/utils/useBottomHScrollVar";
 import {
-  addDays,
-  addMonths,
-  diffDays,
-  getProjectSpanFromRows,
-  computeGanttMinForSpan,
   clamp01to100,
 } from "./progress/ganttDateUtils";
 import { recomputeAllRows } from "./progress/autoSchedule";
@@ -87,7 +79,6 @@ import {
   WeekendAdjustPopover,
 } from "./progress/AdjustPopovers";
 
-import { parseClipboard, toTSV } from "./core/utils/clipboard";
 import { useI18n } from "./i18n";
 import { LINKS } from "./config/links";
 
@@ -210,15 +201,6 @@ export default function App() {
 
   const { t } = useI18n();
 
-  // fallback helper (dersom key mangler i språkfila)
-  const tt = useCallback(
-    (key: string, fallback: string) => {
-      const v = t(key);
-      return v === key ? fallback : v;
-    },
-    [t]
-  );
-
   // ============================
   // BLOCK: COLUMNS (START)
   // ============================
@@ -259,7 +241,6 @@ export default function App() {
   // ============================
   // BLOCK: ROW_BUILDERS (START)
   // ============================
-
   function buildBlankRows(count: number): RowData[] {
     const rows: RowData[] = [];
     for (let i = 0; i < count; i++) {
@@ -337,99 +318,6 @@ export default function App() {
     lsWriteString("progress_currentCloudProjectId", currentCloudProjectId);
   }, [currentCloudProjectId]);
 
-  // owners => dropdown options
-  const ownerOptions = useMemo(() => {
-    const raw = (projectInfo as any)?.owners ?? [];
-    if (!Array.isArray(raw)) return [];
-    const names = raw
-      .map((x: any) => {
-        if (!x) return "";
-        if (typeof x === "string") return x.trim();
-        if (typeof x === "object") return String(x.name ?? "").trim();
-        return "";
-      })
-      .filter(Boolean);
-
-    const seen = new Set<string>();
-    const unique: string[] = [];
-    for (const n of names) {
-      if (seen.has(n)) continue;
-      seen.add(n);
-      unique.push(n);
-    }
-    return unique;
-  }, [projectInfo]);
-
-  // owner -> color map
-  const ownerColorMap = useMemo(() => {
-    const raw = (projectInfo as any)?.owners ?? [];
-    const map: Record<string, string> = {};
-    if (!Array.isArray(raw)) return map;
-
-    for (const x of raw) {
-      if (!x) continue;
-      if (typeof x === "object") {
-        const name = String((x as any).name ?? "").trim();
-        const color = String((x as any).color ?? "").trim();
-        if (name && color) map[name] = color;
-      }
-    }
-    return map;
-  }, [projectInfo]);
-
-  const progressCalendar = useMemo(() => {
-    const workWeekDays = (projectInfo as any)?.workWeekDays;
-    const workWeekdays =
-      workWeekDays === 7
-        ? new Set<number>([0, 1, 2, 3, 4, 5, 6])
-        : workWeekDays === 6
-        ? new Set<number>([1, 2, 3, 4, 5, 6])
-        : new Set<number>([1, 2, 3, 4, 5]);
-    const nonWorking = new Set<string>();
-
-    const addRange = (fromISO: string, toISO: string) => {
-      if (!fromISO) return;
-      const start = new Date(fromISO + "T00:00:00");
-      const end = new Date(toISO + "T00:00:00");
-      if (Number.isNaN(+start) || Number.isNaN(+end)) return;
-
-      const a = +start <= +end ? start : end;
-      const b = +start <= +end ? end : start;
-
-      const toKey = (d: Date) => {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, "0");
-        const dd = String(d.getDate()).padStart(2, "0");
-        return `${y}-${m}-${dd}`;
-      };
-
-      let d = new Date(a);
-      while (+d <= +b) {
-        nonWorking.add(toKey(d));
-        d.setDate(d.getDate() + 1);
-      }
-    };
-
-    for (const e of calendarEntries) {
-      addRange(e.from, e.to || e.from);
-    }
-
-    return {
-      ...defaultCalendar,
-      workWeekdays,
-      nonWorkingDates: nonWorking,
-    };
-  }, [calendarEntries, projectInfo]);
-
-  const deps = useMemo(() => {
-    return computeDependencies(rows, progressCalendar, {
-      wbsKey: "wbs",
-      depKey: "dep",
-      startKey: "start",
-      endKey: "end",
-    });
-  }, [rows, progressCalendar]);
-
   // GANTT view options (13 zoom trinn, styrt kun av pxPerDay. nivå 11: default/reset zoom)
   const ganttZoomLevels = [3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40] as const;
 
@@ -499,79 +387,6 @@ export default function App() {
 
   const [colMgrOpen, setColMgrOpen] = useState(false);
 
-  const visibleColumns = useMemo(
-    () => getVisibleColumns(appColumns),
-    [appColumns]
-  );
-
-  // owner -> select + options
-  const visibleColumnsPatched = useMemo(() => {
-    return visibleColumns.map((c) => {
-      if (c.key !== "owner") return c;
-      return {
-        ...(c as any),
-        type: "select",
-        options: ownerOptions,
-      } as any;
-    });
-  }, [visibleColumns, ownerOptions]);
-
-  // Print: Gantt trenger start/end i columns-lista for å bygge barer,
-  // selv om de er skjult i tabellen.
-  const printColumnsPatched = useMemo(() => {
-    const out = [...visibleColumnsPatched] as any[];
-
-    const hasStart =
-      out.some((c: any) => c?.key === "start") ||
-      out.some((c: any) => c?.dateRole === "start");
-    const hasEnd =
-      out.some((c: any) => c?.key === "end") ||
-      out.some((c: any) => c?.dateRole === "end");
-
-    // plukk original-definisjoner (med dateRole) fra base columns
-    const startDef = columns.find(
-      (c: any) => c?.key === "start" || c?.dateRole === "start"
-    );
-    const endDef = columns.find(
-      (c: any) => c?.key === "end" || c?.dateRole === "end"
-    );
-
-    if (!hasStart && startDef) out.push(startDef as any);
-    if (!hasEnd && endDef) out.push(endDef as any);
-
-    return out;
-  }, [visibleColumnsPatched, columns]);
-
-  const headerInfo = useMemo(() => {
-    const p = (projectInfo.projectName ?? "").trim();
-    const c = (projectInfo.customerName ?? "").trim();
-    const no = (projectInfo.projectNo ?? "").trim();
-
-    const baseISO = (projectInfo.baseStartISO ?? "").trim();
-    let basePretty = "";
-    if (baseISO) {
-      const d = new Date(baseISO + "T00:00:00");
-      if (!Number.isNaN(+d)) basePretty = formatDMY(d);
-    }
-
-    const parts: string[] = [];
-    const projLeft = [no, p].filter(Boolean).join(" , ");
-
-    if (projLeft) parts.push(`${t("app.header.project")}: ${projLeft}`);
-    if (c) parts.push(`${t("app.header.customer")}: ${c}`);
-    if (basePretty)
-      parts.push(`${t("app.header.projectStart")}: ${basePretty}`);
-
-    if (parts.length === 0) return t("app.header.fallback");
-    return parts.join(" • ");
-  }, [
-    projectInfo.projectName,
-    projectInfo.customerName,
-    projectInfo.projectNo,
-    projectInfo.baseStartISO,
-    t,
-  ]);
-
   const watermarkUrl = `${import.meta.env.BASE_URL}mcl-watermark.svg`;
 
   const tableHostRef = useRef<HTMLDivElement | null>(null);
@@ -585,6 +400,28 @@ export default function App() {
   const ganttSpacerRef = useRef<HTMLDivElement | null>(null);
   // ============================
   // BLOCK: APP_STATE (END)
+  // ============================
+
+  // ============================
+  // BLOCK: VIEW_MODEL (START)
+  // ============================
+  const {
+    ownerColorMap,
+    progressCalendar,
+    deps,
+    visibleColumnsPatched,
+    printColumnsPatched,
+    headerInfo,
+  } = useProgressViewModel({
+    t,
+    rows,
+    columns,
+    appColumns,
+    projectInfo,
+    calendarEntries,
+  });
+  // ============================
+  // BLOCK: VIEW_MODEL (END)
   // ============================
 
   // recompute when calendar changes
@@ -695,14 +532,10 @@ export default function App() {
     useDatePickerPopover();
 
   const {
-    buildSnapshot,
     applySnapshot,
-    saveToCloudProOnly,
-
     requestGanttFocus,
     handleGanttZoomDelta,
     resetGanttZoom,
-
     handleFileAction,
   } = useProgressProjectIO({
     apiBase,
@@ -969,7 +802,9 @@ export default function App() {
             onCalendarAction={handleCalendarAction}
             onProjectAction={handleProjectAction}
             workWeekDays={projectInfo.workWeekDays}
-            onSetWorkWeekDays={(next) => setProjectInfo((p) => ({ ...p, workWeekDays: next }))}
+            onSetWorkWeekDays={(next) =>
+              setProjectInfo((p) => ({ ...p, workWeekDays: next }))
+            }
             ganttShowBarText={ganttShowBarText}
             onSetGanttShowBarText={setGanttShowBarText}
             ganttDefaultBarColor={ganttDefaultBarColor}
@@ -1006,24 +841,21 @@ export default function App() {
                           headerInfoText={headerInfo}
                           onVisibleRowIdsChange={setVisibleRowIds}
                           onSelectionChange={setSelection}
-
-                          // ✅ NY: Oppdater prosjektets kolonnebredder når brukeren resizer/flytter kolonner
                           onColumnsChange={(nextCols: ColumnDef[]) => {
                             setAppColumns((prev) => {
-                              // nextCols kommer fra TableCore (typisk "synlige kolonner") og har korrekt rekkefølge + ev. nye widths
-                              const nextByKey = new Map(nextCols.map((c) => [c.key, c]));
+                              const nextByKey = new Map(
+                                nextCols.map((c) => [c.key, c])
+                              );
                               const nextKeys = nextCols.map((c) => c.key);
 
                               const prevByKey = new Map(prev.map((c) => [c.key, c]));
 
-                              // 1) Bygg ny rekkefølge basert på nextCols (dvs. drag/drop-rekkefølgen)
                               const reorderedVisible = nextKeys
                                 .map((key) => {
                                   const prevCol = prevByKey.get(key);
                                   const nextCol = nextByKey.get(key);
                                   if (!prevCol || !nextCol) return null;
 
-                                  // behold alle app-eide properties, men ta med width fra TableCore når den finnes
                                   return {
                                     ...prevCol,
                                     width: nextCol.width ?? prevCol.width,
@@ -1031,7 +863,6 @@ export default function App() {
                                 })
                                 .filter(Boolean) as ColumnDef[];
 
-                              // 2) Behold kolonner som ikke var i nextCols (typisk skjulte), uten å miste dem
                               const seen = new Set(nextKeys);
                               const untouched = prev.filter((c) => !seen.has(c.key));
 
@@ -1140,7 +971,10 @@ export default function App() {
         cancelText={t("app.weekendPopover.cancel")}
       />
 
-      <AppDatePickerPopover req={datePickReq as any} onRequestClose={closeDatePickerUI} />
+      <AppDatePickerPopover
+        req={datePickReq as any}
+        onRequestClose={closeDatePickerUI}
+      />
 
       <ColumnManagerModal
         open={colMgrOpen}
