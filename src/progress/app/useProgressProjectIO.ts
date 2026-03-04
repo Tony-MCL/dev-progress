@@ -57,8 +57,8 @@ export function useProgressProjectIO(args: {
   columns: ColumnDef[];
   buildBlankRows: (count: number) => RowData[];
 
-  // ✅ NOTE: App.tsx sender dette inn – vi aksepterer det her for grønn build
-  ganttZoomLevels?: number[];
+  // ✅ FIX: App.tsx sender readonly number[] (ofte "as const")
+  ganttZoomLevels?: readonly number[];
 
   // state
   rows: RowData[];
@@ -183,11 +183,11 @@ export function useProgressProjectIO(args: {
     onRowsChange,
   } = args;
 
-  // Zoom levels: hvis App.tsx leverer levels, bruk dem.
   const zoomLevels = useMemo(() => {
-    const arr = Array.isArray(ganttZoomLevels) && ganttZoomLevels.length > 0 ? ganttZoomLevels : null;
-    if (arr) return arr.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0);
-    // fallback (trygg default)
+    const arr =
+      Array.isArray(ganttZoomLevels) && ganttZoomLevels.length > 0 ? ganttZoomLevels : null;
+    if (arr) return Array.from(arr).map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0);
+
     return [8, 10, 12, 14, 16, 18, 22, 26, 32, 40, 52, 64];
   }, [ganttZoomLevels]);
 
@@ -203,7 +203,6 @@ export function useProgressProjectIO(args: {
   }, []);
 
   const buildSnapshot = useCallback((): ProgressProjectSnapshotV1 => {
-    // ProjectInfo/Calendar snapshot slik repoet ditt forventer (v1 + appColumns + calendar + ui)
     const cal = {
       workWeekDays: (projectInfo as any)?.workWeekDays ?? 5,
       entries: calendarEntries ?? [],
@@ -242,9 +241,6 @@ export function useProgressProjectIO(args: {
     splitLeft,
   ]);
 
-  // ------------------------------------------------------------
-  // Gantt focus / zoom
-  // ------------------------------------------------------------
   const ganttFocusTokenRef = useRef(0);
   const [ganttFocusToken, setGanttFocusToken] = useState(0);
 
@@ -264,8 +260,6 @@ export function useProgressProjectIO(args: {
       const hasProject = !!span?.min;
 
       const focusDate = hasProject ? startOfDayLocal(span.min as any) : today;
-
-      // Vi må ha en “ganttMin” å regne fra – her bruker vi min(datoer) hvis finnes, ellers today.
       const ganttMin = hasProject ? startOfDayLocal(span.min as any) : today;
 
       const focusPx = daysBetween(ganttMin, focusDate) * pxPerDay;
@@ -283,7 +277,6 @@ export function useProgressProjectIO(args: {
   );
 
   useEffect(() => {
-    // initial focus if empty project
     const hasAnyDates = rows.some((r) => {
       const c = (r as any)?.cells;
       return String(c?.start ?? "").trim() || String(c?.end ?? "").trim();
@@ -333,9 +326,6 @@ export function useProgressProjectIO(args: {
     setGanttZoomIdx(0);
   }, [setGanttZoomIdx]);
 
-  // ------------------------------------------------------------
-  // Snapshot apply
-  // ------------------------------------------------------------
   const applySnapshot = useCallback(
     (snap: ProgressProjectSnapshotV1) => {
       const anySnap: any = snap as any;
@@ -394,9 +384,6 @@ export function useProgressProjectIO(args: {
     ]
   );
 
-  // ------------------------------------------------------------
-  // New project
-  // ------------------------------------------------------------
   const openNewProjectInNewTab = useCallback(() => {
     try {
       const sp = new URLSearchParams(window.location.search);
@@ -446,34 +433,19 @@ export function useProgressProjectIO(args: {
     setSelection,
   ]);
 
-  // ------------------------------------------------------------
-  // Cloud save (Pro/Trial only)
-  // ------------------------------------------------------------
   const saveCloudAsNewProOnly = useCallback(
     async (titleOverride?: string) => {
       const plan = String(org.activePlan ?? "free");
       const isProOrTrial = plan === "pro" || plan === "trial";
       if (!isProOrTrial) return;
 
-      if (!apiBase) {
-        console.warn("[Progress][Cloud] Missing apiBase (VITE_PROGRESS_API_BASE)");
-        return;
-      }
-      if (!authUid) {
-        console.warn("[Progress][Cloud] No auth user");
-        return;
-      }
-      if (!org.activeOrgId) {
-        console.warn("[Progress][Cloud] No active orgId");
-        return;
-      }
+      if (!apiBase) return;
+      if (!authUid) return;
+      if (!org.activeOrgId) return;
 
       try {
         const token = await auth.getIdToken(false);
-        if (!token) {
-          console.warn("[Progress][Cloud] Missing auth token");
-          return;
-        }
+        if (!token) return;
 
         const snap = buildSnapshot();
         const title = String(titleOverride ?? "").trim() || fallbackCloudTitle((snap as any).title);
@@ -485,11 +457,10 @@ export function useProgressProjectIO(args: {
           uid: authUid,
           title,
           snapshot: snap,
-          projectId: null, // IMPORTANT: never overwrite
+          projectId: null,
         });
 
         setCurrentCloudProjectId(res.id);
-        console.log("[Progress][Cloud] Saved as new:", res.id);
       } catch (e) {
         console.warn("[Progress][Cloud] Save-as-new failed:", e);
       }
@@ -502,31 +473,14 @@ export function useProgressProjectIO(args: {
     const isProOrTrial = plan === "pro" || plan === "trial";
     if (!isProOrTrial) return;
 
-    if (!apiBase) {
-      console.warn("[Progress][Cloud] Missing apiBase (VITE_PROGRESS_API_BASE)");
-      return;
-    }
-    if (!authUid) {
-      console.warn("[Progress][Cloud] No auth user");
-      return;
-    }
-    if (!org.activeOrgId) {
-      console.warn("[Progress][Cloud] No active orgId");
-      return;
-    }
-
-    // SAFETY RULE: cannot update without an active cloud id
-    if (!currentCloudProjectId) {
-      console.warn("[Progress][Cloud] No active cloudProjectId; refusing cloud update.");
-      return;
-    }
+    if (!apiBase) return;
+    if (!authUid) return;
+    if (!org.activeOrgId) return;
+    if (!currentCloudProjectId) return;
 
     try {
       const token = await auth.getIdToken(false);
-      if (!token) {
-        console.warn("[Progress][Cloud] Missing auth token");
-        return;
-      }
+      if (!token) return;
 
       const snap = buildSnapshot();
 
@@ -541,7 +495,6 @@ export function useProgressProjectIO(args: {
       });
 
       setCurrentCloudProjectId(res.id);
-      console.log("[Progress][Cloud] Updated:", res.id);
     } catch (e) {
       console.warn("[Progress][Cloud] Update failed:", e);
     }
@@ -557,12 +510,8 @@ export function useProgressProjectIO(args: {
     setCurrentCloudProjectId,
   ]);
 
-  // Back-compat alias
   const saveToCloudProOnly = saveCloudUpdateProOnly;
 
-  // ------------------------------------------------------------
-  // TSV export/import
-  // ------------------------------------------------------------
   const exportTSV = useCallback(() => {
     const used = rows.filter((r) => String((r as any)?.cells?.title ?? "").trim().length > 0);
 
@@ -580,20 +529,14 @@ export function useProgressProjectIO(args: {
     }
 
     const text = toTSV(matrix);
-    const stamp = new Date();
-    const y = stamp.getFullYear();
-    const m = String(stamp.getMonth() + 1).padStart(2, "0");
-    const d = String(stamp.getDate()).padStart(2, "0");
-    downloadTextFile(`progress-plan-${y}${m}${d}.tsv`, "text/tab-separated-values", text);
+    downloadTextFile(`progress-plan.tsv`, "text/tab-separated-values", text);
   }, [rows, columns]);
 
   const importTSV = useCallback(async () => {
     const picked = await pickTextFile(".tsv,text/tab-separated-values,text/plain");
     if (!picked) return;
 
-    // ✅ Repoet ditt: parseClipboard() gir string[][] (ikke {rows: ...})
     const rowsMatrix = parseClipboard(picked.text) as unknown as string[][];
-
     if (!Array.isArray(rowsMatrix) || rowsMatrix.length < 2) return;
 
     const header = (rowsMatrix[0] ?? []).map((x) => String(x || "").trim());
@@ -625,9 +568,6 @@ export function useProgressProjectIO(args: {
     onRowsChange(nextRows);
   }, [columns, onRowsChange]);
 
-  // ------------------------------------------------------------
-  // File menu handler
-  // ------------------------------------------------------------
   const handleFileAction = useCallback(
     (action: any) => {
       const a =
@@ -677,7 +617,6 @@ export function useProgressProjectIO(args: {
           return;
         }
 
-        // Back-compat
         case "saveCloud": {
           void saveToCloudProOnly();
           return;
@@ -693,7 +632,6 @@ export function useProgressProjectIO(args: {
         }
 
         case "cloudSaveUpdate": {
-          // Safety: if no active cloudProjectId, fall back to "save as new" (never overwrite).
           if (!currentCloudProjectId) {
             const title = typeof action === "object" && action ? String((action as any).title ?? "") : "";
             void saveCloudAsNewProOnly(title);
@@ -740,10 +678,7 @@ export function useProgressProjectIO(args: {
               if (!picked) return;
 
               const snap = safeParseJSON<ProgressProjectSnapshotV1>(picked.text);
-              if (!snap || (snap as any).v !== 1) {
-                console.warn("[Progress] Invalid .mclp file:", picked.name);
-                return;
-              }
+              if (!snap || (snap as any).v !== 1) return;
 
               applySnapshot(snap);
 
