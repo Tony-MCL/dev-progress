@@ -1,26 +1,12 @@
 // src/progress/app/useProgressProjectIO.ts
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ColumnDef, RowData, Selection } from "../../core/TableTypes";
 import type { CalendarEntry } from "../CalendarModal";
 import type { ProjectInfo } from "../ProjectModal";
 import type { ProgressProjectSnapshotV1 } from "../../storage/projectDbTypes";
 import type { AppColumnDef } from "../tableCommands";
 
-import {
-  computeDerivedRows,
-  defaultCalendar,
-  formatDMY,
-  addWorkdays,
-  parseDMYLoose,
-} from "../ProgressCore";
-
-import { recomputeAllRows } from "../autoSchedule";
-import {
-  startOfDay,
-  diffDays,
-  getProjectSpanFromRows,
-  computeGanttMinForSpan,
-} from "../ganttDateUtils";
+import { getProjectSpanFromRows } from "../ganttDateUtils";
 
 import { parseClipboard, toTSV } from "../../core/utils/clipboard";
 import { safeParseJSON, downloadTextFile, pickTextFile } from "../../core/utils/fileIO";
@@ -47,6 +33,21 @@ type CalendarLike = {
   nonWorkingDates: Set<string>;
 };
 
+function startOfDayLocal(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function daysBetween(a: Date, b: Date) {
+  const ms = startOfDayLocal(b).getTime() - startOfDayLocal(a).getTime();
+  return Math.round(ms / 86400000);
+}
+
+function clampZoomIdx(n: number, maxIdx: number) {
+  return Math.max(0, Math.min(maxIdx, n));
+}
+
 export function useProgressProjectIO(args: {
   apiBase: string;
   auth: AuthLike;
@@ -55,6 +56,9 @@ export function useProgressProjectIO(args: {
 
   columns: ColumnDef[];
   buildBlankRows: (count: number) => RowData[];
+
+  // ✅ NOTE: App.tsx sender dette inn – vi aksepterer det her for grønn build
+  ganttZoomLevels?: number[];
 
   // state
   rows: RowData[];
@@ -124,6 +128,8 @@ export function useProgressProjectIO(args: {
     columns,
     buildBlankRows,
 
+    ganttZoomLevels,
+
     rows,
     setRows,
 
@@ -177,7 +183,18 @@ export function useProgressProjectIO(args: {
     onRowsChange,
   } = args;
 
-  const ganttPxPerDay = useMemoPxPerDay(ganttZoomIdx);
+  // Zoom levels: hvis App.tsx leverer levels, bruk dem.
+  const zoomLevels = useMemo(() => {
+    const arr = Array.isArray(ganttZoomLevels) && ganttZoomLevels.length > 0 ? ganttZoomLevels : null;
+    if (arr) return arr.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0);
+    // fallback (trygg default)
+    return [8, 10, 12, 14, 16, 18, 22, 26, 32, 40, 52, 64];
+  }, [ganttZoomLevels]);
+
+  const pxPerDay = useMemo(() => {
+    const idx = clampZoomIdx(ganttZoomIdx, zoomLevels.length - 1);
+    return zoomLevels[idx] ?? 18;
+  }, [ganttZoomIdx, zoomLevels]);
 
   const fallbackCloudTitle = useCallback((snapTitle: string) => {
     const t = String(snapTitle || "").trim();
@@ -186,6 +203,7 @@ export function useProgressProjectIO(args: {
   }, []);
 
   const buildSnapshot = useCallback((): ProgressProjectSnapshotV1 => {
+    // ProjectInfo/Calendar snapshot slik repoet ditt forventer (v1 + appColumns + calendar + ui)
     const cal = {
       workWeekDays: (projectInfo as any)?.workWeekDays ?? 5,
       entries: calendarEntries ?? [],
@@ -224,19 +242,16 @@ export function useProgressProjectIO(args: {
     splitLeft,
   ]);
 
-  const requestGanttFocusTokenRef = useRef(0);
+  // ------------------------------------------------------------
+  // Gantt focus / zoom
+  // ------------------------------------------------------------
+  const ganttFocusTokenRef = useRef(0);
   const [ganttFocusToken, setGanttFocusToken] = useState(0);
 
   const requestGanttFocus = useCallback(() => {
-    requestGanttFocusTokenRef.current++;
-    setGanttFocusToken(requestGanttFocusTokenRef.current);
+    ganttFocusTokenRef.current++;
+    setGanttFocusToken(ganttFocusTokenRef.current);
   }, []);
-
-  useEffect(() => {
-    const el = ganttScrollRef.current;
-    if (!el) return;
-    el.focus?.();
-  }, [ganttFocusToken, ganttScrollRef]);
 
   const focusGanttToProjectStartOrToday = useCallback(
     (rowsSnapshot: RowData[]) => {
@@ -244,53 +259,83 @@ export function useProgressProjectIO(args: {
       const measure = ganttMeasureRef.current;
       if (!bar || !measure) return;
 
-      const pxPerDay = ganttPxPerDay;
-      const { min } = getProjectSpanFromRows(rowsSnapshot);
+      const today = startOfDayLocal(new Date());
+      const span = getProjectSpanFromRows(rowsSnapshot);
+      const hasProject = !!span?.min;
 
-      const today = startOfDay(new Date());
-      const hasProject = !!min;
+      const focusDate = hasProject ? startOfDayLocal(span.min as any) : today;
 
-      const anchorDay = hasProject ? min! : today;
+      // Vi må ha en “ganttMin” å regne fra – her bruker vi min(datoer) hvis finnes, ellers today.
+      const ganttMin = hasProject ? startOfDayLocal(span.min as any) : today;
 
-      // compute "min day" used in gantt measure
-      const base = computeGanttMinForSpan(rowsSnapshot, progressCalendar);
-      const minDay = base ?? today;
+      const focusPx = daysBetween(ganttMin, focusDate) * pxPerDay;
 
-      const deltaDays = diffDays(minDay, anchorDay);
-      const x = Math.max(0, Math.floor(deltaDays * pxPerDay - 120));
+      const marginDays = 3;
+      const targetPx = Math.max(0, focusPx - marginDays * pxPerDay);
 
-      const sc = ganttScrollRef.current;
-      if (sc) sc.scrollLeft = x;
+      const vw = bar.clientWidth || 1;
+      const maxScroll = Math.max(0, measure.scrollWidth - vw);
+      const nextScroll = Math.max(0, Math.min(maxScroll, Math.round(targetPx)));
+
+      bar.scrollLeft = nextScroll;
     },
-    [ganttBarRef, ganttMeasureRef, ganttPxPerDay, ganttScrollRef, progressCalendar]
+    [ganttBarRef, ganttMeasureRef, pxPerDay]
   );
+
+  useEffect(() => {
+    // initial focus if empty project
+    const hasAnyDates = rows.some((r) => {
+      const c = (r as any)?.cells;
+      return String(c?.start ?? "").trim() || String(c?.end ?? "").trim();
+    });
+    if (!hasAnyDates) requestGanttFocus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!ganttFocusToken) return;
+
+    const raf1 = requestAnimationFrame(() => {
+      const raf2 = requestAnimationFrame(() => {
+        focusGanttToProjectStartOrToday(rows);
+      });
+      return () => cancelAnimationFrame(raf2);
+    });
+
+    return () => cancelAnimationFrame(raf1);
+  }, [ganttFocusToken, focusGanttToProjectStartOrToday, rows]);
 
   const handleGanttZoomDelta = useCallback(
     (step: number, anchorX: number | null) => {
-      const next = clampZoomIdx(ganttZoomIdx + step);
-      if (next === ganttZoomIdx) return;
-
       const sc = ganttScrollRef.current;
-      const pxPrev = usePxPerDayForIdx(ganttZoomIdx);
-      const pxNext = usePxPerDayForIdx(next);
+
+      const prevIdx = clampZoomIdx(ganttZoomIdx, zoomLevels.length - 1);
+      const nextIdx = clampZoomIdx(ganttZoomIdx + step, zoomLevels.length - 1);
+      if (nextIdx === prevIdx) return;
+
+      const prevPx = zoomLevels[prevIdx] ?? 18;
+      const nextPx = zoomLevels[nextIdx] ?? 18;
 
       if (sc) {
         const clientX = anchorX ?? Math.floor(sc.clientWidth / 2);
         const beforeX = sc.scrollLeft + clientX;
-        const ratio = pxNext / pxPrev;
+        const ratio = nextPx / prevPx;
         const afterX = beforeX * ratio;
         sc.scrollLeft = Math.max(0, Math.round(afterX - clientX));
       }
 
-      setGanttZoomIdx(next);
+      setGanttZoomIdx(nextIdx);
     },
-    [ganttScrollRef, ganttZoomIdx, setGanttZoomIdx]
+    [ganttScrollRef, ganttZoomIdx, setGanttZoomIdx, zoomLevels]
   );
 
   const resetGanttZoom = useCallback(() => {
     setGanttZoomIdx(0);
   }, [setGanttZoomIdx]);
 
+  // ------------------------------------------------------------
+  // Snapshot apply
+  // ------------------------------------------------------------
   const applySnapshot = useCallback(
     (snap: ProgressProjectSnapshotV1) => {
       const anySnap: any = snap as any;
@@ -299,6 +344,7 @@ export function useProgressProjectIO(args: {
       const nextCols = Array.isArray(anySnap?.appColumns) ? (anySnap.appColumns as AppColumnDef[]) : [];
 
       const nextInfo = anySnap?.projectInfo ?? null;
+
       const safeInfo: ProjectInfo = {
         projectName: String(nextInfo?.projectName ?? ""),
         customerName: String(nextInfo?.customerName ?? ""),
@@ -310,11 +356,8 @@ export function useProgressProjectIO(args: {
       };
 
       const cal = anySnap?.calendar ?? null;
-      if (cal && Array.isArray(cal.entries)) {
-        setCalendarEntries(cal.entries);
-      } else {
-        setCalendarEntries([]);
-      }
+      if (cal && Array.isArray(cal.entries)) setCalendarEntries(cal.entries);
+      else setCalendarEntries([]);
 
       const ui = anySnap?.ui ?? null;
       if (ui) {
@@ -351,6 +394,9 @@ export function useProgressProjectIO(args: {
     ]
   );
 
+  // ------------------------------------------------------------
+  // New project
+  // ------------------------------------------------------------
   const openNewProjectInNewTab = useCallback(() => {
     try {
       const sp = new URLSearchParams(window.location.search);
@@ -400,9 +446,9 @@ export function useProgressProjectIO(args: {
     setSelection,
   ]);
 
-  // ----------------------------
+  // ------------------------------------------------------------
   // Cloud save (Pro/Trial only)
-  // ----------------------------
+  // ------------------------------------------------------------
   const saveCloudAsNewProOnly = useCallback(
     async (titleOverride?: string) => {
       const plan = String(org.activePlan ?? "free");
@@ -439,7 +485,7 @@ export function useProgressProjectIO(args: {
           uid: authUid,
           title,
           snapshot: snap,
-          projectId: null,
+          projectId: null, // IMPORTANT: never overwrite
         });
 
         setCurrentCloudProjectId(res.id);
@@ -511,12 +557,12 @@ export function useProgressProjectIO(args: {
     setCurrentCloudProjectId,
   ]);
 
-  // Back-compat alias: old "Save to cloud" = "update active"
+  // Back-compat alias
   const saveToCloudProOnly = saveCloudUpdateProOnly;
 
-  // ----------------------------
+  // ------------------------------------------------------------
   // TSV export/import
-  // ----------------------------
+  // ------------------------------------------------------------
   const exportTSV = useCallback(() => {
     const used = rows.filter((r) => String((r as any)?.cells?.title ?? "").trim().length > 0);
 
@@ -545,12 +591,12 @@ export function useProgressProjectIO(args: {
     const picked = await pickTextFile(".tsv,text/tab-separated-values,text/plain");
     if (!picked) return;
 
-    const matrix = parseClipboard(picked.text);
-    const rowsMatrix = matrix.rows;
+    // ✅ Repoet ditt: parseClipboard() gir string[][] (ikke {rows: ...})
+    const rowsMatrix = parseClipboard(picked.text) as unknown as string[][];
 
-    if (!rowsMatrix || rowsMatrix.length < 2) return;
+    if (!Array.isArray(rowsMatrix) || rowsMatrix.length < 2) return;
 
-    const header = rowsMatrix[0].map((x: string) => String(x || "").trim());
+    const header = (rowsMatrix[0] ?? []).map((x) => String(x || "").trim());
     const idxIndent = header.indexOf("Indent");
 
     const keyToIdx = new Map<string, number>();
@@ -559,7 +605,7 @@ export function useProgressProjectIO(args: {
     const nextRows: RowData[] = [];
 
     for (let r = 1; r < rowsMatrix.length; r++) {
-      const row = rowsMatrix[r];
+      const row = rowsMatrix[r] ?? [];
       const indent = idxIndent >= 0 ? Number(row[idxIndent] ?? 0) : 0;
 
       const cells: any = {};
@@ -579,9 +625,9 @@ export function useProgressProjectIO(args: {
     onRowsChange(nextRows);
   }, [columns, onRowsChange]);
 
-  // ----------------------------
+  // ------------------------------------------------------------
   // File menu handler
-  // ----------------------------
+  // ------------------------------------------------------------
   const handleFileAction = useCallback(
     (action: any) => {
       const a =
@@ -647,7 +693,7 @@ export function useProgressProjectIO(args: {
         }
 
         case "cloudSaveUpdate": {
-          // Safety: if no active cloudProjectId, fall back to saving as new (never overwrite).
+          // Safety: if no active cloudProjectId, fall back to "save as new" (never overwrite).
           if (!currentCloudProjectId) {
             const title = typeof action === "object" && action ? String((action as any).title ?? "") : "";
             void saveCloudAsNewProOnly(title);
@@ -711,29 +757,6 @@ export function useProgressProjectIO(args: {
           return;
         }
 
-        case "openRecent": {
-          setProjectLibraryOpen(true);
-          return;
-        }
-
-        case "open": {
-          (async () => {
-            try {
-              const picked = await pickTextFile(".mclp,application/json");
-              if (!picked) return;
-
-              const snap = safeParseJSON<ProgressProjectSnapshotV1>(picked.text);
-              if (!snap || (snap as any).v !== 1) return;
-
-              applySnapshot(snap);
-              try {
-                lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
-              } catch {}
-            } catch {}
-          })();
-          return;
-        }
-
         case "saveAs": {
           const plan = String(org.activePlan ?? "free");
           const isProOrTrial = plan === "pro" || plan === "trial";
@@ -761,11 +784,6 @@ export function useProgressProjectIO(args: {
 
         case "importTsv": {
           void importTSV();
-          return;
-        }
-
-        case "exportCsv": {
-          console.warn("[Progress] exportCsv not implemented yet");
           return;
         }
 
@@ -820,21 +838,4 @@ export function useProgressProjectIO(args: {
 
     handleFileAction,
   };
-}
-
-// ----------------------------
-// Small helpers
-// ----------------------------
-function clampZoomIdx(n: number) {
-  return Math.max(-6, Math.min(10, n));
-}
-
-function usePxPerDayForIdx(idx: number) {
-  const base = 18;
-  const step = 2;
-  return Math.max(6, Math.min(72, base + idx * step));
-}
-
-function useMemoPxPerDay(idx: number) {
-  return usePxPerDayForIdx(idx);
 }
