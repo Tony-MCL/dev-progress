@@ -8,6 +8,7 @@ type FileAction =
   | "openProject"
   | "openFile"
   | "save"
+  | "saveCloud" // back-compat
   | "cloudOpen"
   | "cloudSaveUpdate"
   | "cloudSaveAsNew"
@@ -34,7 +35,9 @@ type CalendarAction = "calendarManage" | "setWorkWeek5" | "setWorkWeek6" | "setW
 type ProjectAction = "projectManage";
 
 export type ProgressToolbarProps = {
-  onFileAction?: (action: FileAction | { id: string; title?: string }) => void;
+  // NOTE: accepts string OR {id, title} for cloud "save as new"
+  onFileAction?: (action: any) => void;
+
   onTableAction?: (action: TableAction) => void;
   onGanttAction?: (action: GanttAction) => void;
   onCalendarAction?: (action: CalendarAction) => void;
@@ -51,7 +54,7 @@ export type ProgressToolbarProps = {
 
   activePlan?: "free" | "trial" | "pro";
 
-  // Cloud state (optional, used to enforce safe Cloud Save behavior)
+  // Optional: enables toolbar to decide whether "Save (update active)" should prompt "Save as new"
   cloudCurrentProjectId?: string | null;
   cloudSuggestedTitle?: string;
 
@@ -226,7 +229,6 @@ function CloudSaveAsModal(props: {
             className="ptb-btn ptb-btn--confirm"
             onClick={props.onConfirm}
             disabled={!canConfirm}
-            title={!canConfirm ? "Name is required" : undefined}
           >
             {props.confirmLabel}
           </button>
@@ -257,6 +259,7 @@ export default function ProgressToolbar({
   activePlan = "free",
   cloudCurrentProjectId,
   cloudSuggestedTitle,
+
   disabled,
   hasUnsavedChanges,
   confirmOnNew = true,
@@ -272,12 +275,11 @@ export default function ProgressToolbar({
   const [activeSubKey, setActiveSubKey] = useState<string | null>(null);
 
   const [confirmNewOpen, setConfirmNewOpen] = useState(false);
+  const pendingNewActionRef = useRef<FileAction | null>(null);
 
-  // Cloud: "Save as new" modal
+  // Cloud: save-as-new modal
   const [cloudSaveAsOpen, setCloudSaveAsOpen] = useState(false);
   const [cloudSaveAsName, setCloudSaveAsName] = useState("");
-
-  const pendingNewActionRef = useRef<FileAction | null>(null);
 
   const anyOpen = openMenu !== null;
 
@@ -286,41 +288,29 @@ export default function ProgressToolbar({
     setActiveSubKey(null);
   });
 
+  const closeAll = () => {
+    setOpenMenu(null);
+    setActiveSubKey(null);
+  };
+
+  const openCloudSaveAs = (prefill?: string) => {
+    const next = String(prefill ?? cloudSuggestedTitle ?? "").trim();
+    setCloudSaveAsName(next);
+    closeAll();
+    setCloudSaveAsOpen(true);
+  };
+
   const fileMenu: MenuNode[] = useMemo(
     () => [
-      {
-        kind: "item",
-        key: "newBlank",
-        label: isNo ? "Nytt prosjekt" : "New project",
-        hint: "Ctrl+N",
-        action: "newBlank",
-      },
+      { kind: "item", key: "newBlank", label: isNo ? "Nytt prosjekt" : "New project", hint: "Ctrl+N", action: "newBlank" },
+      { kind: "divider" },
+
+      { kind: "item", key: "openProject", label: isNo ? "Åpne prosjekt…" : "Open project…", action: "openProject" },
+      { kind: "item", key: "openFile", label: isNo ? "Åpne fil…" : "Open file…", hint: "Ctrl+O", action: "openFile" },
 
       { kind: "divider" },
 
-      {
-        kind: "item",
-        key: "openProject",
-        label: isNo ? "Åpne prosjekt…" : "Open project…",
-        action: "openProject",
-      },
-      {
-        kind: "item",
-        key: "openFile",
-        label: isNo ? "Åpne fil…" : "Open file…",
-        hint: "Ctrl+O",
-        action: "openFile",
-      },
-
-      { kind: "divider" },
-
-      {
-        kind: "item",
-        key: "save",
-        label: isNo ? "Lagre lokalt" : "Save locally",
-        hint: "Ctrl+S",
-        action: "save",
-      },
+      { kind: "item", key: "save", label: isNo ? "Lagre lokalt" : "Save locally", hint: "Ctrl+S", action: "save" },
 
       {
         kind: "item",
@@ -333,13 +323,7 @@ export default function ProgressToolbar({
 
       { kind: "divider" },
 
-      {
-        kind: "item",
-        key: "print",
-        label: t("toolbar.file.print"),
-        hint: "Ctrl+P",
-        action: "print",
-      },
+      { kind: "item", key: "print", label: t("toolbar.file.print"), hint: "Ctrl+P", action: "print" },
 
       { kind: "divider" },
 
@@ -396,17 +380,9 @@ export default function ProgressToolbar({
         disabled: !isPro,
         title: !isPro
           ? proOnlyText
-          : cloudCurrentProjectId
-          ? isNo
-            ? "Oppdaterer aktivt sky-prosjekt"
-            : "Updates the active cloud project"
-          : cloudCurrentProjectId === null
-          ? isNo
-            ? "Ingen aktiv sky-ID: lagrer som nytt i stedet"
-            : "No active cloud id: saves as new instead"
           : isNo
-          ? "Oppdaterer aktivt sky-prosjekt"
-          : "Updates the active cloud project",
+          ? "Oppdaterer aktivt sky-prosjekt (ellers lagre som nytt)"
+          : "Updates the active cloud project (otherwise saves as new)",
       },
       {
         kind: "item",
@@ -417,67 +393,27 @@ export default function ProgressToolbar({
         title: !isPro ? proOnlyText : undefined,
       },
     ],
-    [isNo, isPro, proOnlyText, cloudCurrentProjectId]
+    [isNo, isPro, proOnlyText]
   );
 
   const tableMenu: MenuNode[] = useMemo(
     () => [
-      {
-        kind: "item",
-        key: "columnsManage",
-        label: t("toolbar.table.columns"),
-        action: "columnsManage",
-      },
+      { kind: "item", key: "columnsManage", label: t("toolbar.table.columns"), action: "columnsManage" },
       { kind: "divider" },
-      {
-        kind: "item",
-        key: "addRowEnd",
-        label: t("toolbar.table.addEnd"),
-        action: "addRowEnd",
-      },
-      {
-        kind: "item",
-        key: "addRowBelow",
-        label: t("toolbar.table.addBelow"),
-        action: "addRowBelow",
-      },
-      {
-        kind: "item",
-        key: "deleteSelectedRows",
-        label: t("toolbar.table.deleteSelected"),
-        action: "deleteSelectedRows",
-      },
+      { kind: "item", key: "addRowEnd", label: t("toolbar.table.addEnd"), action: "addRowEnd" },
+      { kind: "item", key: "addRowBelow", label: t("toolbar.table.addBelow"), action: "addRowBelow" },
+      { kind: "item", key: "deleteSelectedRows", label: t("toolbar.table.deleteSelected"), action: "deleteSelectedRows" },
     ],
     [t]
   );
 
   const ganttMenu: MenuNode[] = useMemo(
     () => [
-      {
-        kind: "item",
-        key: "zoomIn",
-        label: t("toolbar.gantt.zoomIn"),
-        action: "zoomIn",
-      },
-      {
-        kind: "item",
-        key: "zoomOut",
-        label: t("toolbar.gantt.zoomOut"),
-        action: "zoomOut",
-      },
-      {
-        kind: "item",
-        key: "zoomReset",
-        label: t("toolbar.gantt.zoomReset"),
-        action: "zoomReset",
-      },
+      { kind: "item", key: "zoomIn", label: t("toolbar.gantt.zoomIn"), action: "zoomIn" },
+      { kind: "item", key: "zoomOut", label: t("toolbar.gantt.zoomOut"), action: "zoomOut" },
+      { kind: "item", key: "zoomReset", label: t("toolbar.gantt.zoomReset"), action: "zoomReset" },
       { kind: "divider" },
-      {
-        kind: "item",
-        key: "toggleWeekend",
-        label: t("toolbar.gantt.toggleWeekend"),
-        action: "toggleWeekend",
-      },
+      { kind: "item", key: "toggleWeekend", label: t("toolbar.gantt.toggleWeekend"), action: "toggleWeekend" },
       {
         kind: "custom",
         key: "toggleBarText",
@@ -508,48 +444,23 @@ export default function ProgressToolbar({
           );
         },
       },
-      {
-        kind: "item",
-        key: "toggleTodayLine",
-        label: t("toolbar.gantt.toggleTodayLine"),
-        action: "toggleTodayLine",
-      },
+      { kind: "item", key: "toggleTodayLine", label: t("toolbar.gantt.toggleTodayLine"), action: "toggleTodayLine" },
     ],
     [t, ganttShowBarText, onSetGanttShowBarText, disabled]
   );
 
   const calendarMenu: MenuNode[] = useMemo(
     () => [
-      {
-        kind: "item",
-        key: "calendarManage",
-        label: t("toolbar.calendar.manage"),
-        action: "calendarManage",
-      },
+      { kind: "item", key: "calendarManage", label: t("toolbar.calendar.manage"), action: "calendarManage" },
       { kind: "divider" },
       {
         kind: "item",
         key: "workWeek",
         label: t("toolbar.calendar.workweek"),
         children: [
-          {
-            kind: "item",
-            key: "setWorkWeek5",
-            label: isNo ? "5 dager (Man–Fre)" : "5 days (Mon–Fri)",
-            action: "setWorkWeek5",
-          },
-          {
-            kind: "item",
-            key: "setWorkWeek6",
-            label: isNo ? "6 dager (Man–Lør)" : "6 days (Mon–Sat)",
-            action: "setWorkWeek6",
-          },
-          {
-            kind: "item",
-            key: "setWorkWeek7",
-            label: isNo ? "7 dager (Man–Søn)" : "7 days (Mon–Sun)",
-            action: "setWorkWeek7",
-          },
+          { kind: "item", key: "setWorkWeek5", label: isNo ? "5 dager (Man–Fre)" : "5 days (Mon–Fri)", action: "setWorkWeek5" },
+          { kind: "item", key: "setWorkWeek6", label: isNo ? "6 dager (Man–Lør)" : "6 days (Mon–Sat)", action: "setWorkWeek6" },
+          { kind: "item", key: "setWorkWeek7", label: isNo ? "7 dager (Man–Søn)" : "7 days (Mon–Sun)", action: "setWorkWeek7" },
         ],
       },
     ],
@@ -557,28 +468,9 @@ export default function ProgressToolbar({
   );
 
   const projectMenu: MenuNode[] = useMemo(
-    () => [
-      {
-        kind: "item",
-        key: "projectManage",
-        label: t("toolbar.project.manage"),
-        action: "projectManage",
-      },
-    ],
+    () => [{ kind: "item", key: "projectManage", label: t("toolbar.project.manage"), action: "projectManage" }],
     [t]
   );
-
-  const closeAll = () => {
-    setOpenMenu(null);
-    setActiveSubKey(null);
-  };
-
-  const openCloudSaveAs = (prefill?: string) => {
-    const next = String(prefill ?? cloudSuggestedTitle ?? "").trim();
-    setCloudSaveAsName(next);
-    closeAll();
-    setCloudSaveAsOpen(true);
-  };
 
   const doFileAction = (a: FileAction) => {
     // Confirm before wiping current work
@@ -591,14 +483,12 @@ export default function ProgressToolbar({
       }
     }
 
-    // Cloud: Save-as-new always opens a naming dialog.
     if (a === "cloudSaveAsNew") {
       openCloudSaveAs();
       return;
     }
 
-    // Cloud: "Save (update active)" MUST NOT overwrite anything if there's no active cloud id.
-    // If App passes cloudCurrentProjectId explicitly as null, we route to "Save as new" dialog.
+    // If we know there is NO active cloud id, route "update" into "save as new"
     if (a === "cloudSaveUpdate" && cloudCurrentProjectId === null) {
       openCloudSaveAs();
       return;
@@ -669,48 +559,40 @@ export default function ProgressToolbar({
     setConfirmNewOpen(false);
   };
 
-  const cancelCloudSaveAs = () => {
-    setCloudSaveAsOpen(false);
+  const confirmNew = () => {
+    const a = pendingNewActionRef.current;
+    pendingNewActionRef.current = null;
+    setConfirmNewOpen(false);
+    if (!a) return;
+    closeAll();
+    onFileAction?.(a);
   };
+
+  const cancelCloudSaveAs = () => setCloudSaveAsOpen(false);
 
   const confirmCloudSaveAs = () => {
     const name = cloudSaveAsName.trim();
     if (!name) return;
     setCloudSaveAsOpen(false);
-    onFileAction?.({ id: "cloudSaveAsNew", title: name } as any);
+    // send object {id, title}
+    onFileAction?.({ id: "cloudSaveAsNew", title: name });
   };
 
   useEffect(() => {
     if (!anyOpen) setActiveSubKey(null);
   }, [anyOpen]);
 
-  const renderMenuPop = (
-    menuLabel: string,
-    nodes: MenuNode[],
-    runAction: (a?: string) => void
-  ) => (
+  const renderMenuPop = (menuLabel: string, nodes: MenuNode[], runAction: (a?: string) => void) => (
     <div className="ptb-menu-pop" role="menu" aria-label={`${menuLabel}-meny`}>
       {nodes.map((node) => {
-        if (node.kind === "divider") {
-          return <Divider key={node.kind + "-" + Math.random()} />;
-        }
-        if (node.kind === "custom") {
-          return <React.Fragment key={node.key}>{node.render()}</React.Fragment>;
-        }
+        if (node.kind === "divider") return <Divider key={node.kind + "-" + Math.random()} />;
+        if (node.kind === "custom") return <React.Fragment key={node.key}>{node.render()}</React.Fragment>;
 
         const hasChildren = !!node.children?.length;
-
         const isOpen = activeSubKey === node.key;
 
-        const onEnter = () => {
-          if (!hasChildren) return;
-          setActiveSubKey(node.key);
-        };
-
-        const onLeave = () => {
-          if (!hasChildren) return;
-          setActiveSubKey((k) => (k === node.key ? null : k));
-        };
+        const onEnter = () => { if (hasChildren) setActiveSubKey(node.key); };
+        const onLeave = () => { if (hasChildren) setActiveSubKey((k) => (k === node.key ? null : k)); };
 
         const onClick = () => {
           if (node.disabled) return;
@@ -774,15 +656,6 @@ export default function ProgressToolbar({
     </div>
   );
 
-  const confirmNew = () => {
-    const a = pendingNewActionRef.current;
-    pendingNewActionRef.current = null;
-    setConfirmNewOpen(false);
-    if (!a) return;
-    closeAll();
-    onFileAction?.(a);
-  };
-
   const fileOpen = openMenu === "file";
   const cloudOpen = openMenu === "cloud";
   const tableOpen = openMenu === "table";
@@ -798,10 +671,7 @@ export default function ProgressToolbar({
             label={t("toolbar.top.file")}
             open={fileOpen}
             disabled={disabled}
-            onToggle={() => {
-              setActiveSubKey(null);
-              setOpenMenu((v) => (v === "file" ? null : "file"));
-            }}
+            onToggle={() => { setActiveSubKey(null); setOpenMenu((v) => (v === "file" ? null : "file")); }}
           />
           {fileOpen ? renderMenuPop(t("toolbar.top.file"), fileMenu, runFileAction) : null}
         </div>
@@ -811,10 +681,7 @@ export default function ProgressToolbar({
             label={isNo ? "Sky" : "Cloud"}
             open={cloudOpen}
             disabled={disabled}
-            onToggle={() => {
-              setActiveSubKey(null);
-              setOpenMenu((v) => (v === "cloud" ? null : "cloud"));
-            }}
+            onToggle={() => { setActiveSubKey(null); setOpenMenu((v) => (v === "cloud" ? null : "cloud")); }}
           />
           {cloudOpen ? renderMenuPop(isNo ? "Sky" : "Cloud", cloudMenu, runFileAction) : null}
         </div>
@@ -824,10 +691,7 @@ export default function ProgressToolbar({
             label={t("toolbar.top.table")}
             open={tableOpen}
             disabled={disabled}
-            onToggle={() => {
-              setActiveSubKey(null);
-              setOpenMenu((v) => (v === "table" ? null : "table"));
-            }}
+            onToggle={() => { setActiveSubKey(null); setOpenMenu((v) => (v === "table" ? null : "table")); }}
           />
           {tableOpen ? renderMenuPop(t("toolbar.top.table"), tableMenu, runTableAction) : null}
         </div>
@@ -837,10 +701,7 @@ export default function ProgressToolbar({
             label={t("toolbar.top.gantt")}
             open={ganttOpen}
             disabled={disabled}
-            onToggle={() => {
-              setActiveSubKey(null);
-              setOpenMenu((v) => (v === "gantt" ? null : "gantt"));
-            }}
+            onToggle={() => { setActiveSubKey(null); setOpenMenu((v) => (v === "gantt" ? null : "gantt")); }}
           />
           {ganttOpen ? renderMenuPop(t("toolbar.top.gantt"), ganttMenu, runGanttAction) : null}
         </div>
@@ -850,10 +711,7 @@ export default function ProgressToolbar({
             label={t("toolbar.top.calendar")}
             open={calendarOpen}
             disabled={disabled}
-            onToggle={() => {
-              setActiveSubKey(null);
-              setOpenMenu((v) => (v === "calendar" ? null : "calendar"));
-            }}
+            onToggle={() => { setActiveSubKey(null); setOpenMenu((v) => (v === "calendar" ? null : "calendar")); }}
           />
           {calendarOpen ? renderMenuPop(t("toolbar.top.calendar"), calendarMenu, runCalendarAction) : null}
         </div>
@@ -863,10 +721,7 @@ export default function ProgressToolbar({
             label={t("toolbar.top.project")}
             open={projectOpen}
             disabled={disabled}
-            onToggle={() => {
-              setActiveSubKey(null);
-              setOpenMenu((v) => (v === "project" ? null : "project"));
-            }}
+            onToggle={() => { setActiveSubKey(null); setOpenMenu((v) => (v === "project" ? null : "project")); }}
           />
           {projectOpen ? renderMenuPop(t("toolbar.top.project"), projectMenu, runProjectAction) : null}
         </div>
