@@ -19,12 +19,14 @@ type IndexedDbStore = {
   upsert: (x: { id?: string; title: string; snapshot: ProgressProjectSnapshotV1 }) => Promise<{ id: string }>;
 };
 
+// ✅ Structural typing: App.tsx kan sende UseAuthUserResult (så lenge getIdToken finnes)
 type AuthLike = {
-  getIdToken: (force?: boolean) => Promise<string | null>;
+  getIdToken: (...args: any[]) => Promise<string | null>;
 };
 
+// ✅ Plan kan være enum/string/null — vi bruker String(...) uansett
 type OrgLike = {
-  activePlan: string | null;
+  activePlan: unknown;
   activeOrgId: string | null;
 };
 
@@ -57,7 +59,7 @@ export function useProgressProjectIO(args: {
   columns: ColumnDef[];
   buildBlankRows: (count: number) => RowData[];
 
-  // ✅ compatibility with App.tsx
+  // compat with App.tsx
   ganttZoomLevels?: readonly number[];
   ganttPxPerDay?: number;
 
@@ -115,10 +117,10 @@ export function useProgressProjectIO(args: {
   // gantt refs
   ganttBarRef: React.RefObject<HTMLDivElement>;
   ganttMeasureRef: React.RefObject<HTMLDivElement>;
-  ganttScrollRef: React.RefObject<HTMLDivElement>;
 
-  // row pipeline
-  onRowsChange: (next: RowData[]) => void;
+  // ✅ App.tsx sender ikke alltid disse, så de må være optional
+  ganttScrollRef?: React.RefObject<HTMLDivElement>;
+  onRowsChange?: (next: RowData[]) => void;
 }) {
   const {
     apiBase,
@@ -180,19 +182,29 @@ export function useProgressProjectIO(args: {
 
     ganttBarRef,
     ganttMeasureRef,
-    ganttScrollRef,
 
+    ganttScrollRef,
     onRowsChange,
   } = args;
 
+  // ✅ Fallback hvis App.tsx ikke sender onRowsChange
+  const onRowsChangeSafe = useCallback(
+    (next: RowData[]) => {
+      if (typeof onRowsChange === "function") {
+        onRowsChange(next);
+        return;
+      }
+      setRows(next);
+    },
+    [onRowsChange, setRows]
+  );
+
   const zoomLevels = useMemo(() => {
-    const arr =
-      Array.isArray(ganttZoomLevels) && ganttZoomLevels.length > 0 ? ganttZoomLevels : null;
+    const arr = Array.isArray(ganttZoomLevels) && ganttZoomLevels.length > 0 ? ganttZoomLevels : null;
     if (arr) return Array.from(arr).map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0);
     return [8, 10, 12, 14, 16, 18, 22, 26, 32, 40, 52, 64];
   }, [ganttZoomLevels]);
 
-  // ✅ If App.tsx provides ganttPxPerDay, use it (it’s authoritative)
   const pxPerDay = useMemo(() => {
     const fromApp = Number(ganttPxPerDayFromApp);
     if (Number.isFinite(fromApp) && fromApp > 0) return fromApp;
@@ -313,7 +325,7 @@ export function useProgressProjectIO(args: {
         return;
       }
 
-      const sc = ganttScrollRef.current;
+      const sc = ganttScrollRef?.current;
 
       const prevIdx = clampZoomIdx(ganttZoomIdx, zoomLevels.length - 1);
       const nextIdx = clampZoomIdx(ganttZoomIdx + step, zoomLevels.length - 1);
@@ -578,8 +590,8 @@ export function useProgressProjectIO(args: {
       } as any);
     }
 
-    onRowsChange(nextRows);
-  }, [columns, onRowsChange]);
+    onRowsChangeSafe(nextRows);
+  }, [columns, onRowsChangeSafe]);
 
   const handleFileAction = useCallback(
     (action: any) => {
@@ -591,19 +603,6 @@ export function useProgressProjectIO(args: {
           : "";
 
       switch (a) {
-        case "newBlank": {
-          const plan = String(org.activePlan ?? "free");
-          const isProOrTrial = plan === "pro" || plan === "trial";
-
-          if (isProOrTrial) {
-            openNewProjectInNewTab();
-            return;
-          }
-
-          resetToBlankProject();
-          return;
-        }
-
         case "save": {
           (async () => {
             try {
@@ -658,29 +657,6 @@ export function useProgressProjectIO(args: {
         case "cloudSaveAsNew": {
           const title = typeof action === "object" && action ? String((action as any).title ?? "") : "";
           void saveCloudAsNewProOnly(title);
-          return;
-        }
-
-        case "openProject": {
-          const plan = String(org.activePlan ?? "free");
-          const isProOrTrial = plan === "pro" || plan === "trial";
-
-          if (isProOrTrial) {
-            setProjectLibraryOpen(true);
-            return;
-          }
-
-          try {
-            const raw = lsReadString(PROGRESS_KEYS.freeProjectSnapshotV1, null);
-            const snap = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
-            if (snap && (snap as any).v === 1) {
-              applySnapshot(snap);
-              return;
-            }
-          } catch {}
-
-          requestGanttFocus();
-          setRows(buildBlankRows(120));
           return;
         }
 
@@ -748,8 +724,6 @@ export function useProgressProjectIO(args: {
     },
     [
       org.activePlan,
-      openNewProjectInNewTab,
-      resetToBlankProject,
       buildSnapshot,
       projectStore,
       currentProjectId,
@@ -760,9 +734,6 @@ export function useProgressProjectIO(args: {
       saveCloudAsNewProOnly,
       setProjectLibraryOpen,
       applySnapshot,
-      requestGanttFocus,
-      setRows,
-      buildBlankRows,
       exportTSV,
       importTSV,
       setPrint2Open,
