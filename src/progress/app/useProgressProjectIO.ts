@@ -333,54 +333,54 @@ export function useProgressProjectIO(args: {
     [ganttBarRef, ganttMeasureRef, ganttZoomLevels, ganttPxPerDay, rows]
   );
 
-    const handleGanttZoomDelta = useCallback(
-      (deltaSteps: number, anchorClientX: number | null) => {
-        const nextIdx = Math.max(
-          0,
-          Math.min(ganttZoomLevels.length - 1, ganttZoomIdx + deltaSteps)
-        );
-        if (nextIdx === ganttZoomIdx) return;
-  
-        pendingZoomRef.current = {
-          anchorDate: pickAnchorDate(rows),
-          anchorClientX,
-          targetZoomIdx: nextIdx,
-        };
-  
-        setGanttZoomIdx(nextIdx);
-      },
-      [ganttZoomLevels.length, ganttZoomIdx, pickAnchorDate, rows, setGanttZoomIdx]
-    );
-  
-    const resetGanttZoom = useCallback(() => {
-      const target = 11; // default (32px per day)
-      if (target === ganttZoomIdx) return;
-  
+  const handleGanttZoomDelta = useCallback(
+    (deltaSteps: number, anchorClientX: number | null) => {
+      const nextIdx = Math.max(
+        0,
+        Math.min(ganttZoomLevels.length - 1, ganttZoomIdx + deltaSteps)
+      );
+      if (nextIdx === ganttZoomIdx) return;
+
       pendingZoomRef.current = {
         anchorDate: pickAnchorDate(rows),
-        anchorClientX: null,
-        targetZoomIdx: target,
+        anchorClientX,
+        targetZoomIdx: nextIdx,
       };
-  
-      setGanttZoomIdx(target);
-    }, [ganttZoomIdx, pickAnchorDate, rows, setGanttZoomIdx]);
-  
-    useEffect(() => {
-      const pz = pendingZoomRef.current;
-      if (!pz) return;
-      if (pz.targetZoomIdx !== ganttZoomIdx) return;
-  
-      const raf1 = requestAnimationFrame(() => {
-        const raf2 = requestAnimationFrame(() => {
-          applyZoomScroll(pz);
-          pendingZoomRef.current = null;
-        });
-        return () => cancelAnimationFrame(raf2);
+
+      setGanttZoomIdx(nextIdx);
+    },
+    [ganttZoomLevels.length, ganttZoomIdx, pickAnchorDate, rows, setGanttZoomIdx]
+  );
+
+  const resetGanttZoom = useCallback(() => {
+    const target = 11; // default (32px per day)
+    if (target === ganttZoomIdx) return;
+
+    pendingZoomRef.current = {
+      anchorDate: pickAnchorDate(rows),
+      anchorClientX: null,
+      targetZoomIdx: target,
+    };
+
+    setGanttZoomIdx(target);
+  }, [ganttZoomIdx, pickAnchorDate, rows, setGanttZoomIdx]);
+
+  useEffect(() => {
+    const pz = pendingZoomRef.current;
+    if (!pz) return;
+    if (pz.targetZoomIdx !== ganttZoomIdx) return;
+
+    const raf1 = requestAnimationFrame(() => {
+      const raf2 = requestAnimationFrame(() => {
+        applyZoomScroll(pz);
+        pendingZoomRef.current = null;
       });
-  
-      return () => cancelAnimationFrame(raf1);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ganttZoomIdx]);
+      return () => cancelAnimationFrame(raf2);
+    });
+
+    return () => cancelAnimationFrame(raf1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ganttZoomIdx]);
 
   // ----------------------------
   // Apply snapshot
@@ -575,7 +575,9 @@ export function useProgressProjectIO(args: {
 
     if (hasHeader) {
       startRow = 1;
-      idxIndent = first.findIndex((h) => h.toLowerCase() === "indent" || h.toLowerCase() === "innrykk");
+      idxIndent = first.findIndex(
+        (h) => h.toLowerCase() === "indent" || h.toLowerCase() === "innrykk"
+      );
       if (idxIndent < 0) idxIndent = 0;
 
       for (let i = 0; i < first.length; i++) colIndexByKey.set(first[i], i);
@@ -594,7 +596,9 @@ export function useProgressProjectIO(args: {
 
       const indentRaw = row[idxIndent] ?? "0";
       const indent = Number(String(indentRaw).trim());
-      const safeIndent = Number.isFinite(indent) ? Math.max(0, Math.min(20, Math.floor(indent))) : 0;
+      const safeIndent = Number.isFinite(indent)
+        ? Math.max(0, Math.min(20, Math.floor(indent)))
+        : 0;
 
       const cells: Record<string, any> = {};
       for (const c of columns) {
@@ -664,7 +668,8 @@ export function useProgressProjectIO(args: {
     sp.delete("_t");
 
     const nextQs = sp.toString();
-    const nextUrl = window.location.pathname + (nextQs ? `?${nextQs}` : "") + window.location.hash;
+    const nextUrl =
+      window.location.pathname + (nextQs ? `?${nextQs}` : "") + window.location.hash;
     window.history.replaceState(null, "", nextUrl);
 
     setCurrentProjectId(null);
@@ -714,7 +719,19 @@ export function useProgressProjectIO(args: {
     requestGanttFocus();
     setRows(buildBlankRows(120));
     setProjectOpen(true);
-  }, [buildBlankRows, columns, requestGanttFocus, setAppColumns, setCalendarEntries, setCurrentCloudProjectId, setCurrentProjectId, setProjectInfo, setProjectOpen, setRows, setSelection]);
+  }, [
+    buildBlankRows,
+    columns,
+    requestGanttFocus,
+    setAppColumns,
+    setCalendarEntries,
+    setCurrentCloudProjectId,
+    setCurrentProjectId,
+    setProjectInfo,
+    setProjectOpen,
+    setRows,
+    setSelection,
+  ]);
 
   // ----------------------------
   // File menu handler
@@ -745,12 +762,23 @@ export function useProgressProjectIO(args: {
         case "save": {
           (async () => {
             try {
+              const plan = String(org.activePlan ?? "free");
+              const isProOrTrial = plan === "pro" || plan === "trial";
+
               const snap = buildSnapshot();
 
               try {
                 lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
               } catch {}
 
+              // ✅ Free users: single-project slot only (localStorage). No hidden project library in IndexedDB.
+              if (!isProOrTrial) {
+                setCurrentProjectId(null);
+                setCurrentCloudProjectId(null);
+                return;
+              }
+
+              // ✅ Pro/Trial: persist to local library (IndexedDB) + best-effort cloud
               const rec = await projectStore.upsert({
                 id: currentProjectId ?? undefined,
                 title: snap.title,
@@ -821,7 +849,26 @@ export function useProgressProjectIO(args: {
         }
 
         case "openRecent": {
-          setProjectLibraryOpen(true);
+          const plan = String(org.activePlan ?? "free");
+          const isProOrTrial = plan === "pro" || plan === "trial";
+
+          if (isProOrTrial) {
+            setProjectLibraryOpen(true);
+            return;
+          }
+
+          // Free: behave like "Open project" (single-project slot)
+          try {
+            const raw = lsReadString(PROGRESS_KEYS.freeProjectSnapshotV1, null);
+            const snap = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
+            if (snap && (snap as any).v === 1) {
+              applySnapshot(snap);
+              return;
+            }
+          } catch {}
+
+          requestGanttFocus();
+          setRows(buildBlankRows(120));
           return;
         }
 
@@ -897,6 +944,7 @@ export function useProgressProjectIO(args: {
       projectStore,
       currentProjectId,
       setCurrentProjectId,
+      setCurrentCloudProjectId,
       saveToCloudProOnly,
       setProjectLibraryOpen,
       applySnapshot,
