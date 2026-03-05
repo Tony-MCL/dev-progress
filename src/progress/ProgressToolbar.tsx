@@ -28,7 +28,11 @@ type GanttAction =
   | "toggleWeekend"
   | "toggleTodayLine";
 
-type CalendarAction = "calendarManage" | "setWorkWeek5" | "setWorkWeek6" | "setWorkWeek7";
+type CalendarAction =
+  | "calendarManage"
+  | "setWorkWeek5"
+  | "setWorkWeek6"
+  | "setWorkWeek7";
 type ProjectAction = "projectManage";
 
 export type ProgressToolbarProps = {
@@ -83,22 +87,20 @@ function useOutsideClose(
     if (!open) return;
 
     const onDown = (e: MouseEvent) => {
-      const el = rootRef.current;
-      if (!el) return;
-      if (el.contains(e.target as Node)) return;
-      onClose();
+      const root = rootRef.current;
+      if (!root) return;
+      if (!root.contains(e.target as any)) onClose();
     };
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
 
-    window.addEventListener("mousedown", onDown, true);
-    window.addEventListener("keydown", onKey, true);
-
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
     return () => {
-      window.removeEventListener("mousedown", onDown, true);
-      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose, rootRef]);
 }
@@ -112,16 +114,13 @@ function MenuButton(props: {
   return (
     <button
       type="button"
-      className={`ptb-menu-btn ${props.open ? "is-open" : ""}`}
+      className={"ptb-top-btn" + (props.open ? " ptb-top-btn--open" : "")}
       onClick={props.onToggle}
       disabled={props.disabled}
       aria-haspopup="menu"
       aria-expanded={props.open}
     >
-      <span className="ptb-menu-btn-label">{props.label}</span>
-      <span className="ptb-menu-caret" aria-hidden="true">
-        ▾
-      </span>
+      {props.label} <span className="ptb-caret">▾</span>
     </button>
   );
 }
@@ -132,7 +131,7 @@ function MenuItem(props: {
   disabled?: boolean;
   title?: string;
   hasChildren?: boolean;
-  onClick?: () => void;
+  onClick: () => void;
 }) {
   return (
     <button
@@ -218,56 +217,55 @@ export default function ProgressToolbar({
   onSetGanttDefaultBarColor,
 
   activePlan = "free",
-  disabled,
-  hasUnsavedChanges,
+  disabled = false,
+  hasUnsavedChanges = false,
   confirmOnNew = true,
 }: ProgressToolbarProps) {
   const { t, lang } = useI18n();
-
   const isNo = String(lang || "no").toLowerCase().startsWith("no");
-  const isPro = activePlan === "pro" || activePlan === "trial";
 
-  const proOnlyText = isNo
-    ? "Tilgjengelig i Pro-versjonen"
-    : "Available in Pro";
-
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [activeSubKey, setActiveSubKey] = useState<string | null>(null);
 
+  const fileOpen = openMenu === "file";
+  const tableOpen = openMenu === "table";
+  const ganttOpen = openMenu === "gantt";
+  const calendarOpen = openMenu === "calendar";
+  const projectOpen = openMenu === "project";
+
+  const anyOpen = fileOpen || tableOpen || ganttOpen || calendarOpen || projectOpen;
+
+  useOutsideClose(rootRef, anyOpen, () => setOpenMenu(null));
+
+  // Confirm overwrite modal
   const [confirmNewOpen, setConfirmNewOpen] = useState(false);
   const pendingNewActionRef = useRef<FileAction | null>(null);
 
-  const anyOpen = openMenu !== null;
+  const fileMenu: MenuNode[] = useMemo(() => {
+    const isPro = activePlan === "pro" || activePlan === "trial";
 
-  useOutsideClose(rootRef, anyOpen, () => {
-    setOpenMenu(null);
-    setActiveSubKey(null);
-  });
-
-  const fileMenu: MenuNode[] = useMemo(
-    () => [
+    return [
       {
         kind: "item",
         key: "newBlank",
-        label: isNo ? "Nytt prosjekt" : "New project",
+        label: t("toolbar.file.newBlank"),
         hint: "Ctrl+N",
         action: "newBlank",
       },
 
-      { kind: "divider" },
-
       {
         kind: "item",
         key: "openProject",
-        label: isNo ? "Åpne prosjekt…" : "Open project…",
+        label: t("toolbar.file.openProject"),
         action: "openProject",
       },
+
       {
         kind: "item",
         key: "openFile",
-        label: isNo ? "Åpne fil…" : "Open file…",
+        label: t("toolbar.file.openFile"),
         hint: "Ctrl+O",
         action: "openFile",
       },
@@ -277,19 +275,41 @@ export default function ProgressToolbar({
       {
         kind: "item",
         key: "save",
-        label: isNo ? "Lagre prosjekt" : "Save project",
+        label: t("toolbar.file.save"),
         hint: "Ctrl+S",
         action: "save",
       },
 
-      {
-        kind: "item",
-        key: "saveAs",
-        label: isNo ? "Lagre som…" : "Save as…",
-        action: "saveAs",
-        disabled: !isPro,
-        title: !isPro ? proOnlyText : undefined,
-      },
+      ...(isPro
+        ? [
+            {
+              kind: "item" as const,
+              key: "saveAs",
+              label: t("toolbar.file.saveAs"),
+              action: "saveAs",
+            },
+          ]
+        : [
+            // keep structure stable
+            {
+              kind: "item" as const,
+              key: "saveAs",
+              label: t("toolbar.file.saveAs"),
+              disabled: true,
+              action: "saveAs",
+            },
+          ]),
+
+      ...(isPro
+        ? [
+            {
+              kind: "item" as const,
+              key: "saveCloud",
+              label: t("toolbar.file.saveCloud"),
+              action: "saveCloud",
+            },
+          ]
+        : []),
 
       { kind: "divider" },
 
@@ -310,14 +330,19 @@ export default function ProgressToolbar({
         children: [
           {
             kind: "item",
+            key: "exportCsv",
+            label: t("toolbar.file.exportCsv"),
+            action: "exportCsv",
+          },
+          {
+            kind: "item",
             key: "exportTsv",
-            label: "TSV…",
+            label: t("toolbar.file.exportTsv"),
             action: "exportTsv",
-            disabled: !isPro,
-            title: !isPro ? proOnlyText : undefined,
           },
         ],
       },
+
       {
         kind: "item",
         key: "import",
@@ -326,293 +351,165 @@ export default function ProgressToolbar({
           {
             kind: "item",
             key: "importTsv",
-            label: "TSV…",
+            label: t("toolbar.file.importTsv"),
             action: "importTsv",
-            disabled: !isPro,
-            title: !isPro ? proOnlyText : undefined,
           },
         ],
       },
-    ],
-    [t, isNo, isPro, proOnlyText]
-  );
+    ];
+  }, [activePlan, t]);
 
   const tableMenu: MenuNode[] = useMemo(
     () => [
       {
         kind: "item",
-        key: "columns",
+        key: "columnsManage",
         label: t("toolbar.table.columns"),
-        children: [
-          {
-            kind: "item",
-            key: "columnsManage",
-            label: t("toolbar.table.chooseVisibleColumns"),
-            action: "columnsManage",
-          },
-        ],
+        action: "columnsManage",
       },
+
       { kind: "divider" },
+
       {
         kind: "item",
-        key: "rows",
-        label: t("toolbar.table.rows"),
-        children: [
-          {
-            kind: "item",
-            key: "addRowEnd",
-            label: t("toolbar.table.addRowEnd"),
-            action: "addRowEnd",
-          },
-          {
-            kind: "item",
-            key: "addRowBelow",
-            label: t("toolbar.table.addRowBelow"),
-            action: "addRowBelow",
-          },
-          { kind: "divider" },
-          {
-            kind: "item",
-            key: "deleteSelectedRows",
-            label: t("toolbar.table.deleteSelectedRows"),
-            action: "deleteSelectedRows",
-          },
-        ],
+        key: "addRowEnd",
+        label: t("toolbar.table.addRowEnd"),
+        action: "addRowEnd",
+      },
+      {
+        kind: "item",
+        key: "addRowBelow",
+        label: t("toolbar.table.addRowBelow"),
+        action: "addRowBelow",
+      },
+      {
+        kind: "item",
+        key: "deleteSelectedRows",
+        label: t("toolbar.table.deleteSelectedRows"),
+        action: "deleteSelectedRows",
       },
     ],
     [t]
   );
 
-  const ganttStandardColor = "#b98a3a";
-
-  const ganttPalette12 = useMemo(() => {
-    return [
-      ganttStandardColor,
-      "#2f7dd1",
-      "#1e3a8a",
-      "#2e9f6d",
-      "#166534",
-      "#d65b5b",
-      "#b91c1c",
-      "#8f63d2",
-      "#6d28d9",
-      "#4b5563",
-      "#111827",
-      "#f59e0b",
-    ];
-  }, []);
-
   const ganttMenu: MenuNode[] = useMemo(
     () => [
       {
         kind: "item",
-        key: "zoom",
-        label: t("toolbar.gantt.zoom"),
-        children: [
-          {
-            kind: "item",
-            key: "zoomIn",
-            label: t("toolbar.gantt.zoomIn"),
-            action: "zoomIn",
-          },
-          {
-            kind: "item",
-            key: "zoomOut",
-            label: t("toolbar.gantt.zoomOut"),
-            action: "zoomOut",
-          },
-          {
-            kind: "item",
-            key: "zoomReset",
-            label: t("toolbar.gantt.zoomReset"),
-            action: "zoomReset",
-          },
-        ],
+        key: "zoomIn",
+        label: t("toolbar.gantt.zoomIn"),
+        action: "zoomIn",
+      },
+      {
+        kind: "item",
+        key: "zoomOut",
+        label: t("toolbar.gantt.zoomOut"),
+        action: "zoomOut",
+      },
+      {
+        kind: "item",
+        key: "zoomReset",
+        label: t("toolbar.gantt.zoomReset"),
+        action: "zoomReset",
       },
 
       { kind: "divider" },
 
       {
         kind: "item",
-        key: "toggles",
-        label: t("toolbar.gantt.view"),
-        children: [
-          {
-            kind: "item",
-            key: "toggleWeekend",
-            label: t("toolbar.gantt.toggleWeekend"),
-            action: "toggleWeekend",
-          },
-          {
-            kind: "item",
-            key: "toggleTodayLine",
-            label: t("toolbar.gantt.toggleTodayLine"),
-            action: "toggleTodayLine",
-          },
-        ],
+        key: "toggleWeekend",
+        label: t("toolbar.gantt.toggleWeekend"),
+        action: "toggleWeekend",
+      },
+      {
+        kind: "item",
+        key: "toggleTodayLine",
+        label: t("toolbar.gantt.toggleTodayLine"),
+        action: "toggleTodayLine",
       },
 
       { kind: "divider" },
 
       {
         kind: "custom",
-        key: "ganttTextToggle",
-        render: () => {
-          const label = isNo ? "Vis tekst på stolper" : "Show text on bars";
-          return (
-            <div
-              style={{
-                padding: "8px 10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 10,
-                userSelect: "none",
-              }}
-              role="menuitem"
-              aria-label={label}
-            >
-              <span style={{ fontWeight: 700, fontSize: 12 }}>{label}</span>
+        key: "barText",
+        render: () => (
+          <div className="ptb-menu-custom">
+            <label className="ptb-check">
               <input
                 type="checkbox"
                 checked={!!ganttShowBarText}
                 onChange={(e) => onSetGanttShowBarText?.(e.target.checked)}
-                disabled={disabled}
-                style={{ width: 16, height: 16 }}
               />
-            </div>
-          );
-        },
+              <span>{t("toolbar.gantt.showBarText")}</span>
+            </label>
+          </div>
+        ),
       },
 
       {
+        kind: "custom",
+        key: "barColor",
+        render: () => (
+          <div className="ptb-menu-custom">
+            <div className="ptb-color-row">
+              <span className="ptb-color-label">{t("toolbar.gantt.defaultBarColor")}</span>
+              <input
+                type="color"
+                className="ptb-color"
+                value={ganttDefaultBarColor || "#b98a3a"}
+                onChange={(e) => onSetGanttDefaultBarColor?.(e.target.value)}
+              />
+            </div>
+          </div>
+        ),
+      },
+    ],
+    [t, ganttShowBarText, onSetGanttShowBarText, ganttDefaultBarColor, onSetGanttDefaultBarColor]
+  );
+
+  const calendarMenu: MenuNode[] = useMemo(
+    () => [
+      {
         kind: "item",
-        key: "colorPicker",
-        label: t("toolbar.gantt.colorPicker.label"),
+        key: "calendarManage",
+        label: t("toolbar.calendar.manage"),
+        action: "calendarManage",
+      },
+
+      { kind: "divider" },
+
+      {
+        kind: "item",
+        key: "workWeek",
+        label: isNo ? "Arbeidsuke" : "Work week",
         children: [
           {
-            kind: "custom",
-            key: "colorPickerPanel",
-            render: () => {
-              const title = t("toolbar.gantt.colorPicker.title");
-              const current = String(
-                ganttDefaultBarColor || ganttStandardColor
-              ).toLowerCase();
-
-              return (
-                <div
-                  style={{
-                    padding: "10px 10px 12px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                  }}
-                  role="menuitem"
-                  aria-label={title}
-                >
-                  <div style={{ fontWeight: 800, fontSize: 12 }}>{title}</div>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(6, 22px)",
-                      gap: 8,
-                      alignItems: "center",
-                    }}
-                  >
-                    {ganttPalette12.map((c) => {
-                      const cc = c.toLowerCase();
-                      const isSelected = current === cc;
-                      const isStandard =
-                        cc === ganttStandardColor.toLowerCase();
-
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => onSetGanttDefaultBarColor?.(c)}
-                          disabled={disabled}
-                          title={c}
-                          aria-label={c}
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 999,
-                            background: c,
-                            cursor: disabled ? "default" : "pointer",
-                            border: isSelected
-                              ? "3px solid rgba(0,0,0,0.70)"
-                              : "1px solid rgba(0,0,0,0.25)",
-                            // Standard-ring (always)
-                            boxShadow: isStandard
-                              ? "0 0 0 2px rgba(0,0,0,0.55)"
-                              : "none",
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            },
+            kind: "item",
+            key: "workWeek5",
+            label: isNo ? "5 dager (man–fre)" : "5 days (Mon–Fri)",
+            hint: workWeekDays === 5 ? "✓" : undefined,
+            action: "setWorkWeek5",
+          },
+          {
+            kind: "item",
+            key: "workWeek6",
+            label: isNo ? "6 dager (man–lør)" : "6 days (Mon–Sat)",
+            hint: workWeekDays === 6 ? "✓" : undefined,
+            action: "setWorkWeek6",
+          },
+          {
+            kind: "item",
+            key: "workWeek7",
+            label: isNo ? "7 dager (man–søn)" : "7 days (Mon–Sun)",
+            hint: workWeekDays === 7 ? "✓" : undefined,
+            action: "setWorkWeek7",
           },
         ],
       },
     ],
-    [
-      t,
-      isNo,
-      disabled,
-      ganttShowBarText,
-      onSetGanttShowBarText,
-      ganttDefaultBarColor,
-      onSetGanttDefaultBarColor,
-      ganttPalette12,
-    ]
+    [t, isNo, workWeekDays]
   );
-
-    const calendarMenu: MenuNode[] = useMemo(
-      () => [
-        {
-          kind: "item",
-          key: "calendarManage",
-          label: t("toolbar.calendar.manage"),
-          action: "calendarManage",
-        },
-  
-        { kind: "divider" },
-  
-        {
-          kind: "item",
-          key: "workWeek",
-          label: isNo ? "Arbeidsuke" : "Work week",
-          children: [
-            {
-              kind: "item",
-              key: "workWeek5",
-              label: isNo ? "5 dager (man–fre)" : "5 days (Mon–Fri)",
-              hint: workWeekDays === 5 ? "✓" : undefined,
-              action: "setWorkWeek5",
-            },
-            {
-              kind: "item",
-              key: "workWeek6",
-              label: isNo ? "6 dager (man–lør)" : "6 days (Mon–Sat)",
-              hint: workWeekDays === 6 ? "✓" : undefined,
-              action: "setWorkWeek6",
-            },
-            {
-              kind: "item",
-              key: "workWeek7",
-              label: isNo ? "7 dager (man–søn)" : "7 days (Mon–Sun)",
-              hint: workWeekDays === 7 ? "✓" : undefined,
-              action: "setWorkWeek7",
-            },
-          ],
-        },
-      ],
-      [t, isNo, workWeekDays]
-    );
 
   const projectMenu: MenuNode[] = useMemo(
     () => [
@@ -631,14 +528,25 @@ export default function ProgressToolbar({
     setActiveSubKey(null);
   };
 
+  const needsOverwriteConfirm = (a: FileAction) => {
+    // Actions that replace the current plan / project content
+    const destructive: FileAction[] = [
+      "newBlank",
+      "newFromTemplate",
+      "openProject",
+      "openFile",
+      "importTsv",
+    ];
+    return destructive.includes(a);
+  };
+
   const doFileAction = (a: FileAction) => {
-    if (a === "newBlank") {
-      const shouldConfirm = confirmOnNew || !!hasUnsavedChanges;
-      if (shouldConfirm) {
-        pendingNewActionRef.current = a;
-        setConfirmNewOpen(true);
-        return;
-      }
+    const shouldConfirm =
+      (confirmOnNew || !!hasUnsavedChanges) && needsOverwriteConfirm(a);
+    if (shouldConfirm) {
+      pendingNewActionRef.current = a;
+      setConfirmNewOpen(true);
+      return;
     }
     closeAll();
     onFileAction?.(a);
@@ -718,94 +626,57 @@ export default function ProgressToolbar({
     if (!anyOpen) setActiveSubKey(null);
   }, [anyOpen]);
 
-  const renderMenuPop = (
-    menuLabel: string,
-    nodes: MenuNode[],
-    runAction: (a?: string) => void
-  ) => (
-    <div className="ptb-menu-pop" role="menu" aria-label={`${menuLabel}-meny`}>
-      {nodes.map((node, idx) => {
-        if (node.kind === "divider") return <Divider key={`d-${idx}`} />;
+  const renderMenuPop = (title: string, nodes: MenuNode[], run: (a?: string) => void) => {
+    const renderNode = (n: MenuNode) => {
+      if (n.kind === "divider") return <Divider key={Math.random()} />;
 
-        if (node.kind === "custom") {
-          return (
-            <div key={node.key} className="ptb-menu-itemwrap">
-              {node.render()}
-            </div>
-          );
-        }
-
-        const hasChildren = !!node.children?.length;
-        const subOpen = hasChildren && activeSubKey === node.key;
-
+      if (n.kind === "custom") {
         return (
-          <div key={node.key} className={`ptb-menu-itemwrap ${subOpen ? "is-subopen" : ""}`}>
-            <MenuItem
-              label={node.label}
-              hint={node.hint}
-              disabled={disabled || node.disabled}
-              title={node.title}
-              hasChildren={hasChildren}
-              onClick={() => {
-                if (disabled || node.disabled) return;
-
-                if (hasChildren) {
-                  setActiveSubKey((cur) => (cur === node.key ? null : node.key));
-                  return;
-                }
-
-                if (node.action) runAction(node.action);
-              }}
-            />
-
-            {hasChildren && subOpen ? (
-              <div className="ptb-submenu" role="menu" aria-label={`${node.label}-undermeny`}>
-                {node.children!.map((child: MenuNode, cIdx: number) => {
-                  if (child.kind === "divider") return <Divider key={`sd-${idx}-${cIdx}`} />;
-
-                  if (child.kind === "custom") {
-                    return (
-                      <div key={child.key} className="ptb-menu-itemwrap">
-                        {child.render()}
-                      </div>
-                    );
-                  }
-
-                  const childHasChildren = !!(child as MenuItemNode).children?.length;
-
-                  return (
-                    <div key={child.key} className="ptb-menu-itemwrap">
-                      <MenuItem
-                        label={(child as MenuItemNode).label}
-                        hint={(child as MenuItemNode).hint}
-                        disabled={disabled || (child as MenuItemNode).disabled}
-                        title={(child as MenuItemNode).title}
-                        hasChildren={childHasChildren}
-                        onClick={() => {
-                          if (disabled || (child as MenuItemNode).disabled) return;
-                          if (childHasChildren) return;
-                          if ((child as MenuItemNode).action) runAction((child as MenuItemNode).action);
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
+          <div key={n.key} className="ptb-menu-custom-wrap">
+            {n.render()}
           </div>
         );
-      })}
-    </div>
-  );
+      }
 
-  const fileOpen = openMenu === "file";
-  const tableOpen = openMenu === "table";
-  const ganttOpen = openMenu === "gantt";
-  const calendarOpen = openMenu === "calendar";
-  const projectOpen = openMenu === "project";
+      const hasChildren = !!n.children && n.children.length > 0;
+      const subOpen = activeSubKey === n.key;
+
+      return (
+        <div key={n.key} className="ptb-menu-row">
+          <MenuItem
+            label={n.label}
+            hint={n.hint}
+            disabled={n.disabled}
+            title={n.title}
+            hasChildren={hasChildren}
+            onClick={() => {
+              if (n.disabled) return;
+              if (hasChildren) {
+                setActiveSubKey((v) => (v === n.key ? null : n.key));
+                return;
+              }
+              run(n.action);
+            }}
+          />
+
+          {hasChildren && subOpen ? (
+            <div className="ptb-submenu" role="menu" aria-label={n.label}>
+              {n.children!.map(renderNode)}
+            </div>
+          ) : null}
+        </div>
+      );
+    };
+
+    return (
+      <div className="ptb-menu-pop" role="menu" aria-label={title}>
+        {nodes.map(renderNode)}
+      </div>
+    );
+  };
 
   return (
-    <div className="ptb-root" ref={rootRef}>
+    <div className="ptb" ref={rootRef}>
       <div className="ptb-left">
         <div className="ptb-menu">
           <MenuButton
@@ -877,14 +748,17 @@ export default function ProgressToolbar({
 
       <OverwriteConfirmModal
         open={confirmNewOpen}
-        title={t("toolbar.confirmOverwrite.title")}
-        text={t("toolbar.confirmOverwrite.text")}
-        cancelLabel={t("toolbar.confirmOverwrite.cancel")}
-        confirmLabel={t("toolbar.confirmOverwrite.confirm")}
+        title={isNo ? "Erstatte gjeldende prosjekt?" : "Replace current project?"}
+        text={
+          isNo
+            ? "I gratis-modus kan du jobbe i ett prosjekt av gangen. Hvis du fortsetter, vil du overskrive det lagrede prosjektet ditt."
+            : "In free mode you can work on one project at a time. If you continue, your saved project will be overwritten."
+        }
+        cancelLabel={isNo ? "Avbryt" : "Cancel"}
+        confirmLabel={isNo ? "Overskriv" : "Overwrite"}
         onCancel={cancelNew}
         onConfirm={confirmNew}
       />
     </div>
   );
 }
-
