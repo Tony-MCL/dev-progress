@@ -57,8 +57,9 @@ export function useProgressProjectIO(args: {
   columns: ColumnDef[];
   buildBlankRows: (count: number) => RowData[];
 
-  // ✅ FIX: App.tsx sender readonly number[] (ofte "as const")
+  // ✅ compatibility with App.tsx
   ganttZoomLevels?: readonly number[];
+  ganttPxPerDay?: number;
 
   // state
   rows: RowData[];
@@ -129,6 +130,7 @@ export function useProgressProjectIO(args: {
     buildBlankRows,
 
     ganttZoomLevels,
+    ganttPxPerDay: ganttPxPerDayFromApp,
 
     rows,
     setRows,
@@ -187,14 +189,17 @@ export function useProgressProjectIO(args: {
     const arr =
       Array.isArray(ganttZoomLevels) && ganttZoomLevels.length > 0 ? ganttZoomLevels : null;
     if (arr) return Array.from(arr).map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0);
-
     return [8, 10, 12, 14, 16, 18, 22, 26, 32, 40, 52, 64];
   }, [ganttZoomLevels]);
 
+  // ✅ If App.tsx provides ganttPxPerDay, use it (it’s authoritative)
   const pxPerDay = useMemo(() => {
+    const fromApp = Number(ganttPxPerDayFromApp);
+    if (Number.isFinite(fromApp) && fromApp > 0) return fromApp;
+
     const idx = clampZoomIdx(ganttZoomIdx, zoomLevels.length - 1);
     return zoomLevels[idx] ?? 18;
-  }, [ganttZoomIdx, zoomLevels]);
+  }, [ganttPxPerDayFromApp, ganttZoomIdx, zoomLevels]);
 
   const fallbackCloudTitle = useCallback((snapTitle: string) => {
     const t = String(snapTitle || "").trim();
@@ -300,6 +305,14 @@ export function useProgressProjectIO(args: {
 
   const handleGanttZoomDelta = useCallback(
     (step: number, anchorX: number | null) => {
+      // If App.tsx drives pxPerDay directly, we still allow changing zoomIdx,
+      // but we can’t safely predict pxPerDay scaling here. So we only update the idx.
+      if (Number.isFinite(Number(ganttPxPerDayFromApp)) && Number(ganttPxPerDayFromApp) > 0) {
+        const nextIdx = clampZoomIdx(ganttZoomIdx + step, zoomLevels.length - 1);
+        if (nextIdx !== ganttZoomIdx) setGanttZoomIdx(nextIdx);
+        return;
+      }
+
       const sc = ganttScrollRef.current;
 
       const prevIdx = clampZoomIdx(ganttZoomIdx, zoomLevels.length - 1);
@@ -319,7 +332,7 @@ export function useProgressProjectIO(args: {
 
       setGanttZoomIdx(nextIdx);
     },
-    [ganttScrollRef, ganttZoomIdx, setGanttZoomIdx, zoomLevels]
+    [ganttPxPerDayFromApp, ganttScrollRef, ganttZoomIdx, setGanttZoomIdx, zoomLevels]
   );
 
   const resetGanttZoom = useCallback(() => {
