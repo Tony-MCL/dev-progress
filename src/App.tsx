@@ -429,6 +429,7 @@ export default function App() {
 
   const {
     applySnapshot,
+    buildSnapshot,
     requestGanttFocus,
     handleGanttZoomDelta,
     resetGanttZoom,
@@ -550,6 +551,65 @@ export default function App() {
   // BLOCK: ACTIONS (END)
   // ============================
 
+    // ============================
+    // BLOCK: UNSAVED_CHANGES (START)
+    // ============================
+    const isRowDataEmpty = useCallback((list: RowData[]) => {
+      return !list.some((r) => {
+        const cells = (r as any)?.cells ?? {};
+        return Object.values(cells).some(
+          (v) => String(v ?? "").trim().length > 0
+        );
+      });
+    }, []);
+  
+    const isProjectInfoEmpty = useCallback((info: ProjectInfo) => {
+      return (
+        String(info.projectName ?? "").trim() === "" &&
+        String(info.customerName ?? "").trim() === "" &&
+        String(info.projectNo ?? "").trim() === "" &&
+        String(info.notes ?? "").trim() === "" &&
+        Array.isArray(info.owners) &&
+        info.owners.length === 0
+      );
+    }, []);
+  
+    const isCurrentPlanEffectivelyBlank = useMemo(() => {
+      return isRowDataEmpty(rows) && isProjectInfoEmpty(projectInfo);
+    }, [rows, projectInfo, isRowDataEmpty, isProjectInfoEmpty]);
+  
+    const hasUnsavedChanges = useMemo(() => {
+      const isFree = String(org.activePlan ?? "free") === "free";
+      if (!isFree) return false;
+  
+      // Blank current plan should never trigger overwrite warning.
+      if (isCurrentPlanEffectivelyBlank) return false;
+  
+      let savedSnapshot: ProgressProjectSnapshotV1 | null = null;
+  
+      try {
+        const raw = lsReadString(PROGRESS_KEYS.freeProjectSnapshotV1, null);
+        savedSnapshot = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
+      } catch {
+        savedSnapshot = null;
+      }
+  
+      // If nothing is saved yet, but the user has entered data, treat it as unsaved changes.
+      if (!savedSnapshot || (savedSnapshot as any).v !== 1) {
+        return true;
+      }
+  
+      try {
+        const currentSnapshot = buildSnapshot();
+        return JSON.stringify(currentSnapshot) !== JSON.stringify(savedSnapshot);
+      } catch {
+        return true;
+      }
+    }, [org.activePlan, isCurrentPlanEffectivelyBlank, buildSnapshot]);
+    // ============================
+    // BLOCK: UNSAVED_CHANGES (END)
+    // ============================
+
   // ============================
   // BLOCK: JSX (START)
   // ============================
@@ -580,6 +640,7 @@ export default function App() {
         left={
           <ProgressToolbar
             activePlan={org.activePlan}
+            hasUnsavedChanges={hasUnsavedChanges}
             confirmOnNew={String(org.activePlan ?? "free") === "free"}
             onFileAction={handleFileAction}
             onTableAction={handleTableAction}
