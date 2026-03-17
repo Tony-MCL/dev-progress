@@ -508,6 +508,10 @@ export default function App() {
       const snap = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
       if (snap && (snap as any).v === 1) {
         applySnapshot(snap);
+  
+        // ✅ SET BASELINE
+        lastSavedSnapshotRef.current = JSON.stringify(snap);
+  
         return true;
       }
     } catch {}
