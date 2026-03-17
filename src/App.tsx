@@ -428,6 +428,10 @@ export default function App() {
   const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
     useDatePickerPopover();
 
+  const setFreeSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
+    lastSavedSnapshotRef.current = snap ? JSON.stringify(snap) : null;
+  }, []);
+
   const {
     applySnapshot,
     buildSnapshot,
@@ -525,10 +529,6 @@ export default function App() {
     requestGanttFocus();
     setRows(buildBlankRows(120));
   }, [requestGanttFocus, setRows]);
-
-  const setFreeSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
-    lastSavedSnapshotRef.current = snap ? JSON.stringify(snap) : null;
-  }, []);
 
   const {
     handleGanttAction,
