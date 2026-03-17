@@ -860,6 +860,7 @@ export default function App() {
           onOpenProject={(rec: any) => {
             setCurrentProjectId(rec.id);
             applySnapshot(rec.snapshot);
+            setFreeSnapshotBaseline(rec.snapshot);
           }}
           apiBase={apiBase}
           auth={auth}
@@ -875,6 +876,7 @@ export default function App() {
           onOpenProject={(rec: any) => {
             setCurrentProjectId(rec.id);
             applySnapshot(rec.snapshot);
+            setFreeSnapshotBaseline(rec.snapshot);
           }}
         />
       )}
