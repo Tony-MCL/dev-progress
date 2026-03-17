@@ -599,9 +599,22 @@ export default function App() {
         return true;
       }
   
+      const normalize = (snap: any) => {
+        if (!snap) return null;
+  
+        return {
+          rows: snap.rows,
+          appColumns: snap.appColumns,
+          projectInfo: snap.projectInfo,
+          calendarEntries: snap.calendarEntries,
+        };
+      };
+  
       try {
-        const currentSnapshot = buildSnapshot();
-        return JSON.stringify(currentSnapshot) !== JSON.stringify(savedSnapshot);
+        const currentSnapshot = normalize(buildSnapshot());
+        const saved = normalize(savedSnapshot);
+  
+        return JSON.stringify(currentSnapshot) !== JSON.stringify(saved);
       } catch {
         return true;
       }
