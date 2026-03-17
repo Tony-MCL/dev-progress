@@ -106,6 +106,8 @@ export function useProgressProjectIO(args: {
   currentCloudProjectId: string | null;
   setCurrentCloudProjectId: (s: string | null) => void;
 
+  onSetFreeSnapshotBaseline?: (snap: ProgressProjectSnapshotV1 | null) => void;
+
   // stores / calendar
   projectStore: IndexedDbStore;
   progressCalendar: CalendarLike;
@@ -154,6 +156,7 @@ export function useProgressProjectIO(args: {
     setCurrentProjectId,
     currentCloudProjectId,
     setCurrentCloudProjectId,
+    onSetFreeSnapshotBaseline,
     projectStore,
     progressCalendar,
     ganttBarRef,
@@ -769,6 +772,7 @@ export function useProgressProjectIO(args: {
 
               try {
                 lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
+                onSetFreeSnapshotBaseline?.(snap);
               } catch {}
 
               // ✅ Free users: single-project slot only (localStorage). No hidden project library in IndexedDB.
@@ -815,6 +819,7 @@ export function useProgressProjectIO(args: {
             const snap = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
             if (snap && (snap as any).v === 1) {
               applySnapshot(snap);
+              onSetFreeSnapshotBaseline?.(snap);
               return;
             }
           } catch {}
@@ -840,6 +845,7 @@ export function useProgressProjectIO(args: {
 
               try {
                 lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
+                onSetFreeSnapshotBaseline?.(snap);
               } catch {}
             } catch (e) {
               console.warn("[Progress] Open file failed:", e);
@@ -863,6 +869,7 @@ export function useProgressProjectIO(args: {
             const snap = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
             if (snap && (snap as any).v === 1) {
               applySnapshot(snap);
+              onSetFreeSnapshotBaseline?.(snap);
               return;
             }
           } catch {}
@@ -884,6 +891,7 @@ export function useProgressProjectIO(args: {
               applySnapshot(snap);
               try {
                 lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
+                onSetFreeSnapshotBaseline?.(snap);
               } catch {}
             } catch {}
           })();
