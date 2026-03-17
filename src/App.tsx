@@ -429,7 +429,24 @@ export default function App() {
     useDatePickerPopover();
 
   const setFreeSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
-    lastSavedSnapshotRef.current = snap ? JSON.stringify(snap) : null;
+    const normalize = (input: any) => {
+      if (!input) return null;
+  
+      const normalizeRows = (rows: any[]) =>
+        (rows || []).map((r) => ({
+          indent: r.indent,
+          cells: r.cells,
+        }));
+  
+      return {
+        rows: normalizeRows(input.rows),
+        appColumns: input.appColumns,
+        projectInfo: input.projectInfo,
+        calendarEntries: input.calendarEntries,
+      };
+    };
+  
+    lastSavedSnapshotRef.current = snap ? JSON.stringify(normalize(snap)) : null;
   }, []);
 
   const {
@@ -592,15 +609,32 @@ export default function App() {
     const hasUnsavedChanges = useMemo(() => {
       const isFree = String(org.activePlan ?? "free") === "free";
       if (!isFree) return false;
-  
+    
       if (isCurrentPlanEffectivelyBlank) return false;
-  
+    
+      const normalize = (input: any) => {
+        if (!input) return null;
+    
+        const normalizeRows = (rows: any[]) =>
+          (rows || []).map((r) => ({
+            indent: r.indent,
+            cells: r.cells,
+          }));
+    
+        return {
+          rows: normalizeRows(input.rows),
+          appColumns: input.appColumns,
+          projectInfo: input.projectInfo,
+          calendarEntries: input.calendarEntries,
+        };
+      };
+    
       try {
-        const current = JSON.stringify(buildSnapshot());
+        const current = JSON.stringify(normalize(buildSnapshot()));
         const last = lastSavedSnapshotRef.current;
-  
+    
         if (!last) return true;
-  
+    
         return current !== last;
       } catch {
         return true;
