@@ -245,6 +245,7 @@ export default function App() {
   // BLOCK: APP_STATE (START)
   // ============================
   const [rows, setRows] = useState<RowData[]>(() => buildBlankRows(120));
+  const lastSavedSnapshotRef = useRef<string | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [print2Open, setPrint2Open] = useState(false);
@@ -489,6 +490,8 @@ export default function App() {
     currentCloudProjectId,
     setCurrentCloudProjectId,
 
+    onSetFreeSnapshotBaseline: setFreeSnapshotBaseline,
+
     projectStore,
     progressCalendar,
 
@@ -523,6 +526,10 @@ export default function App() {
     setRows(buildBlankRows(120));
   }, [requestGanttFocus, setRows]);
 
+  const setFreeSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
+    lastSavedSnapshotRef.current = snap ? JSON.stringify(snap) : null;
+  }, []);
+
   const {
     handleGanttAction,
     handleCalendarAction,
@@ -555,7 +562,7 @@ export default function App() {
   // BLOCK: ACTIONS (END)
   // ============================
 
-    // ============================
+     // ============================
     // BLOCK: UNSAVED_CHANGES (START)
     // ============================
     const isRowDataEmpty = useCallback((list: RowData[]) => {
@@ -586,49 +593,19 @@ export default function App() {
       const isFree = String(org.activePlan ?? "free") === "free";
       if (!isFree) return false;
   
-      // Blank current plan should never trigger overwrite warning.
       if (isCurrentPlanEffectivelyBlank) return false;
   
-      let savedSnapshot: ProgressProjectSnapshotV1 | null = null;
-  
       try {
-        const raw = lsReadString(PROGRESS_KEYS.freeProjectSnapshotV1, null);
-        savedSnapshot = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
-      } catch {
-        savedSnapshot = null;
-      }
+        const current = JSON.stringify(buildSnapshot());
+        const last = lastSavedSnapshotRef.current;
   
-      // If nothing is saved yet, but the user has entered data, treat it as unsaved changes.
-      if (!savedSnapshot || (savedSnapshot as any).v !== 1) {
-        return true;
-      }
+        if (!last) return true;
   
-      const normalize = (snap: any) => {
-        if (!snap) return null;
-      
-        const normalizeRows = (rows: any[]) =>
-          (rows || []).map((r) => ({
-            indent: r.indent,
-            cells: r.cells,
-          }));
-      
-        return {
-          rows: normalizeRows(snap.rows),
-          appColumns: snap.appColumns,
-          projectInfo: snap.projectInfo,
-          calendarEntries: snap.calendarEntries,
-        };
-      };
-  
-      try {
-        const currentSnapshot = normalize(buildSnapshot());
-        const saved = normalize(savedSnapshot);
-  
-        return JSON.stringify(currentSnapshot) !== JSON.stringify(saved);
+        return current !== last;
       } catch {
         return true;
       }
-    }, [org.activePlan, isCurrentPlanEffectivelyBlank, buildSnapshot]);
+    }, [org.activePlan, buildSnapshot, isCurrentPlanEffectivelyBlank]);
     // ============================
     // BLOCK: UNSAVED_CHANGES (END)
     // ============================
