@@ -601,9 +601,15 @@ export default function App() {
   
       const normalize = (snap: any) => {
         if (!snap) return null;
-  
+      
+        const normalizeRows = (rows: any[]) =>
+          (rows || []).map((r) => ({
+            indent: r.indent,
+            cells: r.cells,
+          }));
+      
         return {
-          rows: snap.rows,
+          rows: normalizeRows(snap.rows),
           appColumns: snap.appColumns,
           projectInfo: snap.projectInfo,
           calendarEntries: snap.calendarEntries,
