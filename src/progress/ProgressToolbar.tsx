@@ -633,15 +633,15 @@ export default function ProgressToolbar({
 
   // ✅ NEW: confirm for all actions that replace the current project content
   const shouldConfirmOverwrite = (a: FileAction) => {
-    const destructive: FileAction[] = [
-      "newBlank",
-      "newFromTemplate",
-      "openProject",
-      "openFile",
-      "importTsv",
-    ];
-    if (!destructive.includes(a)) return false;
-    return confirmOnNew || !!hasUnsavedChanges;
+    if (a === "newBlank" || a === "newFromTemplate") {
+      return confirmOnNew || !!hasUnsavedChanges;
+    }
+
+    if (a === "openProject" || a === "openFile" || a === "importTsv") {
+      return !!hasUnsavedChanges;
+    }
+
+    return false;
   };
 
   const doFileAction = (a: FileAction) => {
