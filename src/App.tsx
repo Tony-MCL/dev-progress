@@ -245,7 +245,7 @@ export default function App() {
   // BLOCK: APP_STATE (START)
   // ============================
   const [rows, setRows] = useState<RowData[]>(() => buildBlankRows(120));
-  const lastSavedSnapshotRef = useRef<string | null>(null);
+  const [lastSavedSnapshotJson, setLastSavedSnapshotJson] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [print2Open, setPrint2Open] = useState(false);
@@ -446,7 +446,7 @@ export default function App() {
       };
     };
   
-    lastSavedSnapshotRef.current = snap ? JSON.stringify(normalize(snap)) : null;
+    setLastSavedSnapshotJson(snap ? JSON.stringify(normalize(snap)) : null);
   }, []);
 
   const {
@@ -532,10 +532,7 @@ export default function App() {
       const snap = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
       if (snap && (snap as any).v === 1) {
         applySnapshot(snap);
-  
-        // ✅ SET BASELINE
-        lastSavedSnapshotRef.current = JSON.stringify(snap);
-  
+        setFreeSnapshotBaseline(snap);
         return true;
       }
     } catch {}
@@ -631,7 +628,7 @@ export default function App() {
     
       try {
         const current = JSON.stringify(normalize(buildSnapshot()));
-        const last = lastSavedSnapshotRef.current;
+        const last = lastSavedSnapshotJson;
     
         if (!last) return true;
     
@@ -639,7 +636,7 @@ export default function App() {
       } catch {
         return true;
       }
-    }, [org.activePlan, buildSnapshot, isCurrentPlanEffectivelyBlank]);
+    }, [org.activePlan, buildSnapshot, isCurrentPlanEffectivelyBlank, lastSavedSnapshotJson]);
     // ============================
     // BLOCK: UNSAVED_CHANGES (END)
     // ============================
