@@ -491,14 +491,23 @@ export function useProgressProjectIO(args: {
       const parsed = raw ? safeParseJSON<any>(raw) : null;
 
       const handoffId = String(parsed?.id || "").trim();
+      const handoffSource =
+        parsed?.source === "cloud" ? "cloud" : "local";
       const snap = parsed?.snapshot as ProgressProjectSnapshotV1 | undefined;
 
       if (!snap || (snap as any)?.v !== 1) return;
       if (!handoffId || handoffId !== openProjectId) return;
 
       applySnapshot(snap);
-      setCurrentProjectId(handoffId);
-      setCurrentCloudProjectId(null);
+
+      if (handoffSource === "cloud") {
+        setCurrentProjectId(null);
+        setCurrentCloudProjectId(handoffId);
+      } else {
+        setCurrentProjectId(handoffId);
+        setCurrentCloudProjectId(null);
+      }
+
       onSetSnapshotBaseline?.(snap);
 
       try {
@@ -897,6 +906,8 @@ export function useProgressProjectIO(args: {
                 return;
               }
 
+              setCurrentProjectId(null);
+              setCurrentCloudProjectId(null);
               applySnapshot(snap);
 
               try {
@@ -944,6 +955,8 @@ export function useProgressProjectIO(args: {
               const snap = safeParseJSON<ProgressProjectSnapshotV1>(picked.text);
               if (!snap || (snap as any).v !== 1) return;
 
+              setCurrentProjectId(null);
+              setCurrentCloudProjectId(null);
               applySnapshot(snap);
               try {
                 lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
