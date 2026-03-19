@@ -227,10 +227,6 @@ export default function ProgressToolbar({
   const isNo = String(lang || "no").toLowerCase().startsWith("no");
   const isPro = activePlan === "pro" || activePlan === "trial";
 
-  const proOnlyText = isNo
-    ? "Tilgjengelig i Pro-versjonen"
-    : "Available in Pro";
-
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
@@ -246,96 +242,100 @@ export default function ProgressToolbar({
     setActiveSubKey(null);
   });
 
-  const fileMenu: MenuNode[] = useMemo(
-    () => [
-      {
-        kind: "item",
-        key: "newBlank",
-        label: isNo ? "Nytt prosjekt" : "New project",
-        hint: "Ctrl+N",
-        action: "newBlank",
-      },
-
-      { kind: "divider" },
-
-      {
-        kind: "item",
-        key: "openProject",
-        label: isNo ? "Åpne prosjekt…" : "Open project…",
-        action: "openProject",
-      },
-      {
-        kind: "item",
-        key: "openFile",
-        label: isNo ? "Åpne fil…" : "Open file…",
-        hint: "Ctrl+O",
-        action: "openFile",
-      },
-
-      { kind: "divider" },
-
-      {
-        kind: "item",
-        key: "save",
-        label: isNo ? "Lagre prosjekt" : "Save project",
-        hint: "Ctrl+S",
-        action: "save",
-      },
-
-      {
-        kind: "item",
-        key: "saveAs",
-        label: isNo ? "Lagre som…" : "Save as…",
-        action: "saveAs",
-        disabled: !isPro,
-        title: !isPro ? proOnlyText : undefined,
-      },
-
-      { kind: "divider" },
-
-      {
-        kind: "item",
-        key: "print",
-        label: t("toolbar.file.print"),
-        hint: "Ctrl+P",
-        action: "print",
-      },
-
-      { kind: "divider" },
-
-      {
-        kind: "item",
-        key: "export",
-        label: t("toolbar.file.export"),
-        children: [
-          {
-            kind: "item",
-            key: "exportTsv",
-            label: "TSV…",
-            action: "exportTsv",
-            disabled: !isPro,
-            title: !isPro ? proOnlyText : undefined,
-          },
-        ],
-      },
-      {
-        kind: "item",
-        key: "import",
-        label: t("toolbar.file.import"),
-        children: [
-          {
-            kind: "item",
-            key: "importTsv",
-            label: "TSV…",
-            action: "importTsv",
-            disabled: !isPro,
-            title: !isPro ? proOnlyText : undefined,
-          },
-        ],
-      },
-    ],
-    [t, isNo, isPro, proOnlyText]
-  );
+    const fileMenu: MenuNode[] = useMemo(
+      () => [
+        {
+          kind: "item",
+          key: "newBlank",
+          label: t("toolbar.file.new"),
+          hint: "Ctrl+N",
+          action: "newBlank",
+        },
+  
+        { kind: "divider" },
+  
+        {
+          kind: "item",
+          key: "openProject",
+          label: t("toolbar.file.openFromSky"),
+          action: "openProject",
+        },
+        {
+          kind: "item",
+          key: "openFile",
+          label: t("toolbar.file.openFromFile"),
+          hint: "Ctrl+O",
+          action: "openFile",
+        },
+  
+        { kind: "divider" },
+  
+        {
+          kind: "item",
+          key: "save",
+          label: t("toolbar.file.saveToSky"),
+          hint: "Ctrl+S",
+          action: "save",
+        },
+  
+        ...(isPro
+          ? [
+              {
+                kind: "item" as const,
+                key: "saveAs",
+                label: t("toolbar.file.saveToFile"),
+                action: "saveAs",
+              },
+            ]
+          : []),
+  
+        { kind: "divider" },
+  
+        {
+          kind: "item",
+          key: "print",
+          label: t("toolbar.file.print"),
+          hint: "Ctrl+P",
+          action: "print",
+        },
+  
+        ...(isPro
+          ? [
+              { kind: "divider" as const },
+              {
+                kind: "item" as const,
+                key: "export",
+                label: t("toolbar.file.export"),
+                children: [
+                  {
+                    kind: "item" as const,
+                    key: "exportTsv",
+                    label: "TSV…",
+                    action: "exportTsv",
+                  },
+                ],
+              },
+            ]
+          : []),
+  
+        { kind: "divider" },
+  
+        {
+          kind: "item",
+          key: "import",
+          label: t("toolbar.file.import"),
+          children: [
+            {
+              kind: "item",
+              key: "importTsv",
+              label: "TSV…",
+              action: "importTsv",
+            },
+          ],
+        },
+      ],
+      [t, isPro]
+    );
 
   const tableMenu: MenuNode[] = useMemo(
     () => [
@@ -892,13 +892,8 @@ export default function ProgressToolbar({
 
       <OverwriteConfirmModal
         open={confirmNewOpen}
-        // ✅ CHANGED: modal wording (no other behavior changes)
-        title={isNo ? "Erstatte gjeldende prosjekt?" : "Replace current project?"}
-        text={
-          isNo
-            ? "I gratis-modus kan du jobbe i ett prosjekt av gangen. Vil du overskrive ditt lagrede prosjekt?"
-            : "In free mode you can work on one project at a time. Do you want to overwrite your saved project?"
-        }
+        title={t("toolbar.confirmOverwrite.title")}
+        text={t("toolbar.confirmOverwrite.text")}
         cancelLabel={t("toolbar.confirmOverwrite.cancel")}
         confirmLabel={t("toolbar.confirmOverwrite.confirm")}
         onCancel={cancelNew}
