@@ -549,42 +549,6 @@ export default function App() {
     setRows(buildBlankRows(120));
   }, [requestGanttFocus, setRows]);
 
-    const handleOpenProjectSmart = useCallback(
-    (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
-      const plan = String(org.activePlan ?? "free");
-      const isProOrTrial = plan === "pro" || plan === "trial";
-
-      // Free: behold enkel eksisterende flyt
-      if (!isProOrTrial) {
-        setCurrentProjectId(rec.id);
-        applySnapshot(rec.snapshot);
-        setSnapshotBaseline(rec.snapshot);
-        return;
-      }
-
-      // Pro/Trial: tom fane -> åpne direkte
-      if (isCurrentPlanEffectivelyBlank) {
-        setCurrentProjectId(rec.id);
-        applySnapshot(rec.snapshot);
-        setSnapshotBaseline(rec.snapshot);
-        return;
-      }
-
-      // Pro/Trial: eksisterende data -> vis dialog
-      setOpenProjectDialog({
-        id: rec.id,
-        snapshot: rec.snapshot,
-      });
-    },
-    [
-      org.activePlan,
-      isCurrentPlanEffectivelyBlank,
-      applySnapshot,
-      setSnapshotBaseline,
-      setCurrentProjectId,
-    ]
-  );
-
   const {
     handleGanttAction,
     handleCalendarAction,
@@ -699,6 +663,42 @@ export default function App() {
     // ============================
     // BLOCK: BEFORE_UNLOAD_GUARD (END)
     // ============================
+
+  const handleOpenProjectSmart = useCallback(
+    (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
+      const plan = String(org.activePlan ?? "free");
+      const isProOrTrial = plan === "pro" || plan === "trial";
+
+      // Free: behold enkel eksisterende flyt
+      if (!isProOrTrial) {
+        setCurrentProjectId(rec.id);
+        applySnapshot(rec.snapshot);
+        setSnapshotBaseline(rec.snapshot);
+        return;
+      }
+
+      // Pro/Trial: tom fane -> åpne direkte
+      if (isCurrentPlanEffectivelyBlank) {
+        setCurrentProjectId(rec.id);
+        applySnapshot(rec.snapshot);
+        setSnapshotBaseline(rec.snapshot);
+        return;
+      }
+
+      // Pro/Trial: eksisterende data -> vis dialog
+      setOpenProjectDialog({
+        id: rec.id,
+        snapshot: rec.snapshot,
+      });
+    },
+    [
+      org.activePlan,
+      isCurrentPlanEffectivelyBlank,
+      applySnapshot,
+      setSnapshotBaseline,
+      setCurrentProjectId,
+    ]
+  );
 
   // ============================
   // BLOCK: JSX (START)
