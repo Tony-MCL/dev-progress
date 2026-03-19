@@ -618,6 +618,11 @@ A: Dette er de mest nyttige i daglig bruk.
     deleteTip: "Sletter dette prosjektet fra lokal database",
     activeTip: "Prosjektet som er lastet nå",
     notFound: "Fant ikke prosjektet.",
+    openConflictTitle: "Denne fanen inneholder allerede et prosjekt",
+    openConflictText: "Vil du overskrive gjeldende prosjekt i denne fanen, åpne prosjektet i en ny fane, eller avbryte?",
+    cancel: "Avbryt",
+    openInNewTab: "Åpne i ny fane",
+    overwriteCurrent: "Overskriv eksisterende",
   },
 };
 
