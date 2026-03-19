@@ -38,7 +38,6 @@ import { setOptimisticPlan } from "./orgs/optimisticPlan";
 import { createIndexedDbProjectStore } from "./storage/indexedDbProjectStore";
 import type { ProgressProjectSnapshotV1 } from "./storage/projectDbTypes";
 import { PROGRESS_KEYS } from "./storage/progressLocalKeys";
-const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 import { lsReadString, lsWriteString } from "./storage/localSettings";
 
 import {
@@ -73,7 +72,7 @@ import "./styles/watermark.css";
 // ============================
 // BLOCK: IMPORTS (END)
 // ===========================
-
+const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 // ============================
 // BLOCK: APP_COMPONENT (START)
 // ============================
