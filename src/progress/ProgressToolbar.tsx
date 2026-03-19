@@ -637,7 +637,7 @@ export default function ProgressToolbar({
       return confirmOnNew || !!hasUnsavedChanges;
     }
 
-    if (a === "openProject" || a === "openFile" || a === "importTsv") {
+    if (a === "openFile" || a === "importTsv") {
       return !!hasUnsavedChanges;
     }
 
