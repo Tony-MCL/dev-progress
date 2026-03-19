@@ -38,6 +38,7 @@ import { setOptimisticPlan } from "./orgs/optimisticPlan";
 import { createIndexedDbProjectStore } from "./storage/indexedDbProjectStore";
 import type { ProgressProjectSnapshotV1 } from "./storage/projectDbTypes";
 import { PROGRESS_KEYS } from "./storage/progressLocalKeys";
+const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 import { lsReadString, lsWriteString } from "./storage/localSettings";
 
 import {
@@ -991,8 +992,20 @@ export default function App() {
                 className="ptb-btn ptb-btn--confirm"
                 style={{ background: "#1e66ff" }}
                 onClick={() => {
+                  try {
+                    lsWriteString(
+                      OPEN_PROJECT_HANDOFF_KEY,
+                      JSON.stringify({
+                        id: openProjectDialog.id,
+                        snapshot: openProjectDialog.snapshot,
+                        ts: Date.now(),
+                      })
+                    );
+                  } catch {}
+                
                   const u = new URL(window.location.href);
                   u.searchParams.set("openProjectId", openProjectDialog.id);
+                  u.searchParams.set("openProjectHandoff", "1");
                   u.searchParams.set("_t", String(Date.now()));
                   window.open(u.toString(), "_blank", "noopener,noreferrer");
                   setOpenProjectDialog(null);
