@@ -257,13 +257,15 @@ export default function ProgressToolbar({
         {
           kind: "item",
           key: "openProject",
-          label: t("toolbar.file.openFromSky"),
+          label: isPro
+            ? t("toolbar.file.openProjectPro")
+            : t("toolbar.file.openProjectFree"),
           action: "openProject",
         },
         {
           kind: "item",
           key: "openFile",
-          label: t("toolbar.file.openFromFile"),
+          label: t("toolbar.file.openFile"),
           hint: "Ctrl+O",
           action: "openFile",
         },
@@ -273,7 +275,9 @@ export default function ProgressToolbar({
         {
           kind: "item",
           key: "save",
-          label: t("toolbar.file.saveToSky"),
+          label: isPro
+            ? t("toolbar.file.savePro")
+            : t("toolbar.file.saveFree"),
           hint: "Ctrl+S",
           action: "save",
         },
@@ -893,7 +897,11 @@ export default function ProgressToolbar({
       <OverwriteConfirmModal
         open={confirmNewOpen}
         title={t("toolbar.confirmOverwrite.title")}
-        text={t("toolbar.confirmOverwrite.text")}
+        text={
+          isPro
+            ? t("toolbar.confirmOverwrite.textPro")
+            : t("toolbar.confirmOverwrite.textFree")
+        }
         cancelLabel={t("toolbar.confirmOverwrite.cancel")}
         confirmLabel={t("toolbar.confirmOverwrite.confirm")}
         onCancel={cancelNew}
