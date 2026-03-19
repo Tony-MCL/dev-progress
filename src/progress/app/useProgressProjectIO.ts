@@ -26,6 +26,7 @@ import { parseClipboard, toTSV } from "../../core/utils/clipboard";
 import { safeParseJSON, downloadTextFile, pickTextFile } from "../../core/utils/fileIO";
 import { ensureAtLeastTitleVisible } from "../tableCommands";
 import { PROGRESS_KEYS } from "../../storage/progressLocalKeys";
+const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 import { lsReadString, lsWriteString } from "../../storage/localSettings";
 import { saveProgressProjectToCloud } from "../../cloud/cloudProjects";
 
@@ -473,6 +474,60 @@ export function useProgressProjectIO(args: {
       requestGanttFocus,
     ]
   );
+
+    // ----------------------------
+  // Open project handoff from another tab
+  // ----------------------------
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const shouldOpenFromHandoff = sp.get("openProjectHandoff") === "1";
+    const openProjectId = String(sp.get("openProjectId") || "").trim();
+
+    if (!shouldOpenFromHandoff || !openProjectId) return;
+
+    try {
+      const raw = lsReadString(OPEN_PROJECT_HANDOFF_KEY, null);
+      const parsed = raw ? safeParseJSON<any>(raw) : null;
+
+      const handoffId = String(parsed?.id || "").trim();
+      const snap = parsed?.snapshot as ProgressProjectSnapshotV1 | undefined;
+
+      if (!snap || (snap as any)?.v !== 1) return;
+      if (!handoffId || handoffId !== openProjectId) return;
+
+      applySnapshot(snap);
+      setCurrentProjectId(handoffId);
+      setCurrentCloudProjectId(null);
+      onSetSnapshotBaseline?.(snap);
+
+      try {
+        lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
+      } catch {}
+
+      try {
+        localStorage.removeItem(OPEN_PROJECT_HANDOFF_KEY);
+      } catch {}
+
+      sp.delete("openProjectId");
+      sp.delete("openProjectHandoff");
+      sp.delete("_t");
+
+      const nextQs = sp.toString();
+      const nextUrl =
+        window.location.pathname +
+        (nextQs ? `?${nextQs}` : "") +
+        window.location.hash;
+
+      window.history.replaceState(null, "", nextUrl);
+    } catch (e) {
+      console.warn("[Progress] open project handoff failed:", e);
+    }
+  }, [
+    applySnapshot,
+    onSetSnapshotBaseline,
+    setCurrentProjectId,
+    setCurrentCloudProjectId,
+  ]);
 
   // ----------------------------
   // Cloud save (Pro/Trial only)
