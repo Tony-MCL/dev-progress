@@ -30,6 +30,7 @@ import { lsReadString, lsWriteString } from "../../storage/localSettings";
 import { saveProgressProjectToCloud } from "../../cloud/cloudProjects";
 
 const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
+const OPEN_FILE_HANDOFF_KEY = "progress_open_file_handoff_v1";
 
 type IndexedDbStore = {
   upsert: (x: {
@@ -712,12 +713,48 @@ export function useProgressProjectIO(args: {
     setRows(computed);
   }, [columns, progressCalendar, requestGanttFocus, setRows]);
 
+  const isCurrentPlanEffectivelyBlank = useCallback(() => {
+    const rowDataEmpty = !rows.some((r) => {
+      const cells = (r as any)?.cells ?? {};
+      return Object.values(cells).some(
+        (v) => String(v ?? "").trim().length > 0
+      );
+    });
+
+    const projectInfoEmpty =
+      String(projectInfo?.projectName ?? "").trim() === "" &&
+      String(projectInfo?.customerName ?? "").trim() === "" &&
+      String(projectInfo?.projectNo ?? "").trim() === "" &&
+      String(projectInfo?.notes ?? "").trim() === "" &&
+      Array.isArray(projectInfo?.owners) &&
+      projectInfo.owners.length === 0;
+
+    return rowDataEmpty && projectInfoEmpty;
+  }, [rows, projectInfo]);
+
   // ----------------------------
   // New project in new tab (Pro/Trial)
   // ----------------------------
   const openNewProjectInNewTab = useCallback(() => {
     const u = new URL(window.location.href);
     u.searchParams.set("new", "1");
+    u.searchParams.set("_t", String(Date.now()));
+    window.open(u.toString(), "_blank", "noopener,noreferrer");
+  }, []);
+
+  const openFileInNewTab = useCallback((snap: ProgressProjectSnapshotV1) => {
+    try {
+      lsWriteString(
+        OPEN_FILE_HANDOFF_KEY,
+        JSON.stringify({
+          snapshot: snap,
+          ts: Date.now(),
+        })
+      );
+    } catch {}
+
+    const u = new URL(window.location.href);
+    u.searchParams.set("openFileHandoff", "1");
     u.searchParams.set("_t", String(Date.now()));
     window.open(u.toString(), "_blank", "noopener,noreferrer");
   }, []);
@@ -762,6 +799,56 @@ export function useProgressProjectIO(args: {
     setAppColumns(columns.map((c) => ({ ...(c as any), visible: true, custom: false })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+    const didHandleOpenFileTabRef = useRef(false);
+
+  useEffect(() => {
+    if (didHandleOpenFileTabRef.current) return;
+    didHandleOpenFileTabRef.current = true;
+
+    const sp = new URLSearchParams(window.location.search);
+    const shouldOpenFileHandoff = sp.get("openFileHandoff") === "1";
+    if (!shouldOpenFileHandoff) return;
+
+    try {
+      const raw = lsReadString(OPEN_FILE_HANDOFF_KEY, null);
+      const parsed = raw ? safeParseJSON<any>(raw) : null;
+      const snap = parsed?.snapshot as ProgressProjectSnapshotV1 | undefined;
+
+      if (!snap || (snap as any)?.v !== 1) return;
+
+      setCurrentProjectId(null);
+      setCurrentCloudProjectId(null);
+      applySnapshot(snap);
+      onSetSnapshotBaseline?.(snap);
+
+      try {
+        lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
+      } catch {}
+
+      try {
+        localStorage.removeItem(OPEN_FILE_HANDOFF_KEY);
+      } catch {}
+
+      sp.delete("openFileHandoff");
+      sp.delete("_t");
+
+      const nextQs = sp.toString();
+      const nextUrl =
+        window.location.pathname +
+        (nextQs ? `?${nextQs}` : "") +
+        window.location.hash;
+
+      window.history.replaceState(null, "", nextUrl);
+    } catch (e) {
+      console.warn("[Progress] open file handoff failed:", e);
+    }
+  }, [
+    applySnapshot,
+    onSetSnapshotBaseline,
+    setCurrentProjectId,
+    setCurrentCloudProjectId,
+  ]);
 
   // ----------------------------
   // Reset blank project (Free, same tab)
@@ -906,6 +993,14 @@ export function useProgressProjectIO(args: {
                 return;
               }
 
+              const plan = String(org.activePlan ?? "free");
+              const isProOrTrial = plan === "pro" || plan === "trial";
+
+              if (isProOrTrial && !isCurrentPlanEffectivelyBlank()) {
+                openFileInNewTab(snap);
+                return;
+              }
+
               setCurrentProjectId(null);
               setCurrentCloudProjectId(null);
               applySnapshot(snap);
@@ -1016,6 +1111,7 @@ export function useProgressProjectIO(args: {
     [
       org.activePlan,
       openNewProjectInNewTab,
+      openFileInNewTab,
       resetToBlankProject,
       buildSnapshot,
       projectStore,
@@ -1031,6 +1127,8 @@ export function useProgressProjectIO(args: {
       exportTSV,
       importTSV,
       setPrint2Open,
+      onSetSnapshotBaseline,
+      isCurrentPlanEffectivelyBlank,
     ]
   );
 
