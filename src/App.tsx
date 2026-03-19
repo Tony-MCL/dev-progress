@@ -270,6 +270,10 @@ export default function App() {
   const projectStore = useMemo(() => createIndexedDbProjectStore(), []);
 
   const [projectLibraryOpen, setProjectLibraryOpen] = useState(false);
+  const [openProjectDialog, setOpenProjectDialog] = useState<{
+    id: string;
+    snapshot: ProgressProjectSnapshotV1;
+  } | null>(null);
 
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(() => {
     return lsReadString(PROGRESS_KEYS.currentProjectId, null);
@@ -543,6 +547,42 @@ export default function App() {
     requestGanttFocus();
     setRows(buildBlankRows(120));
   }, [requestGanttFocus, setRows]);
+
+    const handleOpenProjectSmart = useCallback(
+    (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
+      const plan = String(org.activePlan ?? "free");
+      const isProOrTrial = plan === "pro" || plan === "trial";
+
+      // Free: behold enkel eksisterende flyt
+      if (!isProOrTrial) {
+        setCurrentProjectId(rec.id);
+        applySnapshot(rec.snapshot);
+        setSnapshotBaseline(rec.snapshot);
+        return;
+      }
+
+      // Pro/Trial: tom fane -> åpne direkte
+      if (isCurrentPlanEffectivelyBlank) {
+        setCurrentProjectId(rec.id);
+        applySnapshot(rec.snapshot);
+        setSnapshotBaseline(rec.snapshot);
+        return;
+      }
+
+      // Pro/Trial: eksisterende data -> vis dialog
+      setOpenProjectDialog({
+        id: rec.id,
+        snapshot: rec.snapshot,
+      });
+    },
+    [
+      org.activePlan,
+      isCurrentPlanEffectivelyBlank,
+      applySnapshot,
+      setSnapshotBaseline,
+      setCurrentProjectId,
+    ]
+  );
 
   const {
     handleGanttAction,
@@ -907,9 +947,7 @@ export default function App() {
           onSetCurrentId={setCurrentCloudProjectId}
           onClose={() => setProjectLibraryOpen(false)}
           onOpenProject={(rec: any) => {
-            setCurrentProjectId(rec.id);
-            applySnapshot(rec.snapshot);
-            setSnapshotBaseline(rec.snapshot);
+            handleOpenProjectSmart(rec);
           }}
           apiBase={apiBase}
           auth={auth}
@@ -923,12 +961,62 @@ export default function App() {
           onSetCurrentId={setCurrentProjectId}
           onClose={() => setProjectLibraryOpen(false)}
           onOpenProject={(rec: any) => {
-            setCurrentProjectId(rec.id);
-            applySnapshot(rec.snapshot);
-            setSnapshotBaseline(rec.snapshot);
+            handleOpenProjectSmart(rec);
           }}
         />
       )}
+
+            {openProjectDialog ? (
+        <div className="ptb-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="ptb-modal">
+            <div className="ptb-modal-title">
+              {t("projectLibrary.openConflictTitle")}
+            </div>
+
+            <div className="ptb-modal-text">
+              {t("projectLibrary.openConflictText")}
+            </div>
+
+            <div className="ptb-modal-actions">
+              <button
+                type="button"
+                className="ptb-btn ptb-btn--cancel"
+                onClick={() => setOpenProjectDialog(null)}
+              >
+                {t("projectLibrary.cancel")}
+              </button>
+
+              <button
+                type="button"
+                className="ptb-btn ptb-btn--confirm"
+                style={{ background: "#1e66ff" }}
+                onClick={() => {
+                  const u = new URL(window.location.href);
+                  u.searchParams.set("openProjectId", openProjectDialog.id);
+                  u.searchParams.set("_t", String(Date.now()));
+                  window.open(u.toString(), "_blank", "noopener,noreferrer");
+                  setOpenProjectDialog(null);
+                }}
+              >
+                {t("projectLibrary.openInNewTab")}
+              </button>
+
+              <button
+                type="button"
+                className="ptb-btn ptb-btn--confirm"
+                onClick={() => {
+                  setCurrentProjectId(openProjectDialog.id);
+                  applySnapshot(openProjectDialog.snapshot);
+                  setSnapshotBaseline(openProjectDialog.snapshot);
+                  setOpenProjectDialog(null);
+                }}
+              >
+                {t("projectLibrary.overwriteCurrent")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
 
