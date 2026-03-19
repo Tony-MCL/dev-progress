@@ -235,8 +235,18 @@ A: These are the most helpful day-to-day shortcuts.
       open: "Open",
       openEllipsis: "Open…",
       openRecent: "Open recent",
+
+      openProjectFree: "Open project",
+      openProjectPro: "Open from cloud",
+      openFile: "Open from file",
+
       save: "Save",
       saveAs: "Save as…",
+
+      saveFree: "Save project",
+      savePro: "Save to cloud",
+      saveToFile: "Save to file",
+
       print: "Print…",
       export: "Export",
       import: "Import",
@@ -275,8 +285,11 @@ A: These are the most helpful day-to-day shortcuts.
     },
 
     confirmOverwrite: {
-      title: "Overwrite the current plan?",
-      text: "In free mode, you can work on one project at a time.",
+      title: "Replace current project?",
+      textFree:
+        "In free mode, you can work on one project at a time. Do you want to overwrite your saved project?",
+      textPro:
+        "This action will replace the content of the project currently open in this tab. Do you want to continue?",
       cancel: "Cancel",
       confirm: "Overwrite",
     },
