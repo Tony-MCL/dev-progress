@@ -428,7 +428,7 @@ export default function App() {
   const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
     useDatePickerPopover();
 
-  const setFreeSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
+  const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
       if (!input) return null;
   
@@ -511,7 +511,7 @@ export default function App() {
     currentCloudProjectId,
     setCurrentCloudProjectId,
 
-    onSetFreeSnapshotBaseline: setFreeSnapshotBaseline,
+    onSetSnapshotBaseline: setSnapshotBaseline,
 
     projectStore,
     progressCalendar,
@@ -532,7 +532,7 @@ export default function App() {
       const snap = raw ? safeParseJSON<ProgressProjectSnapshotV1>(raw) : null;
       if (snap && (snap as any).v === 1) {
         applySnapshot(snap);
-        setFreeSnapshotBaseline(snap);
+        setSnapshotBaseline(snap);
         return true;
       }
     } catch {}
@@ -604,10 +604,7 @@ export default function App() {
     }, [rows, projectInfo, isRowDataEmpty, isProjectInfoEmpty]);
   
     const hasUnsavedChanges = useMemo(() => {
-      const isFree = String(org.activePlan ?? "free") === "free";
-      if (!isFree) return false;
-    
-      if (isCurrentPlanEffectivelyBlank) return false;
+  if (isCurrentPlanEffectivelyBlank) return false;
     
       const normalize = (input: any) => {
         if (!input) return null;
@@ -636,7 +633,7 @@ export default function App() {
       } catch {
         return true;
       }
-    }, [org.activePlan, buildSnapshot, isCurrentPlanEffectivelyBlank, lastSavedSnapshotJson]);
+    }, [buildSnapshot, isCurrentPlanEffectivelyBlank, lastSavedSnapshotJson]);
     // ============================
     // BLOCK: UNSAVED_CHANGES (END)
     // ============================
@@ -912,7 +909,7 @@ export default function App() {
           onOpenProject={(rec: any) => {
             setCurrentProjectId(rec.id);
             applySnapshot(rec.snapshot);
-            setFreeSnapshotBaseline(rec.snapshot);
+            setSnapshotBaseline(rec.snapshot);
           }}
           apiBase={apiBase}
           auth={auth}
@@ -928,7 +925,7 @@ export default function App() {
           onOpenProject={(rec: any) => {
             setCurrentProjectId(rec.id);
             applySnapshot(rec.snapshot);
-            setFreeSnapshotBaseline(rec.snapshot);
+            setSnapshotBaseline(rec.snapshot);
           }}
         />
       )}
