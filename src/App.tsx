@@ -272,6 +272,7 @@ export default function App() {
   const [projectLibraryOpen, setProjectLibraryOpen] = useState(false);
   const [openProjectDialog, setOpenProjectDialog] = useState<{
     id: string;
+    source: "local" | "cloud";
     snapshot: ProgressProjectSnapshotV1;
   } | null>(null);
 
@@ -663,14 +664,15 @@ export default function App() {
     // BLOCK: BEFORE_UNLOAD_GUARD (END)
     // ============================
 
-  const handleOpenProjectSmart = useCallback(
+  const handleOpenLocalProjectSmart = useCallback(
     (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
       const plan = String(org.activePlan ?? "free");
       const isProOrTrial = plan === "pro" || plan === "trial";
 
-      // Free: behold enkel eksisterende flyt
+      // Free: åpne direkte i single-slot flyt
       if (!isProOrTrial) {
         setCurrentProjectId(rec.id);
+        setCurrentCloudProjectId(null);
         applySnapshot(rec.snapshot);
         setSnapshotBaseline(rec.snapshot);
         return;
@@ -679,6 +681,7 @@ export default function App() {
       // Pro/Trial: tom fane -> åpne direkte
       if (isCurrentPlanEffectivelyBlank) {
         setCurrentProjectId(rec.id);
+        setCurrentCloudProjectId(null);
         applySnapshot(rec.snapshot);
         setSnapshotBaseline(rec.snapshot);
         return;
@@ -687,6 +690,7 @@ export default function App() {
       // Pro/Trial: eksisterende data -> vis dialog
       setOpenProjectDialog({
         id: rec.id,
+        source: "local",
         snapshot: rec.snapshot,
       });
     },
@@ -696,6 +700,34 @@ export default function App() {
       applySnapshot,
       setSnapshotBaseline,
       setCurrentProjectId,
+      setCurrentCloudProjectId,
+    ]
+  );
+
+  const handleOpenCloudProjectSmart = useCallback(
+    (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
+      // Cloud library brukes bare i Pro/Trial, så vi trenger ikke egen free-branch her
+
+      if (isCurrentPlanEffectivelyBlank) {
+        setCurrentProjectId(null);
+        setCurrentCloudProjectId(rec.id);
+        applySnapshot(rec.snapshot);
+        setSnapshotBaseline(rec.snapshot);
+        return;
+      }
+
+      setOpenProjectDialog({
+        id: rec.id,
+        source: "cloud",
+        snapshot: rec.snapshot,
+      });
+    },
+    [
+      isCurrentPlanEffectivelyBlank,
+      applySnapshot,
+      setSnapshotBaseline,
+      setCurrentProjectId,
+      setCurrentCloudProjectId,
     ]
   );
 
@@ -947,7 +979,7 @@ export default function App() {
           onSetCurrentId={setCurrentCloudProjectId}
           onClose={() => setProjectLibraryOpen(false)}
           onOpenProject={(rec: any) => {
-            handleOpenProjectSmart(rec);
+            handleOpenCloudProjectSmart(rec);
           }}
           apiBase={apiBase}
           auth={auth}
@@ -961,7 +993,7 @@ export default function App() {
           onSetCurrentId={setCurrentProjectId}
           onClose={() => setProjectLibraryOpen(false)}
           onOpenProject={(rec: any) => {
-            handleOpenProjectSmart(rec);
+            handleOpenLocalProjectSmart(rec);
           }}
         />
       )}
@@ -996,6 +1028,7 @@ export default function App() {
                       OPEN_PROJECT_HANDOFF_KEY,
                       JSON.stringify({
                         id: openProjectDialog.id,
+                        source: openProjectDialog.source,
                         snapshot: openProjectDialog.snapshot,
                         ts: Date.now(),
                       })
@@ -1017,7 +1050,14 @@ export default function App() {
                 type="button"
                 className="ptb-btn ptb-btn--confirm"
                 onClick={() => {
-                  setCurrentProjectId(openProjectDialog.id);
+                  if (openProjectDialog.source === "cloud") {
+                    setCurrentProjectId(null);
+                    setCurrentCloudProjectId(openProjectDialog.id);
+                  } else {
+                    setCurrentProjectId(openProjectDialog.id);
+                    setCurrentCloudProjectId(null);
+                  }
+
                   applySnapshot(openProjectDialog.snapshot);
                   setSnapshotBaseline(openProjectDialog.snapshot);
                   setOpenProjectDialog(null);
