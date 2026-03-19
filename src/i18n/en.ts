@@ -615,6 +615,11 @@ A: These are the most helpful day-to-day shortcuts.
     deleteTip: "Deletes this project from local database",
     activeTip: "Currently loaded project",
     notFound: "Project not found.",
+    openConflictTitle: "This tab already contains a project",
+    openConflictText: "Do you want to overwrite the current project in this tab, open the project in a new tab, or cancel?",
+    cancel: "Cancel",
+    openInNewTab: "Open in new tab",
+    overwriteCurrent: "Overwrite current",
   },
 };
 
