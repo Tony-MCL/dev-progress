@@ -236,22 +236,21 @@ A: Dette er de mest nyttige i daglig bruk.
       new: "Ny",
       newPlan: "Ny plan",
       fromTemplate: "Fra mal…",
-    
       open: "Åpne",
       openEllipsis: "Åpne…",
       openRecent: "Åpne nylig",
-    
+
       openProjectFree: "Åpne prosjekt",
       openProjectPro: "Åpne fra sky",
       openFile: "Åpne fra fil",
-    
+
       save: "Lagre",
       saveAs: "Lagre som…",
-    
+
       saveFree: "Lagre prosjekt",
       savePro: "Lagre til sky",
       saveToFile: "Lagre til fil",
-    
+
       print: "Skriv ut…",
       export: "Eksporter",
       import: "Importer",
@@ -291,8 +290,10 @@ A: Dette er de mest nyttige i daglig bruk.
 
     confirmOverwrite: {
       title: "Erstatte gjeldende prosjekt?",
-      textFree: "I gratis-modus kan du jobbe i ett prosjekt av gangen. Vil du overskrive ditt lagrede prosjekt?",
-      textPro: "Denne handlingen vil erstatte innholdet i prosjektet som er åpent i denne fanen. Vil du fortsette?",
+      textFree:
+        "I gratis-modus kan du jobbe i ett prosjekt av gangen. Vil du overskrive ditt lagrede prosjekt?",
+      textPro:
+        "Denne handlingen vil erstatte innholdet i prosjektet som er åpent i denne fanen. Vil du fortsette?",
       cancel: "Avbryt",
       confirm: "Overskriv",
     },
