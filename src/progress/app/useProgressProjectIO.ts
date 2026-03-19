@@ -26,9 +26,10 @@ import { parseClipboard, toTSV } from "../../core/utils/clipboard";
 import { safeParseJSON, downloadTextFile, pickTextFile } from "../../core/utils/fileIO";
 import { ensureAtLeastTitleVisible } from "../tableCommands";
 import { PROGRESS_KEYS } from "../../storage/progressLocalKeys";
-const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 import { lsReadString, lsWriteString } from "../../storage/localSettings";
 import { saveProgressProjectToCloud } from "../../cloud/cloudProjects";
+
+const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 
 type IndexedDbStore = {
   upsert: (x: {
