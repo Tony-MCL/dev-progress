@@ -641,6 +641,27 @@ export default function App() {
     // BLOCK: UNSAVED_CHANGES (END)
     // ============================
 
+    // ============================
+    // BLOCK: BEFORE_UNLOAD_GUARD (START)
+    // ============================
+    useEffect(() => {
+      if (!hasUnsavedChanges) return;
+  
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = "";
+      };
+  
+      window.addEventListener("beforeunload", handleBeforeUnload);
+  
+      return () => {
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+      };
+    }, [hasUnsavedChanges]);
+    // ============================
+    // BLOCK: BEFORE_UNLOAD_GUARD (END)
+    // ============================
+
   // ============================
   // BLOCK: JSX (START)
   // ============================
