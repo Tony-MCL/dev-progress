@@ -30,6 +30,7 @@ import { lsReadString, lsWriteString } from "../../storage/localSettings";
 import { saveProgressProjectToCloud } from "../../cloud/cloudProjects";
 
 const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
+const OPEN_IMPORT_HANDOFF_KEY = "progress_open_import_handoff_v1";
 const OPEN_FILE_HANDOFF_KEY = "progress_open_file_handoff_v1";
 
 type IndexedDbStore = {
@@ -624,94 +625,132 @@ export function useProgressProjectIO(args: {
     downloadTextFile(`progress-plan-${y}${m}${d}.tsv`, "text/tab-separated-values", text);
   }, [rows, columns]);
 
-  const importTSV = useCallback(async () => {
-    const picked = await pickTextFile(".tsv,text/tab-separated-values,text/plain");
-    if (!picked) return;
+    const applyImportedTsvText = useCallback(
+    (text: string) => {
+      const matrix = parseClipboard(text);
+      if (!matrix.length) return false;
 
-    const matrix = parseClipboard(picked.text);
-    if (!matrix.length) return;
+      const first = matrix[0].map((x) => String(x ?? "").trim());
+      const hasHeader =
+        first.length >= 2 &&
+        (first[0].toLowerCase() === "indent" ||
+          first[0].toLowerCase() === "innrykk" ||
+          first.includes("title"));
 
-    const first = matrix[0].map((x) => String(x ?? "").trim());
-    const hasHeader =
-      first.length >= 2 &&
-      (first[0].toLowerCase() === "indent" ||
-        first[0].toLowerCase() === "innrykk" ||
-        first.includes("title"));
+      let startRow = 0;
+      let idxIndent = 0;
+      const colIndexByKey = new Map<string, number>();
 
-    let startRow = 0;
-    let idxIndent = 0;
-    const colIndexByKey = new Map<string, number>();
+      if (hasHeader) {
+        startRow = 1;
+        idxIndent = first.findIndex(
+          (h) => h.toLowerCase() === "indent" || h.toLowerCase() === "innrykk"
+        );
+        if (idxIndent < 0) idxIndent = 0;
 
-    if (hasHeader) {
-      startRow = 1;
-      idxIndent = first.findIndex(
-        (h) => h.toLowerCase() === "indent" || h.toLowerCase() === "innrykk"
-      );
-      if (idxIndent < 0) idxIndent = 0;
-
-      for (let i = 0; i < first.length; i++) colIndexByKey.set(first[i], i);
-    } else {
-      idxIndent = 0;
-      colIndexByKey.set("Indent", 0);
-      columns.forEach((c, i) => colIndexByKey.set(c.key, i + 1));
-      startRow = 0;
-    }
-
-    const imported: RowData[] = [];
-
-    for (let r = startRow; r < matrix.length; r++) {
-      const row = matrix[r];
-      if (!row || row.length === 0) continue;
-
-      const indentRaw = row[idxIndent] ?? "0";
-      const indent = Number(String(indentRaw).trim());
-      const safeIndent = Number.isFinite(indent)
-        ? Math.max(0, Math.min(20, Math.floor(indent)))
-        : 0;
-
-      const cells: Record<string, any> = {};
-      for (const c of columns) {
-        let idx = colIndexByKey.get(c.key);
-        if (idx === undefined && hasHeader) idx = colIndexByKey.get(c.title);
-        if (idx === undefined) idx = -1;
-        const v = idx >= 0 ? row[idx] : "";
-        cells[c.key] = v === undefined || v === null ? "" : String(v);
+        for (let i = 0; i < first.length; i++) colIndexByKey.set(first[i], i);
+      } else {
+        idxIndent = 0;
+        colIndexByKey.set("Indent", 0);
+        columns.forEach((c, i) => colIndexByKey.set(c.key, i + 1));
+        startRow = 0;
       }
 
-      const hasAny =
-        String(cells.title ?? "").trim().length > 0 ||
-        String(cells.start ?? "").trim().length > 0 ||
-        String(cells.end ?? "").trim().length > 0 ||
-        String(cells.dur ?? "").trim().length > 0;
+      const imported: RowData[] = [];
 
-      if (!hasAny) continue;
+      for (let r = startRow; r < matrix.length; r++) {
+        const row = matrix[r];
+        if (!row || row.length === 0) continue;
 
-      imported.push({
-        id: `r${imported.length + 1}`,
-        indent: safeIndent,
-        cells,
+        const indentRaw = row[idxIndent] ?? "0";
+        const indent = Number(String(indentRaw).trim());
+        const safeIndent = Number.isFinite(indent)
+          ? Math.max(0, Math.min(20, Math.floor(indent)))
+          : 0;
+
+        const cells: Record<string, any> = {};
+        for (const c of columns) {
+          let idx = colIndexByKey.get(c.key);
+          if (idx === undefined && hasHeader) idx = colIndexByKey.get(c.title);
+          if (idx === undefined) idx = -1;
+          const v = idx >= 0 ? row[idx] : "";
+          cells[c.key] = v === undefined || v === null ? "" : String(v);
+        }
+
+        const hasAny =
+          String(cells.title ?? "").trim().length > 0 ||
+          String(cells.start ?? "").trim().length > 0 ||
+          String(cells.end ?? "").trim().length > 0 ||
+          String(cells.dur ?? "").trim().length > 0;
+
+        if (!hasAny) continue;
+
+        imported.push({
+          id: `r${imported.length + 1}`,
+          indent: safeIndent,
+          cells,
+        });
+      }
+
+      const target = Math.max(120, imported.length);
+      for (let i = imported.length; i < target; i++) {
+        imported.push({
+          id: `r${i + 1}`,
+          indent: 0,
+          cells: {
+            title: "",
+            start: "",
+            end: "",
+            dur: "",
+            dep: "",
+            wbs: "",
+            owner: "",
+            note: "",
+          },
+        });
+      }
+
+      const computed = computeDerivedRows(imported, progressCalendar as any, {
+        title: "title",
+        start: "start",
+        end: "end",
+        dur: "dur",
       });
-    }
 
-    const target = Math.max(120, imported.length);
-    for (let i = imported.length; i < target; i++) {
-      imported.push({
-        id: `r${i + 1}`,
-        indent: 0,
-        cells: { title: "", start: "", end: "", dur: "", dep: "", wbs: "", owner: "", note: "" },
-      });
-    }
+      setCurrentProjectId(null);
+      setCurrentCloudProjectId(null);
+      requestGanttFocus();
+      setRows(computed);
 
-    const computed = computeDerivedRows(imported, progressCalendar as any, {
-      title: "title",
-      start: "start",
-      end: "end",
-      dur: "dur",
-    });
+      try {
+        const snap = {
+          ...buildSnapshot(),
+          rows: computed,
+        } as ProgressProjectSnapshotV1;
 
-    requestGanttFocus();
-    setRows(computed);
-  }, [columns, progressCalendar, requestGanttFocus, setRows]);
+        lsWriteString(PROGRESS_KEYS.freeProjectSnapshotV1, JSON.stringify(snap));
+        onSetSnapshotBaseline?.(snap);
+      } catch {}
+
+      return true;
+    },
+    [
+      columns,
+      progressCalendar,
+      setCurrentProjectId,
+      setCurrentCloudProjectId,
+      requestGanttFocus,
+      setRows,
+      buildSnapshot,
+      onSetSnapshotBaseline,
+    ]
+  );
+
+  const importTSV = useCallback(async () => {
+    const picked = await pickTextFile(".tsv,text/tab-separated-values,text/plain");
+    if (!picked) return false;
+    return applyImportedTsvText(picked.text);
+  }, [applyImportedTsvText]);
 
   const isCurrentPlanEffectivelyBlank = useCallback(() => {
     const rowDataEmpty = !rows.some((r) => {
@@ -755,6 +794,23 @@ export function useProgressProjectIO(args: {
 
     const u = new URL(window.location.href);
     u.searchParams.set("openFileHandoff", "1");
+    u.searchParams.set("_t", String(Date.now()));
+    window.open(u.toString(), "_blank", "noopener,noreferrer");
+  }, []);
+
+  const openImportInNewTab = useCallback((text: string) => {
+    try {
+      lsWriteString(
+        OPEN_IMPORT_HANDOFF_KEY,
+        JSON.stringify({
+          text,
+          ts: Date.now(),
+        })
+      );
+    } catch {}
+
+    const u = new URL(window.location.href);
+    u.searchParams.set("openImportHandoff", "1");
     u.searchParams.set("_t", String(Date.now()));
     window.open(u.toString(), "_blank", "noopener,noreferrer");
   }, []);
@@ -849,6 +905,45 @@ export function useProgressProjectIO(args: {
     setCurrentProjectId,
     setCurrentCloudProjectId,
   ]);
+
+    const didHandleOpenImportTabRef = useRef(false);
+
+  useEffect(() => {
+    if (didHandleOpenImportTabRef.current) return;
+    didHandleOpenImportTabRef.current = true;
+
+    const sp = new URLSearchParams(window.location.search);
+    const shouldOpenImportHandoff = sp.get("openImportHandoff") === "1";
+    if (!shouldOpenImportHandoff) return;
+
+    try {
+      const raw = lsReadString(OPEN_IMPORT_HANDOFF_KEY, null);
+      const parsed = raw ? safeParseJSON<any>(raw) : null;
+      const text = String(parsed?.text ?? "");
+
+      if (!text.trim()) return;
+
+      const ok = applyImportedTsvText(text);
+      if (!ok) return;
+
+      try {
+        localStorage.removeItem(OPEN_IMPORT_HANDOFF_KEY);
+      } catch {}
+
+      sp.delete("openImportHandoff");
+      sp.delete("_t");
+
+      const nextQs = sp.toString();
+      const nextUrl =
+        window.location.pathname +
+        (nextQs ? `?${nextQs}` : "") +
+        window.location.hash;
+
+      window.history.replaceState(null, "", nextUrl);
+    } catch (e) {
+      console.warn("[Progress] open import handoff failed:", e);
+    }
+  }, [applyImportedTsvText]);
 
   // ----------------------------
   // Reset blank project (Free, same tab)
@@ -1088,7 +1183,24 @@ export function useProgressProjectIO(args: {
         }
 
         case "importTsv": {
-          void importTSV();
+          (async () => {
+            try {
+              const picked = await pickTextFile(".tsv,text/tab-separated-values,text/plain");
+              if (!picked) return;
+
+              const plan = String(org.activePlan ?? "free");
+              const isProOrTrial = plan === "pro" || plan === "trial";
+
+              if (isProOrTrial && !isCurrentPlanEffectivelyBlank()) {
+                openImportInNewTab(picked.text);
+                return;
+              }
+
+              applyImportedTsvText(picked.text);
+            } catch (e) {
+              console.warn("[Progress] Import TSV failed:", e);
+            }
+          })();
           return;
         }
 
@@ -1126,6 +1238,8 @@ export function useProgressProjectIO(args: {
       buildBlankRows,
       exportTSV,
       importTSV,
+      openImportInNewTab,
+      applyImportedTsvText,
       setPrint2Open,
       onSetSnapshotBaseline,
       isCurrentPlanEffectivelyBlank,
