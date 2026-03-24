@@ -294,6 +294,11 @@ A: These are the most helpful day-to-day shortcuts.
       confirm: "Overwrite",
     },
 
+    multiTab: {
+      title: "Number of open Progress tabs",
+      openTabs: "Open tabs",
+    },
+
     a11y: {
       submenuAriaPrefix: "Submenu: ",
     },
