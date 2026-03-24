@@ -463,16 +463,34 @@ function SvgBars({
   return (
     <>
       {bars.map((b, idx) => {
-        const base = (b.color ?? DEFAULT_BAR_HEX).trim();
-        const _fill = base.startsWith("#") ? hexToRgba(base, 0.78) : base;
-
         const label = showLabels ? (labelByRowId[b.rowId] ?? "") : "";
 
-        // litt padding inni bar
+        if (b.isMilestone) {
+          const cx = b.x + b.w / 2;
+          const cy = b.y + b.h / 2;
+          const half = Math.max(4, b.h / 2);
+
+          const pts = [
+            `${cx},${cy - half}`,
+            `${cx + half},${cy}`,
+            `${cx},${cy + half}`,
+            `${cx - half},${cy}`,
+          ].join(" ");
+
+          return (
+            <g key={idx}>
+              <polygon
+                points={pts}
+                fill={b.color || DEFAULT_BAR_FILL}
+                stroke={b.color ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.18)"}
+                strokeWidth={BAR_STROKE_W}
+              />
+            </g>
+          );
+        }
+
         const tx = b.x + 6;
         const ty = b.y + b.h / 2 + 3;
-
-        // clip så tekst ikke flyter utenfor baren
         const clipId = `barclip-${idx}`;
 
         return (
@@ -491,7 +509,14 @@ function SvgBars({
             {showLabels && label ? (
               <>
                 <clipPath id={clipId}>
-                  <rect x={b.x} y={b.y} width={Math.max(1, b.w)} height={Math.max(1, b.h)} rx={BAR_RX} ry={BAR_RX} />
+                  <rect
+                    x={b.x}
+                    y={b.y}
+                    width={Math.max(1, b.w)}
+                    height={Math.max(1, b.h)}
+                    rx={BAR_RX}
+                    ry={BAR_RX}
+                  />
                 </clipPath>
                 <text
                   x={tx}
@@ -764,21 +789,45 @@ export default function PrintRenderer({
         const rowIndexById = new Map<string, number>();
         pageRows.forEach((r: any, i: number) => rowIndexById.set(r.id, i));
 
-        const pageBars: PrintBar[] = pageBarsRaw.map((b) => {
-          const i = rowIndexById.get(b.rowId) ?? 0;
-          const yCenter = headerRowHeight + i * rowHeightPx + (rowHeightPx - b.h) / 2;
-
-          const x1 = ganttLeft + LEFT_GUTTER_PX + (b.x - baseGanttX) * sx;
-          const x2 = ganttLeft + LEFT_GUTTER_PX + (b.x + b.w - baseGanttX) * sx;
-
-          let sx1 = snap(x1);
-          let sx2 = snap(x2);
-
-          sx1 = Math.max(sx1, leftLimit);
-          sx2 = Math.min(sx2, rightLimit);
-
-          return { ...b, x: sx1, w: Math.max(1, sx2 - sx1), y: snap(yCenter) };
-        });
+                const pageBars: PrintBar[] = pageBarsRaw.map((b) => {
+                  const i = rowIndexById.get(b.rowId) ?? 0;
+                  const yCenter = headerRowHeight + i * rowHeightPx + (rowHeightPx - b.h) / 2;
+        
+                  if (b.isMilestone) {
+                    const baseCenterX = b.x + b.w / 2;
+                    const scaledCenterX = ganttLeft + LEFT_GUTTER_PX + (baseCenterX - baseGanttX) * sx;
+        
+                    const size = Math.max(8, snap(b.h));
+                    let x = snap(scaledCenterX - size / 2);
+        
+                    x = Math.max(x, leftLimit);
+                    x = Math.min(x, rightLimit - size);
+        
+                    return {
+                      ...b,
+                      x,
+                      y: snap(yCenter),
+                      w: size,
+                      h: size,
+                    };
+                  }
+        
+                  const x1 = ganttLeft + LEFT_GUTTER_PX + (b.x - baseGanttX) * sx;
+                  const x2 = ganttLeft + LEFT_GUTTER_PX + (b.x + b.w - baseGanttX) * sx;
+        
+                  let sx1 = snap(x1);
+                  let sx2 = snap(x2);
+        
+                  sx1 = Math.max(sx1, leftLimit);
+                  sx2 = Math.min(sx2, rightLimit);
+        
+                  return {
+                    ...b,
+                    x: sx1,
+                    w: Math.max(1, sx2 - sx1),
+                    y: snap(yCenter),
+                  };
+                });
 
         // ✅ label map (rowId -> label)
         const labelKey = (barLabelKey ?? visibleColumns?.[0]?.key ?? "").trim();
