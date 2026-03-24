@@ -506,31 +506,75 @@ function SvgBars({
               stroke={b.color ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.18)"}
               strokeWidth={BAR_STROKE_W}
             />
-            {showLabels && label ? (
-              <>
-                <clipPath id={clipId}>
-                  <rect
-                    x={b.x}
-                    y={b.y}
-                    width={Math.max(1, b.w)}
-                    height={Math.max(1, b.h)}
-                    rx={BAR_RX}
-                    ry={BAR_RX}
-                  />
-                </clipPath>
+            {showLabels && label ? (() => {
+              const labelW = estimateLabelWidth(label);
+              const padding = 12; // luft inni bar
+              const fitsInside = !b.isMilestone && labelW <= (b.w - padding);
+            
+              // midtlinje vertikalt
+              const ty = b.y + b.h / 2 + 3;
+            
+              // ===== CASE 1: inni bar =====
+              if (fitsInside) {
+                const tx = b.x + 6;
+                const clipId = `barclip-${idx}`;
+            
+                return (
+                  <>
+                    <clipPath id={clipId}>
+                      <rect
+                        x={b.x}
+                        y={b.y}
+                        width={Math.max(1, b.w)}
+                        height={Math.max(1, b.h)}
+                        rx={BAR_RX}
+                        ry={BAR_RX}
+                      />
+                    </clipPath>
+                    <text
+                      x={tx}
+                      y={ty}
+                      clipPath={`url(#${clipId})`}
+                      fontSize={9.5}
+                      fontWeight={700}
+                      fill={"rgba(255,255,255,0.92)"}
+                      style={{ pointerEvents: "none" }}
+                    >
+                      {label}
+                    </text>
+                  </>
+                );
+              }
+            
+              // ===== CASE 2: utenfor =====
+            
+              const gap = 6;
+            
+              // prøv høyre først
+              let tx = b.x + b.w + gap;
+              let anchor: "start" | "end" = "start";
+            
+              // hvis vi går ut av høyre side → bruk venstre
+              const pageRight = 2000; // "fake large", clipping håndteres allerede av svg
+              if (tx + labelW > pageRight) {
+                tx = b.x - gap;
+                anchor = "end";
+              }
+            
+              return (
                 <text
                   x={tx}
                   y={ty}
-                  clipPath={`url(#${clipId})`}
                   fontSize={9.5}
-                  fontWeight={700}
-                  fill={"rgba(255,255,255,0.92)"}
+                  fontWeight={600}
+                  fill={"rgba(0,0,0,0.85)"}
+                  textAnchor={anchor}
                   style={{ pointerEvents: "none" }}
                 >
                   {label}
                 </text>
-              </>
-            ) : null}
+              );
+            })() : null}
           </g>
         );
       })}
@@ -542,6 +586,11 @@ function SvgBars({
 function estimateTextPx(text: string, pxPerChar = 6): number {
   const t = String(text ?? "");
   return t.length * pxPerChar;
+}
+
+function estimateLabelWidth(text: string): number {
+  const t = String(text ?? "");
+  return t.length * 5.8 + 6; // litt tighter enn table
 }
 
 function computeAutoColumnWidths(columns: ColumnDef[], rows: PrintRow[], opts: { maxTableW: number; fontPxPerChar?: number }) {
