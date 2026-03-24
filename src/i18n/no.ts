@@ -298,6 +298,11 @@ A: Dette er de mest nyttige i daglig bruk.
       confirm: "Overskriv",
     },
 
+    multiTab: {
+      title: "Antall åpne Progress-faner",
+      openTabs: "Åpne faner",
+    },
+
     a11y: {
       submenuAriaPrefix: "Undermeny: ",
     },
