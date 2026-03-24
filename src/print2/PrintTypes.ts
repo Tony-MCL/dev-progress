@@ -71,7 +71,9 @@ export type PrintBar = {
   h: number;
 
   startISO: string;
-  endISO: string;
+  endISO: string | null;
+
+  isMilestone?: boolean;
 
   // valgfritt
   color?: string;
