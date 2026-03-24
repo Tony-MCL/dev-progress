@@ -42,7 +42,7 @@ const ARROW_HEAD_LEN = 6;
 const ARROW_HEAD_W = 4;
 
 // ✅ Dytt deps litt vekk fra bar-kant så de ikke ender “inni”
-const DEP_END_PAD = 4;
+const DEP_END_PAD = 0;
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
