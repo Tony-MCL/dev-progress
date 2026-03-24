@@ -737,52 +737,6 @@ export default function ProgressToolbar({
     if (!anyOpen) setActiveSubKey(null);
   }, [anyOpen]);
 
-    let tabId = sessionStorage.getItem(PROGRESS_TAB_ID_KEY);
-    if (!tabId) {
-      tabId = `progress_tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      sessionStorage.setItem(PROGRESS_TAB_ID_KEY, tabId);
-    }
-
-    const updatePresence = () => {
-      const next = readOpenTabRegistry();
-      next[tabId!] = Date.now();
-      writeOpenTabRegistry(next);
-      setOpenTabCount(Object.keys(next).length);
-    };
-
-    const removePresence = () => {
-      const next = readOpenTabRegistry();
-      delete next[tabId!];
-      writeOpenTabRegistry(next);
-    };
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key !== PROGRESS_TAB_REGISTRY_KEY) return;
-      const next = readOpenTabRegistry();
-      setOpenTabCount(Math.max(1, Object.keys(next).length));
-    };
-
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        updatePresence();
-      }
-    };
-
-    updatePresence();
-
-    const intervalId = window.setInterval(updatePresence, 10000);
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("beforeunload", removePresence);
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("beforeunload", removePresence);
-      document.removeEventListener("visibilitychange", onVisibility);
-      removePresence();
-    };
-
   const renderMenuPop = (
     menuLabel: string,
     nodes: MenuNode[],
