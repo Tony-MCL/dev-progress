@@ -797,62 +797,58 @@ export default function PrintRenderer({
           ln: PrintDepLine
         ) => {
           const rowH = rowHeightPx;
-          const stub = 10;
-          const padX = 14;
-
+        
+          const OUT = 2;
+          const APPROACH = 10;
+        
           const fromIsStart = ln.type === "SS" || ln.type === "SF";
           const toIsEnd = ln.type === "FF" || ln.type === "SF";
-
-          // Base attach points
+        
           const fromAttachX = fromIsStart ? fromBar.x : (fromBar.x + fromBar.w);
           const toAttachX = toIsEnd ? (toBar.x + toBar.w) : toBar.x;
-
+        
           const fromY = headerRowHeight + fromIdx * rowH + rowH / 2;
           const toY = headerRowHeight + toIdx * rowH + rowH / 2;
-
-          // Determine horizontal "direction" relative to target attach
-          const dir = toAttachX >= fromAttachX ? 1 : -1;
-
-          // ✅ Start/end points pushed outside bars
+        
+          const sign = fromY <= toY ? -1 : 1;
+          const barHalf = Math.max(1, toBar.h / 2);
+        
           const fromX = fromIsStart ? (fromAttachX - DEP_END_PAD) : (fromAttachX + DEP_END_PAD);
           const toX = toIsEnd ? (toAttachX + DEP_END_PAD) : (toAttachX - DEP_END_PAD);
-
-          const fromStubX = fromX + dir * stub;
-          const toStubX = toX - dir * stub;
-
-          const laneXRaw =
-            dir > 0 ? Math.max(fromX, toX) + padX : Math.min(fromX, toX) - padX;
-
+        
+          const xStart = fromIsStart ? (fromX - OUT) : (fromX + OUT);
+          const xEnd = toX;
+        
+          const yEdge = toY + sign * barHalf;
+          const yApproach = yEdge + sign * APPROACH;
+        
           const ganttLeftEdge = pageTableW + LEFT_GUTTER_PX;
           const ganttRightEdge = pageTableW + pageGanttW - RIGHT_GUTTER_PX;
-          const laneX = Math.max(ganttLeftEdge, Math.min(ganttRightEdge, laneXRaw));
-
-          const laneY =
-            toIdx >= fromIdx
-              ? (headerRowHeight + (fromIdx + 1) * rowH - 2)
-              : (headerRowHeight + fromIdx * rowH + 2);
-
-          let points: Array<{ x: number; y: number }> = [];
-
-          if (fromIdx === toIdx) {
-            points = [
-              { x: fromX,     y: fromY },
-              { x: fromStubX, y: fromY },
-              { x: toStubX,   y: toY },
-              { x: toX,       y: toY },
-            ];
-          } else {
-            points = [
-              { x: fromX,     y: fromY },
-              { x: fromStubX, y: fromY },
-              { x: laneX,     y: fromY },
-              { x: laneX,     y: laneY },
-              { x: toStubX,   y: laneY },
-              { x: toStubX,   y: toY },
-              { x: toX,       y: toY },
-            ];
-          }
-
+        
+          const clampX = (x: number) => Math.max(ganttLeftEdge, Math.min(ganttRightEdge, x));
+        
+          const fromXC = clampX(fromX);
+          const xStartC = clampX(xStart);
+          const xEndC = clampX(xEnd);
+        
+          const targetDx = xEndC - xStartC;
+          const goesPositiveToTarget = targetDx >= 0;
+        
+          const points = goesPositiveToTarget
+            ? [
+                { x: fromXC, y: fromY },
+                { x: xStartC, y: fromY },
+                { x: xEndC, y: fromY },
+                { x: xEndC, y: yEdge },
+              ]
+            : [
+                { x: fromXC, y: fromY },
+                { x: xStartC, y: fromY },
+                { x: xStartC, y: yApproach },
+                { x: xEndC, y: yApproach },
+                { x: xEndC, y: yEdge },
+              ];
+        
           return points.map((p) => ({ x: snap(p.x), y: snap(p.y) }));
         };
 
