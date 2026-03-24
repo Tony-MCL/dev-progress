@@ -366,40 +366,60 @@ export function buildPrintModel(input: PrintInput, opts?: Partial<PrintOptions>)
     barInsetYPx: options.barInsetYPx,
   };
 
-  // 9) bars
-  const bars: PrintBar[] = [];
-  for (const pr of printRows) {
-    if (!pr.startISO || !pr.endISO) continue;
-
-    const s = parseISOLoose(pr.startISO);
-    const e = parseISOLoose(pr.endISO);
-    if (!s || !e) continue;
-
-    const startOffsetDays = daysBetween(rangeStart, s);
-    const endOffsetDays = daysBetween(rangeStart, e);
-    const x = ganttPx.x + startOffsetDays * pxPerDay;
-    const w = Math.max(1, (endOffsetDays - startOffsetDays + 1) * pxPerDay);
-
-    const y = ganttPx.y + pr.index * options.rowHeightPx + options.barInsetYPx;
-    const h = options.barHeightPx;
-
-    const ownerName = normalizeOwner(pr.cells?.[ownerKey]);
-    const rawOwnerColor = ownerName ? normalizeOwner(ownerColorMap[ownerName]) : "";
-
-    // ✅ Prioritet: ownerColor -> global defaultBarColor -> undefined
-    const color = rawOwnerColor || globalDefaultBarColor || undefined;
-
-    bars.push({
-      rowId: pr.id,
-      x,
-      y,
-      w,
-      h,
-      startISO: pr.startISO,
-      endISO: pr.endISO,
-      color,
-    });
-  }
+    // 9) bars + milestones
+    const bars: PrintBar[] = [];
+    for (const pr of printRows) {
+      if (!pr.startISO) continue;
+  
+      const s = parseISOLoose(pr.startISO);
+      const e = pr.endISO ? parseISOLoose(pr.endISO) : null;
+      if (!s) continue;
+  
+      const ownerName = normalizeOwner(pr.cells?.[ownerKey]);
+      const rawOwnerColor = ownerName ? normalizeOwner(ownerColorMap[ownerName]) : "";
+  
+      // ✅ Prioritet: ownerColor -> global defaultBarColor -> undefined
+      const color = rawOwnerColor || globalDefaultBarColor || undefined;
+  
+      const y = ganttPx.y + pr.index * options.rowHeightPx + options.barInsetYPx;
+      const h = options.barHeightPx;
+  
+      // Milestone: start finnes, end mangler
+      if (!e) {
+        const startOffsetDays = daysBetween(rangeStart, s);
+        const centerX = ganttPx.x + startOffsetDays * pxPerDay + pxPerDay / 2;
+  
+        bars.push({
+          rowId: pr.id,
+          x: centerX - h / 2,
+          y,
+          w: h,
+          h,
+          startISO: pr.startISO,
+          endISO: null,
+          isMilestone: true,
+          color,
+        });
+        continue;
+      }
+  
+      const startOffsetDays = daysBetween(rangeStart, s);
+      const endOffsetDays = daysBetween(rangeStart, e);
+      const x = ganttPx.x + startOffsetDays * pxPerDay;
+      const w = Math.max(1, (endOffsetDays - startOffsetDays + 1) * pxPerDay);
+  
+      bars.push({
+        rowId: pr.id,
+        x,
+        y,
+        w,
+        h,
+        startISO: pr.startISO,
+        endISO: pr.endISO,
+        isMilestone: false,
+        color,
+      });
+    }
 
   // 10) dependency lines (base geometry; renderer re-builds per page for correctness)
   const depLines: PrintDepLine[] = [];
