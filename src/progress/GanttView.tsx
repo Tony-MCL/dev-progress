@@ -812,7 +812,7 @@ export default function GanttView({
                   const barHalf = (depRender.barH ?? 16) / 2;
 
                   const yEdge = y2 + sign * barHalf;
-                  const yApproach = yEdge + sign * 6;
+                  const yApproach = yEdge + sign * 8;
 
                   const clampX = (x: number) => Math.max(0, Math.min(timelineWidth, x));
 
