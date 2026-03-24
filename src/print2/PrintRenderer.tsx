@@ -455,10 +455,12 @@ function SvgBars({
   bars,
   showLabels,
   labelByRowId,
+  rightLimit,
 }: {
   bars: PrintBar[];
   showLabels: boolean;
   labelByRowId: Record<string, string>;
+  rightLimit: number;
 }) {
   return (
     <>
@@ -508,13 +510,12 @@ function SvgBars({
             />
             {showLabels && label ? (() => {
               const labelW = estimateLabelWidth(label);
-              const padding = 12; // luft inni bar
+              const padding = 12;
               const fitsInside = !b.isMilestone && labelW <= (b.w - padding);
             
-              // midtlinje vertikalt
-              const ty = b.y + b.h / 2 + 3;
+              const insideTy = b.y + b.h / 2 + 3;
+              const outsideTy = b.y + b.h / 2 - 1; // løft labels litt opp for å unngå konflikt med deps
             
-              // ===== CASE 1: inni bar =====
               if (fitsInside) {
                 const tx = b.x + 6;
                 const clipId = `barclip-${idx}`;
@@ -533,7 +534,7 @@ function SvgBars({
                     </clipPath>
                     <text
                       x={tx}
-                      y={ty}
+                      y={insideTy}
                       clipPath={`url(#${clipId})`}
                       fontSize={9.5}
                       fontWeight={700}
@@ -546,29 +547,39 @@ function SvgBars({
                 );
               }
             
-              // ===== CASE 2: utenfor =====
-            
               const gap = 6;
             
               // prøv høyre først
-              let tx = b.x + b.w + gap;
-              let anchor: "start" | "end" = "start";
+              const rightX = b.x + b.w + gap;
+              const rightFits = rightX + labelW <= rightLimit;
             
-              // hvis vi går ut av høyre side → bruk venstre
-              const pageRight = 2000; // "fake large", clipping håndteres allerede av svg
-              if (tx + labelW > pageRight) {
-                tx = b.x - gap;
-                anchor = "end";
+              if (rightFits) {
+                return (
+                  <text
+                    x={rightX}
+                    y={outsideTy}
+                    fontSize={9.5}
+                    fontWeight={600}
+                    fill={"rgba(0,0,0,0.85)"}
+                    textAnchor="start"
+                    style={{ pointerEvents: "none" }}
+                  >
+                    {label}
+                  </text>
+                );
               }
+            
+              // fallback: venstre side
+              const leftX = b.x - gap;
             
               return (
                 <text
-                  x={tx}
-                  y={ty}
+                  x={leftX}
+                  y={outsideTy}
                   fontSize={9.5}
                   fontWeight={600}
                   fill={"rgba(0,0,0,0.85)"}
-                  textAnchor={anchor}
+                  textAnchor="end"
                   style={{ pointerEvents: "none" }}
                 >
                   {label}
@@ -1173,6 +1184,7 @@ export default function PrintRenderer({
                   bars={pageBars}
                   showLabels={Boolean(showBarLabels)}
                   labelByRowId={labelByRowId}
+                  rightLimit={pageTableW + pageGanttW - RIGHT_GUTTER_PX - 4}
                 />
 
                 {/* ✅ arrowheads over bars (never hidden) */}
