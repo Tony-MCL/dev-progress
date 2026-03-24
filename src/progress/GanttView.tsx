@@ -801,11 +801,11 @@ export default function GanttView({
                   const fromIsStart = type === "SS" || type === "SF";
                   const toIsEnd = type === "FF" || type === "SF";
 
-                  const OUT = 1.5;
+                  const OUT = 2;
                   const fromEdgeX = fromIsStart ? a.left : a.right;
                   const xStart = fromIsStart ? fromEdgeX - OUT : fromEdgeX + OUT;
 
-                  const IN = 1.5;
+                  const IN = 0;
                   const xEnd = toIsEnd ? b.right - IN : b.left + IN;
 
                   const sign = y1 <= y2 ? -1 : 1;
