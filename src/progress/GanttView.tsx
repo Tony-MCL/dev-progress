@@ -804,32 +804,26 @@ export default function GanttView({
                   const OUT = 2;
                   const fromEdgeX = fromIsStart ? a.left : a.right;
                   const xStart = fromIsStart ? fromEdgeX - OUT : fromEdgeX + OUT;
-
+                  
                   const IN = 0;
                   const xEnd = toIsEnd ? b.right - IN : b.left + IN;
-
+                  
                   const sign = y1 <= y2 ? -1 : 1;
                   const barHalf = (depRender.barH ?? 16) / 2;
-
+                  
                   const yEdge = y2 + sign * barHalf;
                   const yApproach = yEdge + sign * 8;
-
+                  
                   const clampX = (x: number) => Math.max(0, Math.min(timelineWidth, x));
-
-                  const LANE_GAP = 2;
-
-                  const rawLaneX = fromIsStart ? Math.min(xStart, xEnd) - LANE_GAP : Math.max(xStart, xEnd) + LANE_GAP;
-
-                  const laneX = clampX(rawLaneX);
+                  
                   const xStartC = clampX(xStart);
                   const xEndC = clampX(xEnd);
                   const fromEdgeXC = clampX(fromEdgeX);
-
+                  
                   const pts = [
                     { x: fromEdgeXC, y: y1 },
                     { x: xStartC, y: y1 },
-                    { x: laneX, y: y1 },
-                    { x: laneX, y: yApproach },
+                    { x: xStartC, y: yApproach },
                     { x: xEndC, y: yApproach },
                     { x: xEndC, y: yEdge },
                   ];
