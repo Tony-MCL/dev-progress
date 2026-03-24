@@ -802,31 +802,41 @@ export default function GanttView({
                   const toIsEnd = type === "FF" || type === "SF";
 
                   const OUT = 2;
-                  const fromEdgeX = fromIsStart ? a.left : a.right;
-                  const xStart = fromIsStart ? fromEdgeX - OUT : fromEdgeX + OUT;
-                  
-                  const IN = 0;
-                  const xEnd = toIsEnd ? b.right - IN : b.left + IN;
-                  
-                  const sign = y1 <= y2 ? -1 : 1;
-                  const barHalf = (depRender.barH ?? 16) / 2;
-                  
-                  const yEdge = y2 + sign * barHalf;
-                  const yApproach = yEdge + sign * 8;
-                  
-                  const clampX = (x: number) => Math.max(0, Math.min(timelineWidth, x));
-                  
-                  const xStartC = clampX(xStart);
-                  const xEndC = clampX(xEnd);
-                  const fromEdgeXC = clampX(fromEdgeX);
-                  
-                  const pts = [
-                    { x: fromEdgeXC, y: y1 },
-                    { x: xStartC, y: y1 },
-                    { x: xStartC, y: yApproach },
-                    { x: xEndC, y: yApproach },
-                    { x: xEndC, y: yEdge },
-                  ];
+const fromEdgeX = fromIsStart ? a.left : a.right;
+const xStart = fromIsStart ? fromEdgeX - OUT : fromEdgeX + OUT;
+
+const IN = 0;
+const xEnd = toIsEnd ? b.right - IN : b.left + IN;
+
+const sign = y1 <= y2 ? -1 : 1;
+const barHalf = (depRender.barH ?? 16) / 2;
+
+const yEdge = y2 + sign * barHalf;
+const yApproach = yEdge + sign * 8;
+
+const clampX = (x: number) => Math.max(0, Math.min(timelineWidth, x));
+
+const xStartC = clampX(xStart);
+const xEndC = clampX(xEnd);
+const fromEdgeXC = clampX(fromEdgeX);
+
+const targetDx = xEndC - xStartC;
+const goesPositiveToTarget = targetDx >= 0;
+
+const pts = goesPositiveToTarget
+  ? [
+      { x: fromEdgeXC, y: y1 },
+      { x: xStartC, y: y1 },
+      { x: xEndC, y: y1 },
+      { x: xEndC, y: yEdge },
+    ]
+  : [
+      { x: fromEdgeXC, y: y1 },
+      { x: xStartC, y: y1 },
+      { x: xStartC, y: yApproach },
+      { x: xEndC, y: yApproach },
+      { x: xEndC, y: yEdge },
+    ];
 
                   const r = 2;
 
