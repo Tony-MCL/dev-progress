@@ -236,15 +236,15 @@ A: These are the most helpful day-to-day shortcuts.
       openEllipsis: "Open…",
       openRecent: "Open recent",
 
-      openProjectFree: "Open project",
-      openProjectPro: "Open from cloud",
+      openProject: "Open project",
+      openFromCloud: "Open from cloud",
       openFile: "Open from file",
 
       save: "Save",
       saveAs: "Save as…",
 
-      saveFree: "Save project",
-      savePro: "Save to cloud",
+      saveProject: "Save project",
+      saveToCloud: "Save to cloud",
       saveToFile: "Save to file",
 
       print: "Print…",
