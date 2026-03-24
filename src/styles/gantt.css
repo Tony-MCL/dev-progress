@@ -361,7 +361,7 @@
   fill: none;
   stroke: var(--mcl-link, rgba(30, 30, 30, 0.55));
   color: var(--mcl-link, rgba(30, 30, 30, 0.55));
-  stroke-width: 1.6;
+  stroke-width: 1.2;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
@@ -369,5 +369,5 @@
 .gv-link--bad {
   stroke: var(--mcl-link-bad, rgba(220, 60, 60, 0.70));
   color: var(--mcl-link-bad, rgba(220, 60, 60, 0.70));
-  stroke-dasharray: 4 3;
+  stroke-dasharray: 4 2;
 }
