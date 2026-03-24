@@ -33,6 +33,7 @@ type AccountProps = {
 type HeaderProps = {
   onToggleHelp: () => void;
   account: AccountProps;
+  openTabCount?: number;
 };
 
 function normalizePlanLabel(plan: string | null | undefined) {
@@ -56,7 +57,7 @@ const PRO_YEAR_EX_VAT = 990;
 const VAT_RATE = 0.25;
 const CURRENCY = "NOK";
 
-export default function Header({ onToggleHelp, account }: HeaderProps) {
+export default function Header({ onToggleHelp, account, openTabCount = 1 }: HeaderProps) {
   const i18nAny = useI18n() as any;
   const t = i18nAny?.t ?? ((s: string) => s);
 
@@ -73,6 +74,8 @@ export default function Header({ onToggleHelp, account }: HeaderProps) {
 
   const helpLabel = t("header.help");
   const accountBtnLabel = isNo ? "Konto" : "Account";
+  const openTabsTitle = t("toolbar.multiTab.title");
+  const openTabsLabel = t("toolbar.multiTab.openTabs");
 
   const planLabel = useMemo(() => {
     return normalizePlanLabel(account.plan);
@@ -222,6 +225,31 @@ export default function Header({ onToggleHelp, account }: HeaderProps) {
               {pillText}
             </span>
           </div>
+
+          {planLabel === "pro" && openTabCount > 1 ? (
+            <div
+              title={openTabsTitle}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "7px 12px",
+                borderRadius: 999,
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.25)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
+                fontSize: 12,
+                lineHeight: 1,
+                opacity: 0.95,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span aria-hidden="true">🗂️</span>
+              <span>
+                {openTabsLabel}: {openTabCount}
+              </span>
+            </div>
+          ) : null}
 
           <button
             type="button"
