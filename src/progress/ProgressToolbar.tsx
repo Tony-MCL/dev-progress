@@ -2,6 +2,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 
+const PROGRESS_TAB_REGISTRY_KEY = "progress_open_tabs_v1";
+const PROGRESS_TAB_ID_KEY = "progress_tab_id_v1";
+
 type FileAction =
   | "newBlank"
   | "newFromTemplate"
@@ -73,6 +76,34 @@ type MenuCustomNode = {
 };
 
 type MenuNode = MenuDivider | MenuItemNode | MenuCustomNode;
+
+function readOpenTabRegistry(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(PROGRESS_TAB_REGISTRY_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (!parsed || typeof parsed !== "object") return {};
+
+    const now = Date.now();
+    const cleaned: Record<string, number> = {};
+
+    for (const [key, value] of Object.entries(parsed)) {
+      const ts = Number(value);
+      if (Number.isFinite(ts) && now - ts < 30000) {
+        cleaned[key] = ts;
+      }
+    }
+
+    return cleaned;
+  } catch {
+    return {};
+  }
+}
+
+function writeOpenTabRegistry(next: Record<string, number>) {
+  try {
+    localStorage.setItem(PROGRESS_TAB_REGISTRY_KEY, JSON.stringify(next));
+  } catch {}
+}
 
 function useOutsideClose(
   rootRef: React.RefObject<HTMLElement>,
@@ -234,6 +265,7 @@ export default function ProgressToolbar({
 
   const [confirmNewOpen, setConfirmNewOpen] = useState(false);
   const pendingNewActionRef = useRef<FileAction | null>(null);
+  const [openTabCount, setOpenTabCount] = useState(1);
 
   const anyOpen = openMenu !== null;
 
@@ -737,6 +769,59 @@ export default function ProgressToolbar({
     if (!anyOpen) setActiveSubKey(null);
   }, [anyOpen]);
 
+    useEffect(() => {
+    if (!isPro) {
+      setOpenTabCount(1);
+      return;
+    }
+
+    let tabId = sessionStorage.getItem(PROGRESS_TAB_ID_KEY);
+    if (!tabId) {
+      tabId = `progress_tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      sessionStorage.setItem(PROGRESS_TAB_ID_KEY, tabId);
+    }
+
+    const updatePresence = () => {
+      const next = readOpenTabRegistry();
+      next[tabId!] = Date.now();
+      writeOpenTabRegistry(next);
+      setOpenTabCount(Object.keys(next).length);
+    };
+
+    const removePresence = () => {
+      const next = readOpenTabRegistry();
+      delete next[tabId!];
+      writeOpenTabRegistry(next);
+    };
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== PROGRESS_TAB_REGISTRY_KEY) return;
+      const next = readOpenTabRegistry();
+      setOpenTabCount(Math.max(1, Object.keys(next).length));
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        updatePresence();
+      }
+    };
+
+    updatePresence();
+
+    const intervalId = window.setInterval(updatePresence, 10000);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("beforeunload", removePresence);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("beforeunload", removePresence);
+      document.removeEventListener("visibilitychange", onVisibility);
+      removePresence();
+    };
+  }, [isPro]);
+
   const renderMenuPop = (
     menuLabel: string,
     nodes: MenuNode[],
@@ -892,7 +977,24 @@ export default function ProgressToolbar({
         </div>
       </div>
 
-      <div className="ptb-right" />
+      <div className="ptb-right">
+        {isPro && openTabCount > 1 ? (
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              opacity: 0.85,
+              padding: "6px 10px",
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.04)",
+            }}
+            title={t("toolbar.multiTab.title")}
+          >
+            {t("toolbar.multiTab.openTabs")}: {openTabCount}
+          </div>
+        ) : null}
+      </div>
 
       <OverwriteConfirmModal
         open={confirmNewOpen}
