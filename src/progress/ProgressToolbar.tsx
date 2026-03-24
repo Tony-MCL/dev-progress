@@ -258,8 +258,8 @@ export default function ProgressToolbar({
           kind: "item",
           key: "openProject",
           label: isPro
-            ? t("toolbar.file.openProjectPro")
-            : t("toolbar.file.openProjectFree"),
+            ? t("toolbar.file.openFromCloud")
+            : t("toolbar.file.openProject"),
           action: "openProject",
         },
         {
@@ -276,8 +276,8 @@ export default function ProgressToolbar({
           kind: "item",
           key: "save",
           label: isPro
-            ? t("toolbar.file.savePro")
-            : t("toolbar.file.saveFree"),
+            ? t("toolbar.file.saveToCloud")
+            : t("toolbar.file.saveProject"),
           hint: "Ctrl+S",
           action: "save",
         },
