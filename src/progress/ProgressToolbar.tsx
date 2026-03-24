@@ -782,7 +782,6 @@ export default function ProgressToolbar({
       document.removeEventListener("visibilitychange", onVisibility);
       removePresence();
     };
-  }, [isPro]);
 
   const renderMenuPop = (
     menuLabel: string,
