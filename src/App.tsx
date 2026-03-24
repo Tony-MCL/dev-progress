@@ -73,6 +73,36 @@ import "./styles/watermark.css";
 // BLOCK: IMPORTS (END)
 // ===========================
 const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
+const PROGRESS_TAB_REGISTRY_KEY = "progress_open_tabs_v1";
+const PROGRESS_TAB_ID_KEY = "progress_tab_id_v1";
+
+function readOpenTabRegistry(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(PROGRESS_TAB_REGISTRY_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (!parsed || typeof parsed !== "object") return {};
+
+    const now = Date.now();
+    const cleaned: Record<string, number> = {};
+
+    for (const [key, value] of Object.entries(parsed)) {
+      const ts = Number(value);
+      if (Number.isFinite(ts) && now - ts < 30000) {
+        cleaned[key] = ts;
+      }
+    }
+
+    return cleaned;
+  } catch {
+    return {};
+  }
+}
+
+function writeOpenTabRegistry(next: Record<string, number>) {
+  try {
+    localStorage.setItem(PROGRESS_TAB_REGISTRY_KEY, JSON.stringify(next));
+  } catch {}
+}
 // ============================
 // BLOCK: APP_COMPONENT (START)
 // ============================
@@ -249,6 +279,7 @@ export default function App() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [print2Open, setPrint2Open] = useState(false);
+  const [openTabCount, setOpenTabCount] = useState(1);
 
   // CALENDAR
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -664,6 +695,62 @@ export default function App() {
     // BLOCK: BEFORE_UNLOAD_GUARD (END)
     // ============================
 
+  useEffect(() => {
+    const plan = String(org.activePlan ?? "free");
+    const isProOrTrial = plan === "pro" || plan === "trial";
+
+    if (!isProOrTrial) {
+      setOpenTabCount(1);
+      return;
+    }
+
+    let tabId = sessionStorage.getItem(PROGRESS_TAB_ID_KEY);
+    if (!tabId) {
+      tabId = `progress_tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      sessionStorage.setItem(PROGRESS_TAB_ID_KEY, tabId);
+    }
+
+    const updatePresence = () => {
+      const next = readOpenTabRegistry();
+      next[tabId!] = Date.now();
+      writeOpenTabRegistry(next);
+      setOpenTabCount(Math.max(1, Object.keys(next).length));
+    };
+
+    const removePresence = () => {
+      const next = readOpenTabRegistry();
+      delete next[tabId!];
+      writeOpenTabRegistry(next);
+    };
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== PROGRESS_TAB_REGISTRY_KEY) return;
+      const next = readOpenTabRegistry();
+      setOpenTabCount(Math.max(1, Object.keys(next).length));
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        updatePresence();
+      }
+    };
+
+    updatePresence();
+
+    const intervalId = window.setInterval(updatePresence, 10000);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("beforeunload", removePresence);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("beforeunload", removePresence);
+      document.removeEventListener("visibilitychange", onVisibility);
+      removePresence();
+    };
+  }, [org.activePlan]);
+
   const handleOpenLocalProjectSmart = useCallback(
     (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
       const plan = String(org.activePlan ?? "free");
@@ -742,6 +829,7 @@ export default function App() {
 
       <Header
         onToggleHelp={() => setHelpOpen(true)}
+        openTabCount={openTabCount}
         account={{
           apiBase: apiBase,
           authReady: auth.ready,
