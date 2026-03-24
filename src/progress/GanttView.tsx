@@ -816,7 +816,7 @@ export default function GanttView({
 
                   const clampX = (x: number) => Math.max(0, Math.min(timelineWidth, x));
 
-                  const LANE_GAP = 14;
+                  const LANE_GAP = 6;
 
                   const rawLaneX = fromIsStart ? Math.min(xStart, xEnd) - LANE_GAP : Math.max(xStart, xEnd) + LANE_GAP;
 
