@@ -221,9 +221,7 @@ function buildWeekendBlocks(
     const day = d.getDay();
     const isWeekend = day === 0 || day === 6;
 
-    // Shade bare hvis det er helgedag OG den er stengt i workWeekdays (eller hvis workWeekdays mangler -> default helg)
-    const isClosedWeekend =
-      isWeekend && (ww ? !ww.has(day) : true);
+    const isClosedWeekend = isWeekend && (ww ? !ww.has(day) : true);
 
     if (!isClosedWeekend) {
       i++;
@@ -236,8 +234,7 @@ function buildWeekendBlocks(
       const dd = addDays(min, end);
       const dw = dd.getDay();
       const isW = dw === 0 || dw === 6;
-      const closed =
-        isW && (ww ? !ww.has(dw) : true);
+      const closed = isW && (ww ? !ww.has(dw) : true);
       if (!closed) break;
       end++;
     }
@@ -357,7 +354,6 @@ function hexToRgb(hexRaw: string): { r: number; g: number; b: number } | null {
   return null;
 }
 
-// Return "#111" or "white" based on WCAG-ish luminance threshold
 function readableTextColor(bgHex: string): string {
   const rgb = hexToRgb(bgHex);
   if (!rgb) return "white";
@@ -413,7 +409,6 @@ export default function GanttView({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const hScrollRef = useRef<HTMLDivElement | null>(null);
 
-  // ALT+SCROLL zoom + Mac-mouse horizontal scroll fix
   useEffect(() => {
     const zoomEl = rootRef.current;
     const hEl = hScrollRef.current;
@@ -593,7 +588,6 @@ export default function GanttView({
 
       const y = idx * rowH + barTop + barH / 2;
 
-      // milestone: start set, end missing
       if (!ed) {
         const x = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
         const half = 6;
@@ -807,11 +801,11 @@ export default function GanttView({
                   const fromIsStart = type === "SS" || type === "SF";
                   const toIsEnd = type === "FF" || type === "SF";
 
-                  const OUT = 4;
+                  const OUT = 1.5;
                   const fromEdgeX = fromIsStart ? a.left : a.right;
                   const xStart = fromIsStart ? fromEdgeX - OUT : fromEdgeX + OUT;
 
-                  const IN = 4;
+                  const IN = 1.5;
                   const xEnd = toIsEnd ? b.right - IN : b.left + IN;
 
                   const sign = y1 <= y2 ? -1 : 1;
@@ -840,7 +834,7 @@ export default function GanttView({
                     { x: xEndC, y: yEdge },
                   ];
 
-                  const r = 6;
+                  const r = 2;
 
                   function roundedPath(points: { x: number; y: number }[], radius: number) {
                     if (points.length < 2) return "";
@@ -902,7 +896,6 @@ export default function GanttView({
 
               const owner = String((it.row as any).cells?.[ownerKey] ?? "").trim();
 
-              // C) bar-farge per rad (owner -> default -> fallback)
               const barColor =
                 (owner ? ownerColors?.[owner] : "") ||
                 defaultBarColor ||
@@ -910,7 +903,6 @@ export default function GanttView({
 
               const textColor = readableTextColor(barColor);
 
-              // milestone: start set, end missing
               if (!ed) {
                 const left = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
 
@@ -932,20 +924,16 @@ export default function GanttView({
                 );
               }
 
-              // normal bar
               const left = diffDays(parsed.min, sd) * pxPerDay;
               let width = (diffDays(sd, ed) + 1) * pxPerDay;
               width = Math.max(pxPerDay, width);
 
-              // Plass-sjekk + prop-styring:
               const hasRoomForText = width >= pxPerDay * 3;
               const allowText = showBarTextProp !== false;
 
               const barStyle: React.CSSProperties = {
                 left,
                 width,
-
-                // D) style på selve bar-elementet
                 backgroundColor: barColor,
                 color: textColor,
               };
@@ -960,7 +948,6 @@ export default function GanttView({
                       (it.row as any).cells?.[endKey] ?? ""
                     )}`}
                   >
-                    {/* E) Tekst inni bar */}
                     {allowText && hasRoomForText ? <span className="gv-bar-text">{title}</span> : null}
                   </div>
                 </div>
