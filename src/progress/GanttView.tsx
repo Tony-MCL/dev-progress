@@ -812,7 +812,7 @@ const sign = y1 <= y2 ? -1 : 1;
 const barHalf = (depRender.barH ?? 16) / 2;
 
 const yEdge = y2 + sign * barHalf;
-const yApproach = yEdge + sign * 8;
+const yApproach = yEdge + sign * 10;
 
 const clampX = (x: number) => Math.max(0, Math.min(timelineWidth, x));
 
