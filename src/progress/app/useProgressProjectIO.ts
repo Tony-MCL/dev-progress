@@ -1001,6 +1001,11 @@ export function useProgressProjectIO(args: {
           const isProOrTrial = plan === "pro" || plan === "trial";
 
           if (isProOrTrial) {
+            if (isCurrentPlanEffectivelyBlank()) {
+              resetToBlankProject();
+              return;
+            }
+
             openNewProjectInNewTab();
             return;
           }
