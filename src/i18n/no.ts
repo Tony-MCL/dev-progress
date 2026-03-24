@@ -240,15 +240,15 @@ A: Dette er de mest nyttige i daglig bruk.
       openEllipsis: "Åpne…",
       openRecent: "Åpne nylig",
 
-      openProjectFree: "Åpne prosjekt",
-      openProjectPro: "Åpne fra sky",
+      openProject: "Åpne prosjekt",
+      openFromCloud: "Åpne fra sky",
       openFile: "Åpne fra fil",
 
       save: "Lagre",
       saveAs: "Lagre som…",
 
-      saveFree: "Lagre prosjekt",
-      savePro: "Lagre til sky",
+      saveProject: "Lagre prosjekt",
+      saveToCloud: "Lagre til sky",
       saveToFile: "Lagre til fil",
 
       print: "Skriv ut…",
