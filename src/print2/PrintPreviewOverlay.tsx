@@ -223,16 +223,28 @@ export default function PrintPreviewOverlay({
             visibility: visible !important;
           }
 
-          .p2-print-area {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: ${pageW}px !important;
-            height: ${pageH}px !important;
+          .p2-overlay {
+            position: static !important;
+            inset: auto !important;
             background: white !important;
-            overflow: hidden !important;
+            display: block !important;
+          }
+          
+          .p2-print-area {
+            position: relative !important;
+            left: auto !important;
+            top: auto !important;
+            width: ${pageW}px !important;
+            height: auto !important;
+            background: white !important;
+            overflow: visible !important;
             padding: 0 !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
+          }
+          
+          .p2-print-area > div {
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
 
           .p2-controls {
