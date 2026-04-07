@@ -204,22 +204,22 @@ export default function PrintPreviewOverlay({
       }}
     >
       <style>{`
-        @media print {
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: auto !important;
+          height: auto !important;
+          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
 
           body * {
             visibility: hidden !important;
           }
-
-          .p2-print-area,
-          .p2-print-area * {
+          
+          .p2-overlay,
+          .p2-overlay * {
             visibility: visible !important;
           }
 
@@ -240,11 +240,6 @@ export default function PrintPreviewOverlay({
             overflow: visible !important;
             padding: 0 !important;
             margin: 0 auto !important;
-          }
-          
-          .p2-print-area > div {
-            break-inside: avoid;
-            page-break-inside: avoid;
           }
 
           .p2-controls {
