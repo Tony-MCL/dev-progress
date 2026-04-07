@@ -996,7 +996,10 @@ export default function PrintRenderer({
               position: "relative",
               boxSizing: "border-box",
               background: "white",
+              breakAfter: pageIndex === pages.length - 1 ? "auto" : "page",
               pageBreakAfter: pageIndex === pages.length - 1 ? "auto" : "always",
+              breakInside: "avoid",
+              pageBreakInside: "avoid",
             }}
           >
             {/* PAGE HEADER */}
