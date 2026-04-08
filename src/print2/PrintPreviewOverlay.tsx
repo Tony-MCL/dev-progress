@@ -100,7 +100,15 @@ export default function PrintPreviewOverlay({
 
   const filteredColumns = useMemo(() => {
     const must = new Set<string>();
+  
+    // Første kolonne må alltid være med (typisk aktivitet/tittel)
     if (columns[0]?.key) must.add(columns[0].key);
+  
+    // Owner må alltid være tilgjengelig for print-modellen slik at bar-farger
+    // kan beregnes, selv om kolonnen er skjult i selve utskriften.
+    const ownerCol = columns.find((c) => c.key === "owner");
+    if (ownerCol?.key) must.add(ownerCol.key);
+  
     const allowed = new Set([...printColKeys, ...must]);
     return columns.filter((c) => allowed.has(c.key));
   }, [columns, printColKeys]);
