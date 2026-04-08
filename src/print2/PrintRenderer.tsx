@@ -3,8 +3,11 @@ import React, { useMemo } from "react";
 import type { ColumnDef } from "../core/TableTypes";
 import type { PrintModel, PrintRow, PrintBar, PrintDepLine } from "./PrintTypes";
 
+type PrintLayoutMode = "full" | "table" | "gantt";
+
 type Props = {
   model: PrintModel;
+  mode?: PrintLayoutMode;
 
   logoSrc?: string;
   headerLeftLines?: string[];
@@ -17,7 +20,6 @@ type Props = {
   title?: string;
   locale?: string;
 
-  // ✅ NEW
   showBarLabels?: boolean;
   barLabelKey?: string;
 };
@@ -31,17 +33,14 @@ const snap = (n: number) => Math.round(n);
 const LEFT_GUTTER_PX = 8;
 const RIGHT_GUTTER_PX = 8;
 
-// Bar geometry
 const BAR_RX = 3;
 const BAR_STROKE_W = 1;
 const DEFAULT_BAR_FILL = "#a78666";
-const BAR_EDGE_INSET = BAR_RX + BAR_STROKE_W + 1; // typisk 5px
+const BAR_EDGE_INSET = BAR_RX + BAR_STROKE_W + 1;
 
-// ✅ Dep arrow geometry
 const ARROW_HEAD_LEN = 6;
 const ARROW_HEAD_W = 4;
 
-// ✅ Dytt deps litt vekk fra bar-kant så de ikke ender “inni”
 const DEP_END_PAD = 0;
 
 function pad2(n: number): string {
@@ -177,7 +176,6 @@ function filterDepsForPage(lines: PrintDepLine[], pageRowIds: Set<string>): Prin
   return lines.filter((l) => pageRowIds.has(l.fromRowId) && pageRowIds.has(l.toRowId));
 }
 
-/** ========= Locale helpers ========= */
 const MONTHS_NO = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Des"];
 const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -241,7 +239,7 @@ function buildAxisBands(
   const mkTicksWeek = (): Tick[] => {
     const ticks: Tick[] = [];
     const s = new Date(start);
-    const sDay = (s.getDay() + 6) % 7; // 0=Mon
+    const sDay = (s.getDay() + 6) % 7;
     const firstMonday = addDays(s, (7 - sDay) % 7);
 
     ticks.push({ x: snap(leftGutter), major: true });
@@ -395,12 +393,10 @@ function GanttAxisMulti({
   );
 }
 
-// ====== Deps drawing: lines under bars, arrowheads over bars ======
 function computeArrowPolygon(points: Array<{ x: number; y: number }>) {
   if (!points.length) return null;
   const last = points[points.length - 1];
 
-  // find prev != last
   let prev = last;
   for (let i = points.length - 2; i >= 0; i--) {
     const p = points[i];
@@ -451,18 +447,15 @@ function SvgDepArrowHeads({ lines }: { lines: PrintDepLine[] }) {
   );
 }
 
-function hexToRgba(hex: string, a: number): string {
-  const h = String(hex ?? "").trim();
-  const m = h.match(/^#?([0-9a-fA-F]{6})$/);
-  if (!m) return h;
-  const n = m[1];
-  const r = parseInt(n.slice(0, 2), 16);
-  const g = parseInt(n.slice(2, 4), 16);
-  const b = parseInt(n.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${a})`;
+function estimateTextPx(text: string, pxPerChar = 6): number {
+  const t = String(text ?? "");
+  return t.length * pxPerChar;
 }
 
-const DEFAULT_BAR_HEX = "#2D6CDF";
+function estimateLabelWidth(text: string): number {
+  const t = String(text ?? "");
+  return t.length * 5.8 + 6;
+}
 
 function SvgBars({
   bars,
@@ -484,24 +477,22 @@ function SvgBars({
           const cx = b.x + b.w / 2;
           const cy = b.y + b.h / 2;
           const half = Math.max(4, b.h / 2);
-        
+
           const pts = [
             `${cx},${cy - half}`,
             `${cx + half},${cy}`,
             `${cx},${cy + half}`,
             `${cx - half},${cy}`,
           ].join(" ");
-        
-          const label = showLabels ? (labelByRowId[b.rowId] ?? "") : "";
-        
+
           const labelW = estimateLabelWidth(label);
           const gap = 6;
-        
+
           const rightX = cx + half + gap;
           const leftX = cx - half - gap;
-        
+
           const rightFits = rightX + labelW <= rightLimit;
-        
+
           return (
             <g key={idx}>
               <polygon
@@ -510,7 +501,7 @@ function SvgBars({
                 stroke={b.color ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.18)"}
                 strokeWidth={BAR_STROKE_W}
               />
-        
+
               {showLabels && label ? (
                 rightFits ? (
                   <text
@@ -542,10 +533,6 @@ function SvgBars({
           );
         }
 
-        const tx = b.x + 6;
-        const ty = b.y + b.h / 2 + 3;
-        const clipId = `barclip-${idx}`;
-
         return (
           <g key={idx}>
             <rect
@@ -559,84 +546,83 @@ function SvgBars({
               stroke={b.color ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.18)"}
               strokeWidth={BAR_STROKE_W}
             />
-            {showLabels && label ? (() => {
-              const labelW = estimateLabelWidth(label);
-              const padding = 12;
-              const fitsInside = !b.isMilestone && labelW <= (b.w - padding);
-            
-              const insideTy = b.y + b.h / 2 + 3;
-              const outsideTy = b.y + b.h / 2 - 1; // løft labels litt opp for å unngå konflikt med deps
-            
-              if (fitsInside) {
-                const tx = b.x + 6;
-                const clipId = `barclip-${idx}`;
-            
-                return (
-                  <>
-                    <clipPath id={clipId}>
-                      <rect
-                        x={b.x}
-                        y={b.y}
-                        width={Math.max(1, b.w)}
-                        height={Math.max(1, b.h)}
-                        rx={BAR_RX}
-                        ry={BAR_RX}
-                      />
-                    </clipPath>
+            {showLabels && label
+              ? (() => {
+                  const labelW = estimateLabelWidth(label);
+                  const padding = 12;
+                  const fitsInside = !b.isMilestone && labelW <= b.w - padding;
+
+                  const insideTy = b.y + b.h / 2 + 3;
+                  const outsideTy = b.y + b.h / 2 - 1;
+
+                  if (fitsInside) {
+                    const tx = b.x + 6;
+                    const clipId = `barclip-${idx}`;
+
+                    return (
+                      <>
+                        <clipPath id={clipId}>
+                          <rect
+                            x={b.x}
+                            y={b.y}
+                            width={Math.max(1, b.w)}
+                            height={Math.max(1, b.h)}
+                            rx={BAR_RX}
+                            ry={BAR_RX}
+                          />
+                        </clipPath>
+                        <text
+                          x={tx}
+                          y={insideTy}
+                          clipPath={`url(#${clipId})`}
+                          fontSize={9.5}
+                          fontWeight={700}
+                          fill={"rgba(255,255,255,0.92)"}
+                          style={{ pointerEvents: "none" }}
+                        >
+                          {label}
+                        </text>
+                      </>
+                    );
+                  }
+
+                  const gap = 6;
+                  const rightX = b.x + b.w + gap;
+                  const rightFits = rightX + labelW <= rightLimit;
+
+                  if (rightFits) {
+                    return (
+                      <text
+                        x={rightX}
+                        y={outsideTy}
+                        fontSize={9.5}
+                        fontWeight={600}
+                        fill={"rgba(0,0,0,0.85)"}
+                        textAnchor="start"
+                        style={{ pointerEvents: "none" }}
+                      >
+                        {label}
+                      </text>
+                    );
+                  }
+
+                  const leftX = b.x - gap;
+
+                  return (
                     <text
-                      x={tx}
-                      y={insideTy}
-                      clipPath={`url(#${clipId})`}
+                      x={leftX}
+                      y={outsideTy}
                       fontSize={9.5}
-                      fontWeight={700}
-                      fill={"rgba(255,255,255,0.92)"}
+                      fontWeight={600}
+                      fill={"rgba(0,0,0,0.85)"}
+                      textAnchor="end"
                       style={{ pointerEvents: "none" }}
                     >
                       {label}
                     </text>
-                  </>
-                );
-              }
-            
-              const gap = 6;
-            
-              // prøv høyre først
-              const rightX = b.x + b.w + gap;
-              const rightFits = rightX + labelW <= rightLimit;
-            
-              if (rightFits) {
-                return (
-                  <text
-                    x={rightX}
-                    y={outsideTy}
-                    fontSize={9.5}
-                    fontWeight={600}
-                    fill={"rgba(0,0,0,0.85)"}
-                    textAnchor="start"
-                    style={{ pointerEvents: "none" }}
-                  >
-                    {label}
-                  </text>
-                );
-              }
-            
-              // fallback: venstre side
-              const leftX = b.x - gap;
-            
-              return (
-                <text
-                  x={leftX}
-                  y={outsideTy}
-                  fontSize={9.5}
-                  fontWeight={600}
-                  fill={"rgba(0,0,0,0.85)"}
-                  textAnchor="end"
-                  style={{ pointerEvents: "none" }}
-                >
-                  {label}
-                </text>
-              );
-            })() : null}
+                  );
+                })()
+              : null}
           </g>
         );
       })}
@@ -644,18 +630,11 @@ function SvgBars({
   );
 }
 
-// (resten av tabell + widths er uendret fra din nåværende)
-function estimateTextPx(text: string, pxPerChar = 6): number {
-  const t = String(text ?? "");
-  return t.length * pxPerChar;
-}
-
-function estimateLabelWidth(text: string): number {
-  const t = String(text ?? "");
-  return t.length * 5.8 + 6; // litt tighter enn table
-}
-
-function computeAutoColumnWidths(columns: ColumnDef[], rows: PrintRow[], opts: { maxTableW: number; fontPxPerChar?: number }) {
+function computeAutoColumnWidths(
+  columns: ColumnDef[],
+  rows: PrintRow[],
+  opts: { maxTableW: number; fontPxPerChar?: number }
+) {
   const pxPerChar = opts.fontPxPerChar ?? 6;
 
   const minWByKey = new Map<string, number>();
@@ -668,7 +647,10 @@ function computeAutoColumnWidths(columns: ColumnDef[], rows: PrintRow[], opts: {
     if (c.dateRole === "start" || c.dateRole === "end") {
       minW = 78;
       maxW = 110;
-    } else if (c.key.toLowerCase().includes("varighet") || c.title.toLowerCase().includes("varighet")) {
+    } else if (
+      c.key.toLowerCase().includes("varighet") ||
+      c.title.toLowerCase().includes("varighet")
+    ) {
       minW = 58;
       maxW = 90;
     }
@@ -793,7 +775,15 @@ function PrintTable({
         <tr style={{ height: headerRowHeightPx }}>
           {columns.map((c, i) => (
             <th key={c.key} style={{ ...headCell, width: widths[i] }} title={c.title}>
-              <div style={{ height: headerRowHeightPx, display: "flex", alignItems: "center", padding: "0 6px", lineHeight: 1.1 }}>
+              <div
+                style={{
+                  height: headerRowHeightPx,
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "0 6px",
+                  lineHeight: 1.1,
+                }}
+              >
                 <span style={{ fontWeight: 700 }}>{c.title}</span>
               </div>
             </th>
@@ -810,10 +800,10 @@ function PrintTable({
             indent > 0 && hasChildren
               ? { fontWeight: 700, fontStyle: "italic" }
               : hasChildren
-                ? { fontWeight: 700, fontStyle: "normal" }
-                : indent > 0
-                  ? { fontWeight: 400, fontStyle: "italic" }
-                  : { fontWeight: 400, fontStyle: "normal" };
+              ? { fontWeight: 700, fontStyle: "normal" }
+              : indent > 0
+              ? { fontWeight: 400, fontStyle: "italic" }
+              : { fontWeight: 400, fontStyle: "normal" };
 
           return (
             <tr key={r.id} style={{ height: rowHeightPx }}>
@@ -823,8 +813,19 @@ function PrintTable({
 
                 return (
                   <td key={c.key} style={{ ...bodyCell, width: widths[i] }} title={raw}>
-                    <div style={{ height: rowHeightPx, display: "flex", alignItems: "center", padding: "0 6px", lineHeight: 1.1, ...rowTextStyle }}>
-                      <span style={{ display: "inline-block", paddingLeft: indentPad }}>{raw}</span>
+                    <div
+                      style={{
+                        height: rowHeightPx,
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "0 6px",
+                        lineHeight: 1.1,
+                        ...rowTextStyle,
+                      }}
+                    >
+                      <span style={{ display: "inline-block", paddingLeft: indentPad }}>
+                        {raw}
+                      </span>
                     </div>
                   </td>
                 );
@@ -839,6 +840,7 @@ function PrintTable({
 
 export default function PrintRenderer({
   model,
+  mode = "full",
   logoSrc,
   headerLeftLines,
   watermarkText,
@@ -850,6 +852,9 @@ export default function PrintRenderer({
   barLabelKey,
 }: Props) {
   const { pagePx, contentPx, rowHeightPx } = model.layout;
+
+  const showTable = mode === "full" || mode === "table";
+  const showGantt = mode === "full" || mode === "gantt";
 
   const headerHeight = 64;
   const footerHeight = 28;
@@ -875,23 +880,42 @@ export default function PrintRenderer({
         const pageRowIds = new Set(pageRows.map((r) => (r as any).id));
 
         const pageBarsRaw = filterBarsForPage(model.bars, pageRowIds);
-        const pageDepsRaw = model.options.includeDependencies ? filterDepsForPage(model.depLines, pageRowIds) : [];
+        const pageDepsRaw =
+          model.options.includeDependencies && showGantt
+            ? filterDepsForPage(model.depLines, pageRowIds)
+            : [];
 
         const minGanttW = 520;
         const maxTableW = Math.max(240, contentPx.w - minGanttW);
 
-        const auto = computeAutoColumnWidths(visibleColumns, model.rows, { maxTableW });
-        const pageTableW = auto.tableW;
+        const auto = showTable
+          ? computeAutoColumnWidths(visibleColumns, model.rows, { maxTableW })
+          : { widths: [] as number[], tableW: 0 };
+
+        const pageTableW = showTable
+          ? showGantt
+            ? auto.tableW
+            : contentPx.w
+          : 0;
 
         const ganttLeft = pageTableW;
         const baseGanttX = model.layout.ganttPx.x;
 
-        const pageGanttW = Math.max(120, contentPx.w - pageTableW);
+        const pageGanttW = showGantt
+          ? showTable
+            ? Math.max(120, contentPx.w - pageTableW)
+            : contentPx.w
+          : 0;
 
-        const innerTimeW = Math.max(40, pageGanttW - LEFT_GUTTER_PX - RIGHT_GUTTER_PX);
+        const innerTimeW = showGantt
+          ? Math.max(40, pageGanttW - LEFT_GUTTER_PX - RIGHT_GUTTER_PX)
+          : 0;
 
         const baseExpectedW = Math.max(1, model.range.totalDays * model.layout.pxPerDay);
-        const sx = Math.round((innerTimeW / baseExpectedW) * 1000) / 1000;
+        const sx = showGantt
+          ? Math.round((innerTimeW / baseExpectedW) * 1000) / 1000
+          : 1;
+
         const pxPerDayScaled = model.layout.pxPerDay * sx;
 
         const leftLimit = snap(ganttLeft + LEFT_GUTTER_PX);
@@ -900,55 +924,55 @@ export default function PrintRenderer({
         const rowIndexById = new Map<string, number>();
         pageRows.forEach((r: any, i: number) => rowIndexById.set(r.id, i));
 
-                const pageBars: PrintBar[] = pageBarsRaw.map((b) => {
-                  const i = rowIndexById.get(b.rowId) ?? 0;
-                  const yCenter = headerRowHeight + i * rowHeightPx + (rowHeightPx - b.h) / 2;
-        
-                  if (b.isMilestone) {
-                    const baseCenterX = b.x + b.w / 2;
-                    const scaledCenterX = ganttLeft + LEFT_GUTTER_PX + (baseCenterX - baseGanttX) * sx;
-        
-                    const size = Math.max(8, snap(b.h));
-                    let x = snap(scaledCenterX - size / 2);
-        
-                    x = Math.max(x, leftLimit);
-                    x = Math.min(x, rightLimit - size);
-        
-                    return {
-                      ...b,
-                      x,
-                      y: snap(yCenter),
-                      w: size,
-                      h: size,
-                    };
-                  }
-        
-                  const x1 = ganttLeft + LEFT_GUTTER_PX + (b.x - baseGanttX) * sx;
-                  const x2 = ganttLeft + LEFT_GUTTER_PX + (b.x + b.w - baseGanttX) * sx;
-        
-                  let sx1 = snap(x1);
-                  let sx2 = snap(x2);
-        
-                  sx1 = Math.max(sx1, leftLimit);
-                  sx2 = Math.min(sx2, rightLimit);
-        
-                  return {
-                    ...b,
-                    x: sx1,
-                    w: Math.max(1, sx2 - sx1),
-                    y: snap(yCenter),
-                  };
-                });
+        const pageBars: PrintBar[] = showGantt
+          ? pageBarsRaw.map((b) => {
+              const i = rowIndexById.get(b.rowId) ?? 0;
+              const yCenter = headerRowHeight + i * rowHeightPx + (rowHeightPx - b.h) / 2;
 
-        // ✅ label map (rowId -> label)
+              if (b.isMilestone) {
+                const baseCenterX = b.x + b.w / 2;
+                const scaledCenterX =
+                  ganttLeft + LEFT_GUTTER_PX + (baseCenterX - baseGanttX) * sx;
+
+                const size = Math.max(8, snap(b.h));
+                let x = snap(scaledCenterX - size / 2);
+
+                x = Math.max(x, leftLimit);
+                x = Math.min(x, rightLimit - size);
+
+                return {
+                  ...b,
+                  x,
+                  y: snap(yCenter),
+                  w: size,
+                  h: size,
+                };
+              }
+
+              const x1 = ganttLeft + LEFT_GUTTER_PX + (b.x - baseGanttX) * sx;
+              const x2 = ganttLeft + LEFT_GUTTER_PX + (b.x + b.w - baseGanttX) * sx;
+
+              let sx1 = snap(x1);
+              let sx2 = snap(x2);
+
+              sx1 = Math.max(sx1, leftLimit);
+              sx2 = Math.min(sx2, rightLimit);
+
+              return {
+                ...b,
+                x: sx1,
+                w: Math.max(1, sx2 - sx1),
+                y: snap(yCenter),
+              };
+            })
+          : [];
+
         const labelKey = (barLabelKey ?? visibleColumns?.[0]?.key ?? "").trim();
         const labelByRowId: Record<string, string> = {};
         for (const r of model.rows) {
           labelByRowId[r.id] = labelKey ? safeText(r.cells?.[labelKey]) : "";
         }
 
-        // ✅ FIX: Rebuild dependency lines per page based on *scaled bars*,
-        // + push end-points slightly OUTSIDE bars so arrowheads don't land inside.
         const buildDepPoints = (
           fromBar: PrintBar,
           toBar: PrintBar,
@@ -957,43 +981,43 @@ export default function PrintRenderer({
           ln: PrintDepLine
         ) => {
           const rowH = rowHeightPx;
-        
+
           const OUT = 2;
           const APPROACH = 10;
-        
+
           const fromIsStart = ln.type === "SS" || ln.type === "SF";
           const toIsEnd = ln.type === "FF" || ln.type === "SF";
-        
-          const fromAttachX = fromIsStart ? fromBar.x : (fromBar.x + fromBar.w);
-          const toAttachX = toIsEnd ? (toBar.x + toBar.w) : toBar.x;
-        
+
+          const fromAttachX = fromIsStart ? fromBar.x : fromBar.x + fromBar.w;
+          const toAttachX = toIsEnd ? toBar.x + toBar.w : toBar.x;
+
           const fromY = headerRowHeight + fromIdx * rowH + rowH / 2;
           const toY = headerRowHeight + toIdx * rowH + rowH / 2;
-        
+
           const sign = fromY <= toY ? -1 : 1;
           const barHalf = Math.max(1, toBar.h / 2);
-        
-          const fromX = fromIsStart ? (fromAttachX - DEP_END_PAD) : (fromAttachX + DEP_END_PAD);
-          const toX = toIsEnd ? (toAttachX + DEP_END_PAD) : (toAttachX - DEP_END_PAD);
-        
-          const xStart = fromIsStart ? (fromX - OUT) : (fromX + OUT);
+
+          const fromX = fromIsStart ? fromAttachX - DEP_END_PAD : fromAttachX + DEP_END_PAD;
+          const toX = toIsEnd ? toAttachX + DEP_END_PAD : toAttachX - DEP_END_PAD;
+
+          const xStart = fromIsStart ? fromX - OUT : fromX + OUT;
           const xEnd = toX;
-        
+
           const yEdge = toY + sign * barHalf;
           const yApproach = yEdge + sign * APPROACH;
-        
-          const ganttLeftEdge = pageTableW + LEFT_GUTTER_PX;
-          const ganttRightEdge = pageTableW + pageGanttW - RIGHT_GUTTER_PX;
-        
+
+          const ganttLeftEdge = showTable ? pageTableW + LEFT_GUTTER_PX : LEFT_GUTTER_PX;
+          const ganttRightEdge = (showTable ? pageTableW : 0) + pageGanttW - RIGHT_GUTTER_PX;
+
           const clampX = (x: number) => Math.max(ganttLeftEdge, Math.min(ganttRightEdge, x));
-        
+
           const fromXC = clampX(fromX);
           const xStartC = clampX(xStart);
           const xEndC = clampX(xEnd);
-        
+
           const targetDx = xEndC - xStartC;
           const goesPositiveToTarget = targetDx >= 0;
-        
+
           const points = goesPositiveToTarget
             ? [
                 { x: fromXC, y: fromY },
@@ -1008,33 +1032,34 @@ export default function PrintRenderer({
                 { x: xEndC, y: yApproach },
                 { x: xEndC, y: yEdge },
               ];
-        
+
           return points.map((p) => ({ x: snap(p.x), y: snap(p.y) }));
         };
 
-        const pageDeps: PrintDepLine[] = model.options.includeDependencies
-          ? (() => {
-              const barByRow = new Map<string, PrintBar>();
-              for (const b of pageBars) barByRow.set(b.rowId, b);
+        const pageDeps: PrintDepLine[] =
+          model.options.includeDependencies && showGantt
+            ? (() => {
+                const barByRow = new Map<string, PrintBar>();
+                for (const b of pageBars) barByRow.set(b.rowId, b);
 
-              const out: PrintDepLine[] = [];
-              for (const ln of pageDepsRaw) {
-                const fromIdx = rowIndexById.get(ln.fromRowId);
-                const toIdx = rowIndexById.get(ln.toRowId);
-                if (fromIdx === undefined || toIdx === undefined) continue;
+                const out: PrintDepLine[] = [];
+                for (const ln of pageDepsRaw) {
+                  const fromIdx = rowIndexById.get(ln.fromRowId);
+                  const toIdx = rowIndexById.get(ln.toRowId);
+                  if (fromIdx === undefined || toIdx === undefined) continue;
 
-                const fromBar = barByRow.get(ln.fromRowId);
-                const toBar = barByRow.get(ln.toRowId);
-                if (!fromBar || !toBar) continue;
+                  const fromBar = barByRow.get(ln.fromRowId);
+                  const toBar = barByRow.get(ln.toRowId);
+                  if (!fromBar || !toBar) continue;
 
-                out.push({
-                  ...ln,
-                  points: buildDepPoints(fromBar, toBar, fromIdx, toIdx, ln),
-                });
-              }
-              return out;
-            })()
-          : [];
+                  out.push({
+                    ...ln,
+                    points: buildDepPoints(fromBar, toBar, fromIdx, toIdx, ln),
+                  });
+                }
+                return out;
+              })()
+            : [];
 
         const wm = Boolean(showWatermark && (watermarkSvgSrc || watermarkText));
 
@@ -1051,7 +1076,6 @@ export default function PrintRenderer({
               pageBreakAfter: pageIndex === pages.length - 1 ? "auto" : "always",
             }}
           >
-            {/* PAGE HEADER */}
             <div
               style={{
                 position: "absolute",
@@ -1077,15 +1101,40 @@ export default function PrintRenderer({
               </div>
 
               <div style={{ justifySelf: "center", textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 900, lineHeight: 1.1, position: "relative", top: 1 }}>
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 900,
+                    lineHeight: 1.1,
+                    position: "relative",
+                    top: 1,
+                  }}
+                >
                   {centerTitle}
                 </div>
               </div>
 
               <div style={{ justifySelf: "end", display: "flex", alignItems: "center" }}>
-                <div style={{ width: 160, height: 48, display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+                <div
+                  style={{
+                    width: 160,
+                    height: 48,
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                  }}
+                >
                   {logoSrc ? (
-                    <img src={logoSrc} alt="logo" style={{ maxWidth: 160, maxHeight: 48, objectFit: "contain", display: "block" }} />
+                    <img
+                      src={logoSrc}
+                      alt="logo"
+                      style={{
+                        maxWidth: 160,
+                        maxHeight: 48,
+                        objectFit: "contain",
+                        display: "block",
+                      }}
+                    />
                   ) : (
                     <div
                       style={{
@@ -1106,7 +1155,6 @@ export default function PrintRenderer({
               </div>
             </div>
 
-            {/* FRAME */}
             <div
               style={{
                 position: "absolute",
@@ -1163,88 +1211,127 @@ export default function PrintRenderer({
                 </div>
               ) : null}
 
-              {/* TABLE */}
-              <div style={{ position: "absolute", left: 0, top: 0, width: pageTableW, height: contentHeight, boxSizing: "border-box" }}>
-                <PrintTable
-                  columns={visibleColumns}
-                  rows={pageRows as any}
-                  colWidths={auto.widths}
-                  rowHeightPx={rowHeightPx}
-                  headerRowHeightPx={headerRowHeight}
-                />
-              </div>
+              {showTable ? (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: pageTableW,
+                    height: contentHeight,
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <PrintTable
+                    columns={visibleColumns}
+                    rows={pageRows as any}
+                    colWidths={showGantt ? auto.widths : computeAutoColumnWidths(
+                      visibleColumns,
+                      model.rows,
+                      { maxTableW: contentPx.w }
+                    ).widths}
+                    rowHeightPx={rowHeightPx}
+                    headerRowHeightPx={headerRowHeight}
+                  />
+                </div>
+              ) : null}
 
-              {/* GANTT AXIS HEADER */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: pageTableW,
-                  top: 0,
-                  width: pageGanttW,
-                  height: headerRowHeight,
-                  boxSizing: "border-box",
-                  borderLeft: `1px solid ${GRID_LINE}`,
-                  borderBottom: `1px solid ${GRID_LINE}`,
-                  background: "rgba(0,0,0,0.02)",
-                }}
-              >
-                <GanttAxisMulti
-                  model={model}
-                  ganttW={pageGanttW}
-                  height={headerRowHeight}
-                  pxPerDay={pxPerDayScaled}
-                  leftGutter={LEFT_GUTTER_PX}
-                  rightGutter={RIGHT_GUTTER_PX}
-                  localeKey={localeKey}
-                />
-              </div>
+              {showGantt ? (
+                <>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: pageTableW,
+                      top: 0,
+                      width: pageGanttW,
+                      height: headerRowHeight,
+                      boxSizing: "border-box",
+                      borderLeft: showTable ? `1px solid ${GRID_LINE}` : "none",
+                      borderBottom: `1px solid ${GRID_LINE}`,
+                      background: "rgba(0,0,0,0.02)",
+                    }}
+                  >
+                    <GanttAxisMulti
+                      model={model}
+                      ganttW={pageGanttW}
+                      height={headerRowHeight}
+                      pxPerDay={pxPerDayScaled}
+                      leftGutter={LEFT_GUTTER_PX}
+                      rightGutter={RIGHT_GUTTER_PX}
+                      localeKey={localeKey}
+                    />
+                  </div>
 
-              {/* OVERLAY SVG */}
-              <svg
-                width={contentPx.w}
-                height={contentHeight}
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  display: "block",
-                  pointerEvents: "none",
-                }}
-              >
-                <line x1={pageTableW} y1={0} x2={pageTableW} y2={contentHeight} stroke={GRID_LINE} strokeWidth={1} />
-                <line x1={0} y1={snap(headerRowHeight)} x2={contentPx.w} y2={snap(headerRowHeight)} stroke={GRID_LINE} strokeWidth={1} />
+                  <svg
+                    width={contentPx.w}
+                    height={contentHeight}
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      display: "block",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {showTable ? (
+                      <line
+                        x1={pageTableW}
+                        y1={0}
+                        x2={pageTableW}
+                        y2={contentHeight}
+                        stroke={GRID_LINE}
+                        strokeWidth={1}
+                      />
+                    ) : null}
 
-                {pageRows.map((r: any, i: number) => {
-                  const y = snap(headerRowHeight + i * rowHeightPx);
-                  return <line key={r.id} x1={0} y1={y} x2={contentPx.w} y2={y} stroke={GRID_LINE_LIGHT} strokeWidth={1} />;
-                })}
+                    <line
+                      x1={showTable ? 0 : pageTableW}
+                      y1={snap(headerRowHeight)}
+                      x2={showTable ? contentPx.w : pageTableW + pageGanttW}
+                      y2={snap(headerRowHeight)}
+                      stroke={GRID_LINE}
+                      strokeWidth={1}
+                    />
 
-                <line
-                  x1={0}
-                  y1={snap(headerRowHeight + pageRows.length * rowHeightPx)}
-                  x2={contentPx.w}
-                  y2={snap(headerRowHeight + pageRows.length * rowHeightPx)}
-                  stroke={GRID_LINE_LIGHT}
-                  strokeWidth={1}
-                />
+                    {pageRows.map((r: any, i: number) => {
+                      const y = snap(headerRowHeight + i * rowHeightPx);
+                      return (
+                        <line
+                          key={r.id}
+                          x1={showTable ? 0 : pageTableW}
+                          y1={y}
+                          x2={showTable ? contentPx.w : pageTableW + pageGanttW}
+                          y2={y}
+                          stroke={GRID_LINE_LIGHT}
+                          strokeWidth={1}
+                        />
+                      );
+                    })}
 
-                {/* ✅ deps under bars */}
-                {model.options.includeDependencies ? <SvgDepLines lines={pageDeps} /> : null}
+                    <line
+                      x1={showTable ? 0 : pageTableW}
+                      y1={snap(headerRowHeight + pageRows.length * rowHeightPx)}
+                      x2={showTable ? contentPx.w : pageTableW + pageGanttW}
+                      y2={snap(headerRowHeight + pageRows.length * rowHeightPx)}
+                      stroke={GRID_LINE_LIGHT}
+                      strokeWidth={1}
+                    />
 
-                {/* ✅ bars */}
-                <SvgBars
-                  bars={pageBars}
-                  showLabels={Boolean(showBarLabels)}
-                  labelByRowId={labelByRowId}
-                  rightLimit={pageTableW + pageGanttW - RIGHT_GUTTER_PX - 4}
-                />
+                    {model.options.includeDependencies ? <SvgDepLines lines={pageDeps} /> : null}
 
-                {/* ✅ arrowheads over bars (never hidden) */}
-                {model.options.includeDependencies ? <SvgDepArrowHeads lines={pageDeps} /> : null}
-              </svg>
+                    <SvgBars
+                      bars={pageBars}
+                      showLabels={Boolean(showBarLabels)}
+                      labelByRowId={labelByRowId}
+                      rightLimit={(showTable ? pageTableW : 0) + pageGanttW - RIGHT_GUTTER_PX - 4}
+                    />
+
+                    {model.options.includeDependencies ? <SvgDepArrowHeads lines={pageDeps} /> : null}
+                  </svg>
+                </>
+              ) : null}
             </div>
 
-            {/* FOOTER */}
             <div
               style={{
                 position: "absolute",
