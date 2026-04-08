@@ -145,27 +145,43 @@ export function useProgressViewModel({
   // selv om de er skjult i tabellen.
   const printColumnsPatched = useMemo(() => {
     const out = [...visibleColumnsPatched] as any[];
-
+  
     const hasStart =
       out.some((c: any) => c?.key === "start") ||
       out.some((c: any) => c?.dateRole === "start");
     const hasEnd =
       out.some((c: any) => c?.key === "end") ||
       out.some((c: any) => c?.dateRole === "end");
-
-    // plukk original-definisjoner (med dateRole) fra base columns
+    const hasOwner =
+      out.some((c: any) => c?.key === "owner");
+  
+    // plukk original-definisjoner fra base columns
     const startDef = columns.find(
       (c: any) => c?.key === "start" || c?.dateRole === "start"
     );
     const endDef = columns.find(
       (c: any) => c?.key === "end" || c?.dateRole === "end"
     );
-
+    const ownerDef = columns.find((c: any) => c?.key === "owner");
+  
     if (!hasStart && startDef) out.push(startDef as any);
     if (!hasEnd && endDef) out.push(endDef as any);
-
+  
+    // Owner skal være tilgjengelig for print-farger selv om kolonnen er skjult i utskriftstabellen
+    if (!hasOwner && ownerDef) {
+      out.push({
+        ...(ownerDef as any),
+        visible: false,
+        hidden: true,
+        isVisible: false,
+        show: false,
+        type: "select",
+        options: ownerOptions,
+      });
+    }
+  
     return out;
-  }, [visibleColumnsPatched, columns]);
+  }, [visibleColumnsPatched, columns, ownerOptions]);
 
   const headerInfo = useMemo(() => {
     const p = (projectInfo.projectName ?? "").trim();
