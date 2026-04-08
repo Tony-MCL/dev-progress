@@ -68,3 +68,23 @@ html[data-theme="dark"] {
   --mcl-link: rgba(255, 255, 255, 0.38);
   --mcl-link-bad: rgba(255, 120, 120, 0.78);
 }
+
+/* =========================================================
+   Print preview selects (dark controls bar)
+   ========================================================= */
+
+.p2-controls select {
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.p2-controls select option {
+  background: #ffffff;
+  color: #111111;
+}
+
+html[data-theme="dark"] .p2-controls select option {
+  background: #1e1e1e;
+  color: #ffffff;
+}
