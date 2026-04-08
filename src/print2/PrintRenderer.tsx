@@ -120,9 +120,22 @@ function safeText(s: any): string {
   return String(s ?? "").trim();
 }
 
+function isPrintableVisibleColumn(c: ColumnDef): boolean {
+  const x: any = c;
+  if (x?.visible === false) return false;
+  if (x?.hidden === true) return false;
+  if (x?.isHidden === true) return false;
+  if (x?.show === false) return false;
+  if (x?.isVisible === false) return false;
+  return true;
+}
+
 function computeVisibleColumns(columns: ColumnDef[], rows: PrintRow[]): ColumnDef[] {
   const hasAny = (key: string) => rows.some((r) => safeText(r.cells[key]));
-  return columns.filter((c) => c.dateRole === "start" || c.dateRole === "end" || hasAny(c.key));
+  return columns.filter((c) => {
+    if (!isPrintableVisibleColumn(c)) return false;
+    return c.dateRole === "start" || c.dateRole === "end" || hasAny(c.key);
+  });
 }
 
 function reorderColumnsForPrint(columns: ColumnDef[]): ColumnDef[] {
