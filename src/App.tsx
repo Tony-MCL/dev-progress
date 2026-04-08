@@ -1164,6 +1164,7 @@ export default function App() {
         <PrintPreviewOverlay
           columns={printColumnsPatched}
           rows={rows}
+          visibleRowIds={visibleRowIds}
           showBarLabels={ganttShowBarText}
           dependencies={deps.links}
           projectInfo={projectInfo}
