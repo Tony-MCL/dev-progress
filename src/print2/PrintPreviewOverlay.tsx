@@ -7,27 +7,25 @@ import { buildPrintModel } from "./PrintModel";
 import PrintRenderer from "./PrintRenderer";
 import { useI18n } from "../i18n";
 
+type PrintLayoutMode = "full" | "table" | "gantt";
+
 type Props = {
   columns: ColumnDef[];
   rows: RowData[];
+  visibleRowIds?: string[];
   dependencies: DepLink[];
   watermarkSvgSrc?: string;
 
   projectInfo?: ProjectInfo;
 
-  // Branding/header
   logoSrc?: string;
 
-  // Watermark (gratisbrukere)
   showWatermark?: boolean;
   watermarkText?: string;
 
-  // ✅ NEW: bar-tekst i print (skal følge app-toggle)
   showBarLabels?: boolean;
-  // ✅ NEW: hvilken celle som brukes som label (default: første kolonne)
   barLabelKey?: string;
 
-  // ✅ NY: global default bar color (fra toolbar)
   defaultBarColor?: string;
 
   onClose: () => void;
@@ -67,6 +65,7 @@ function isAppVisibleColumn(c: ColumnDef): boolean {
 export default function PrintPreviewOverlay({
   columns,
   rows,
+  visibleRowIds,
   dependencies,
   projectInfo,
   logoSrc,
@@ -83,10 +82,21 @@ export default function PrintPreviewOverlay({
   const locale =
     String(i18n.lang ?? i18n.locale ?? i18n.language ?? "").trim() || "en";
 
+  const tt = (key: string, fallback: string) => {
+    try {
+      const v = String(t(key) ?? "").trim();
+      if (!v || v === key) return fallback;
+      return v;
+    } catch {
+      return fallback;
+    }
+  };
+
   const [pageSize, setPageSize] = useState<"A4" | "A3" | "LETTER" | "TABLOID">(
     "A4"
   );
   const [includeDeps, setIncludeDeps] = useState<boolean>(true);
+  const [layoutMode, setLayoutMode] = useState<PrintLayoutMode>("full");
 
   const [printColKeys, setPrintColKeys] = useState<string[]>(() =>
     columns.filter(isAppVisibleColumn).map((c) => c.key)
@@ -100,18 +110,23 @@ export default function PrintPreviewOverlay({
 
   const filteredColumns = useMemo(() => {
     const must = new Set<string>();
-  
-    // Første kolonne må alltid være med
+
     if (columns[0]?.key) must.add(columns[0].key);
-  
-    // Owner må alltid være med til print-modellen for bar-farger,
-    // selv om den er skjult i print-tabellen.
+
     const ownerCol = columns.find((c) => c.key === "owner");
     if (ownerCol?.key) must.add(ownerCol.key);
-  
+
     const allowed = new Set([...printColKeys, ...must]);
     return columns.filter((c) => allowed.has(c.key));
   }, [columns, printColKeys]);
+
+  const shownRows = useMemo(() => {
+    const ids = Array.isArray(visibleRowIds) ? visibleRowIds : [];
+    if (!ids.length) return rows;
+
+    const allowed = new Set(ids);
+    return rows.filter((r) => allowed.has(r.id));
+  }, [rows, visibleRowIds]);
 
   const ownerColors = useMemo(() => {
     const out: Record<string, string> = {};
@@ -128,13 +143,14 @@ export default function PrintPreviewOverlay({
     return buildPrintModel(
       {
         columns: filteredColumns,
-        rows,
+        rows: shownRows,
         dependencies,
         ownerColors,
-        defaultBarColor, // ✅ NY: send global bar color til print-model
+        defaultBarColor,
       },
       {
-        pageSize: pageSize === "LETTER" || pageSize === "TABLOID" ? "A4" : pageSize, // (hvis PrintOptions kun støtter A4/A3)
+        pageSize:
+          pageSize === "LETTER" || pageSize === "TABLOID" ? "A4" : pageSize,
         includeDependencies: includeDeps,
         orientation: "landscape",
         marginMm: { top: 8, right: 8, bottom: 8, left: 8 },
@@ -142,7 +158,7 @@ export default function PrintPreviewOverlay({
     );
   }, [
     filteredColumns,
-    rows,
+    shownRows,
     dependencies,
     ownerColors,
     defaultBarColor,
@@ -157,8 +173,8 @@ export default function PrintPreviewOverlay({
     const p = projectInfo;
 
     const customer = (p?.customerName ?? "").trim();
-    const left1 = `${t("printPreview.customerLabel")} ${
-      customer || t("printPreview.notSet")
+    const left1 = `${tt("printPreview.customerLabel", "Customer:")} ${
+      customer || tt("printPreview.notSet", "Not set")
     }`;
 
     const startISO = model?.range?.startISO ? String(model.range.startISO) : "";
@@ -170,16 +186,19 @@ export default function PrintPreviewOverlay({
 
     const left2 =
       startISO && endISO
-        ? `${t("printPreview.projectPeriodLabel")} ${startISO} – ${endISO}`
-        : `${t("printPreview.projectPeriodLabel")} ${t("printPreview.notSet")}`;
+        ? `${tt("printPreview.projectPeriodLabel", "Project period:")} ${startISO} – ${endISO}`
+        : `${tt("printPreview.projectPeriodLabel", "Project period:")} ${tt(
+            "printPreview.notSet",
+            "Not set"
+          )}`;
 
     return [left1, left2];
-  }, [projectInfo, model, t]);
+  }, [projectInfo, model, tt]);
 
   const title = useMemo(() => {
     const name = (projectInfo?.projectName ?? "").trim();
-    return name || t("printPreview.projectNameNotSet");
-  }, [projectInfo, t]);
+    return name || tt("printPreview.projectNameNotSet", "Project name not set");
+  }, [projectInfo, tt]);
 
   const pageCssSize =
     pageSize === "A3"
@@ -191,11 +210,11 @@ export default function PrintPreviewOverlay({
       : "Tabloid landscape";
 
   const pageW = model.layout.pagePx.w;
-  const pageH = model.layout.pagePx.h;
 
-  // ✅ labelKey default: første kolonne i *innkommende* kolonner (typisk "Aktivitet")
   const resolvedBarLabelKey =
     barLabelKey ?? columns?.[0]?.key ?? filteredColumns?.[0]?.key ?? "title";
+
+  const rowCountText = `${shownRows.length}`;
 
   return (
     <div
@@ -222,16 +241,16 @@ export default function PrintPreviewOverlay({
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-      
+
           body {
             margin: 0 !important;
             padding: 0 !important;
           }
-      
+
           .app-shell > *:not(.p2-overlay) {
             display: none !important;
           }
-      
+
           .p2-overlay {
             position: static !important;
             inset: auto !important;
@@ -240,11 +259,11 @@ export default function PrintPreviewOverlay({
             margin: 0 !important;
             padding: 0 !important;
           }
-      
+
           .p2-controls {
             display: none !important;
           }
-      
+
           .p2-preview-scroll {
             display: block !important;
             overflow: visible !important;
@@ -252,7 +271,7 @@ export default function PrintPreviewOverlay({
             margin: 0 !important;
             background: white !important;
           }
-      
+
           .p2-print-area {
             position: static !important;
             left: auto !important;
@@ -264,7 +283,7 @@ export default function PrintPreviewOverlay({
             margin: 0 auto !important;
             background: white !important;
           }
-      
+
           @page {
             size: ${pageCssSize};
             margin: 0;
@@ -282,9 +301,10 @@ export default function PrintPreviewOverlay({
           background: "rgba(20,20,20,0.92)",
           color: "white",
           boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
+          flexWrap: "wrap",
         }}
       >
-        <div style={{ fontWeight: 800 }}>{t("printPreview.topTitle")}</div>
+        <div style={{ fontWeight: 800 }}>{tt("printPreview.topTitle", "Print preview")}</div>
 
         <div
           style={{
@@ -295,7 +315,7 @@ export default function PrintPreviewOverlay({
           }}
         >
           <label style={{ fontSize: 12, opacity: 0.9 }}>
-            {t("printPreview.paperLabel")}
+            {tt("printPreview.paperLabel", "Paper")}
           </label>
           <select
             value={pageSize}
@@ -317,6 +337,36 @@ export default function PrintPreviewOverlay({
           </select>
         </div>
 
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginLeft: 12,
+          }}
+        >
+          <label style={{ fontSize: 12, opacity: 0.9 }}>
+            {tt("printPreview.layoutModeLabel", "Print type")}
+          </label>
+          <select
+            value={layoutMode}
+            onChange={(e) => setLayoutMode(e.target.value as PrintLayoutMode)}
+            style={{
+              height: 30,
+              borderRadius: 6,
+              border: "1px solid rgba(255,255,255,0.25)",
+              background: "rgba(255,255,255,0.10)",
+              color: "white",
+              padding: "0 8px",
+              outline: "none",
+            }}
+          >
+            <option value="full">{tt("printPreview.modeFull", "Complete")}</option>
+            <option value="table">{tt("printPreview.modeTable", "Table only")}</option>
+            <option value="gantt">{tt("printPreview.modeGantt", "Gantt only")}</option>
+          </select>
+        </div>
+
         <label
           style={{
             display: "flex",
@@ -329,11 +379,27 @@ export default function PrintPreviewOverlay({
             type="checkbox"
             checked={includeDeps}
             onChange={(e) => setIncludeDeps(e.target.checked)}
+            disabled={layoutMode !== "full" && layoutMode !== "gantt"}
           />
           <span style={{ fontSize: 12, opacity: 0.9 }}>
-            {t("printPreview.includeDeps")}
+            {tt("printPreview.includeDeps", "Include dependencies")}
           </span>
         </label>
+
+        <div
+          style={{
+            marginLeft: 12,
+            fontSize: 12,
+            opacity: 0.9,
+            padding: "4px 8px",
+            borderRadius: 999,
+            border: "1px solid rgba(255,255,255,0.18)",
+            background: "rgba(255,255,255,0.08)",
+          }}
+        >
+          {tt("printPreview.printAsShown", "Print as shown")} · {rowCountText}{" "}
+          {tt("printPreview.rowsShown", "rows")}
+        </div>
 
         <div style={{ flex: 1 }} />
 
@@ -351,7 +417,7 @@ export default function PrintPreviewOverlay({
             fontWeight: 700,
           }}
         >
-          {t("printPreview.printBtn")}
+          {tt("printPreview.printBtn", "Print")}
         </button>
 
         <button
@@ -368,7 +434,7 @@ export default function PrintPreviewOverlay({
             fontWeight: 700,
           }}
         >
-          {t("printPreview.closeBtn")}
+          {tt("printPreview.closeBtn", "Close")}
         </button>
       </div>
 
@@ -384,6 +450,7 @@ export default function PrintPreviewOverlay({
         <div className="p2-print-area" style={{ margin: "0 auto", width: pageW }}>
           <PrintRenderer
             model={model}
+            mode={layoutMode}
             logoSrc={resolvedLogo}
             headerLeftLines={headerLeftLines}
             headerRightLines={[]}
@@ -392,7 +459,6 @@ export default function PrintPreviewOverlay({
             watermarkSvgSrc={watermarkSvgSrc}
             title={title}
             locale={locale}
-            // ✅ NEW
             showBarLabels={Boolean(showBarLabels)}
             barLabelKey={resolvedBarLabelKey}
           />
