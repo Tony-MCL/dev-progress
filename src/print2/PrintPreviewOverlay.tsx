@@ -109,14 +109,23 @@ export default function PrintPreviewOverlay({
   const wmText = watermarkText ?? "MCL Progress • FREE";
 
   const filteredColumns = useMemo(() => {
-    const must = new Set<string>();
-
-    if (columns[0]?.key) must.add(columns[0].key);
-
+    const allowed = new Set(printColKeys);
+  
+    // Owner må alltid være med til print-modellen for bar-farger,
+    // selv om den er skjult i print-tabellen.
     const ownerCol = columns.find((c) => c.key === "owner");
-    if (ownerCol?.key) must.add(ownerCol.key);
-
-    const allowed = new Set([...printColKeys, ...must]);
+    if (ownerCol?.key) allowed.add(ownerCol.key);
+  
+    // Start/slutt må alltid være med til print-modellen for Gantt-geometri,
+    // selv om de er skjult i print-tabellen.
+    const startCol =
+      columns.find((c: any) => c?.key === "start" || c?.dateRole === "start");
+    const endCol =
+      columns.find((c: any) => c?.key === "end" || c?.dateRole === "end");
+  
+    if (startCol?.key) allowed.add(startCol.key);
+    if (endCol?.key) allowed.add(endCol.key);
+  
     return columns.filter((c) => allowed.has(c.key));
   }, [columns, printColKeys]);
 
