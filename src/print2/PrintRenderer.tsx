@@ -138,24 +138,9 @@ function computeVisibleColumns(columns: ColumnDef[], rows: PrintRow[]): ColumnDe
 }
 
 function reorderColumnsForPrint(columns: ColumnDef[]): ColumnDef[] {
-  if (!columns.length) return columns;
-
-  const isTitle = (c: ColumnDef) =>
-    (c as any).isTitle === true || String(c.key).toLowerCase() === "title";
-  const isStart = (c: ColumnDef) =>
-    c.dateRole === "start" || String(c.key).toLowerCase() === "start";
-  const isEnd = (c: ColumnDef) =>
-    c.dateRole === "end" || String(c.key).toLowerCase() === "end";
-
-  const titleCols = columns.filter(isTitle);
-  const startCols = columns.filter(isStart);
-  const endCols = columns.filter(isEnd);
-
-  const used = new Set<string>([
-    ...titleCols.map((c) => c.key),
-    ...startCols.map((c) => c.key),
-    ...endCols.map((c) => c.key),
-  ]);
+  // Print skal respektere nøyaktig den rekkefølgen kolonnene kommer inn i.
+  return columns;
+}
 
   const rest = columns.filter((c) => !used.has(c.key));
   return [...titleCols, ...startCols, ...endCols, ...rest];
@@ -864,8 +849,7 @@ export default function PrintRenderer({
   const contentHeight = contentPx.h - headerHeight - footerHeight;
 
   const visibleColumns = useMemo(() => {
-    const v = computeVisibleColumns(model.columns, model.rows);
-    return reorderColumnsForPrint(v);
+    return computeVisibleColumns(model.columns, model.rows);
   }, [model.columns, model.rows]);
 
   const rowsPerPage = Math.max(1, Math.floor((contentHeight - headerRowHeight) / rowHeightPx));
