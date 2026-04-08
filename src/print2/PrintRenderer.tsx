@@ -142,10 +142,6 @@ function reorderColumnsForPrint(columns: ColumnDef[]): ColumnDef[] {
   return columns;
 }
 
-  const rest = columns.filter((c) => !used.has(c.key));
-  return [...titleCols, ...startCols, ...endCols, ...rest];
-}
-
 function splitIntoPages<T>(items: T[], pageSize: number): T[][] {
   if (pageSize <= 0) return [items];
   const out: T[][] = [];
