@@ -528,11 +528,14 @@
 .tc-select {
   width: 100%;
   height: calc(var(--tc-row-h, 28px) - 2px);
+
   border: 1px solid rgba(0,0,0,0.25);
   border-radius: 6px;
-  background: rgba(255,255,255,0.85);
+
+  background: var(--mcl-surface);   /* ✅ viktig */
+  color: var(--mcl-text);           /* ✅ viktig */
+
   font: inherit;
-  color: inherit;
   padding: 4px 10px;
   outline: none;
 }
@@ -543,9 +546,20 @@
 }
 
 .tc-cell.editing .tc-select {
-  background: rgba(255,255,255,0.95);
+  background: color-mix(in srgb, var(--mcl-surface) 95%, white);
 }
 
+/* Dropdown-lista */
+.tc-select option {
+  color: #000;
+  background: #fff;
+}
+
+/* Dark mode */
+:root[data-theme="dark"] .tc-select option {
+  color: #fff;
+  background: #1e1e1e;
+}
 /* ============================================================
    TableCore: SELECT (dropdown) styling
    - Matcher textarea/edit-look
