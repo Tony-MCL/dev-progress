@@ -215,20 +215,22 @@ export default function PrintPreviewOverlay({
             print-color-adjust: exact !important;
           }
       
-          body * {
-            visibility: hidden !important;
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
           }
       
-          .p2-overlay,
-          .p2-overlay * {
-            visibility: visible !important;
+          .app-shell > *:not(.p2-overlay) {
+            display: none !important;
           }
       
           .p2-overlay {
             position: static !important;
             inset: auto !important;
-            background: white !important;
             display: block !important;
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
       
           .p2-controls {
@@ -237,7 +239,6 @@ export default function PrintPreviewOverlay({
       
           .p2-preview-scroll {
             display: block !important;
-            flex: none !important;
             overflow: visible !important;
             padding: 0 !important;
             margin: 0 !important;
