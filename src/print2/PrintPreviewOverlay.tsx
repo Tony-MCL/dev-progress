@@ -101,11 +101,11 @@ export default function PrintPreviewOverlay({
   const filteredColumns = useMemo(() => {
     const must = new Set<string>();
   
-    // Første kolonne må alltid være med (typisk aktivitet/tittel)
+    // Første kolonne må alltid være med
     if (columns[0]?.key) must.add(columns[0].key);
   
-    // Owner må alltid være tilgjengelig for print-modellen slik at bar-farger
-    // kan beregnes, selv om kolonnen er skjult i selve utskriften.
+    // Owner må alltid være med til print-modellen for bar-farger,
+    // selv om den er skjult i print-tabellen.
     const ownerCol = columns.find((c) => c.key === "owner");
     if (ownerCol?.key) must.add(ownerCol.key);
   
