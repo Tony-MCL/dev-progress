@@ -484,14 +484,24 @@ function SvgBars({
           const cx = b.x + b.w / 2;
           const cy = b.y + b.h / 2;
           const half = Math.max(4, b.h / 2);
-
+        
           const pts = [
             `${cx},${cy - half}`,
             `${cx + half},${cy}`,
             `${cx},${cy + half}`,
             `${cx - half},${cy}`,
           ].join(" ");
-
+        
+          const label = showLabels ? (labelByRowId[b.rowId] ?? "") : "";
+        
+          const labelW = estimateLabelWidth(label);
+          const gap = 6;
+        
+          const rightX = cx + half + gap;
+          const leftX = cx - half - gap;
+        
+          const rightFits = rightX + labelW <= rightLimit;
+        
           return (
             <g key={idx}>
               <polygon
@@ -500,6 +510,34 @@ function SvgBars({
                 stroke={b.color ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.18)"}
                 strokeWidth={BAR_STROKE_W}
               />
+        
+              {showLabels && label ? (
+                rightFits ? (
+                  <text
+                    x={rightX}
+                    y={cy + 3}
+                    fontSize={9.5}
+                    fontWeight={600}
+                    fill={"rgba(0,0,0,0.85)"}
+                    textAnchor="start"
+                    style={{ pointerEvents: "none" }}
+                  >
+                    {label}
+                  </text>
+                ) : (
+                  <text
+                    x={leftX}
+                    y={cy + 3}
+                    fontSize={9.5}
+                    fontWeight={600}
+                    fill={"rgba(0,0,0,0.85)"}
+                    textAnchor="end"
+                    style={{ pointerEvents: "none" }}
+                  >
+                    {label}
+                  </text>
+                )
+              ) : null}
             </g>
           );
         }
