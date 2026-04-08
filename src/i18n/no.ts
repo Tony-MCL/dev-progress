@@ -607,11 +607,16 @@ A: Dette er de mest nyttige i daglig bruk.
   },
 
   printPreview: {
-    topTitle: "Print / PDF",
+    topTitle: "Utskrift / PDF",
     paperLabel: "Papir",
     includeDeps: "Avhengigheter",
-    printBtn: "Print / Lagre som PDF",
+    printBtn: "Skriv ut / Lagre som PDF",
     closeBtn: "Lukk",
+  
+    layoutModeLabel: "Utskriftstype",
+    modeFull: "Komplett",
+    modeTable: "Kun tabell",
+    modeGantt: "Kun Gantt",
   
     customerLabel: "Kunde:",
     projectPeriodLabel: "Prosjektperiode:",
