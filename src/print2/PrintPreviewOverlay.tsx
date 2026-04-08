@@ -322,8 +322,6 @@ export default function PrintPreviewOverlay({
               height: 30,
               borderRadius: 6,
               border: "1px solid rgba(255,255,255,0.25)",
-              background: "rgba(255,255,255,0.10)",
-              color: "white",
               padding: "0 8px",
               outline: "none",
             }}
@@ -353,8 +351,6 @@ export default function PrintPreviewOverlay({
               height: 30,
               borderRadius: 6,
               border: "1px solid rgba(255,255,255,0.25)",
-              background: "rgba(255,255,255,0.10)",
-              color: "white",
               padding: "0 8px",
               outline: "none",
             }}
