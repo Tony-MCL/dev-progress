@@ -204,32 +204,33 @@ export default function PrintPreviewOverlay({
       }}
     >
       <style>{`
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          width: auto !important;
-          height: auto !important;
-          overflow: visible !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-
+        @media print {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: auto !important;
+            height: auto !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+      
           body * {
             visibility: hidden !important;
           }
-          
+      
           .p2-overlay,
           .p2-overlay * {
             visibility: visible !important;
           }
-
+      
           .p2-overlay {
             position: static !important;
             inset: auto !important;
             background: white !important;
             display: block !important;
           }
-          
+      
           .p2-print-area {
             position: relative !important;
             left: auto !important;
@@ -241,11 +242,11 @@ export default function PrintPreviewOverlay({
             padding: 0 !important;
             margin: 0 auto !important;
           }
-
+      
           .p2-controls {
             display: none !important;
           }
-
+      
           @page {
             size: ${pageCssSize};
             margin: 0;
