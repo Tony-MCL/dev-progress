@@ -214,8 +214,6 @@ export default function PrintPreviewOverlay({
   const resolvedBarLabelKey =
     barLabelKey ?? columns?.[0]?.key ?? filteredColumns?.[0]?.key ?? "title";
 
-  const rowCountText = `${shownRows.length}`;
-
   return (
     <div
       className="p2-overlay"
@@ -385,21 +383,6 @@ export default function PrintPreviewOverlay({
             {tt("printPreview.includeDeps", "Include dependencies")}
           </span>
         </label>
-
-        <div
-          style={{
-            marginLeft: 12,
-            fontSize: 12,
-            opacity: 0.9,
-            padding: "4px 8px",
-            borderRadius: 999,
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "rgba(255,255,255,0.08)",
-          }}
-        >
-          {tt("printPreview.printAsShown", "Print as shown")} · {rowCountText}{" "}
-          {tt("printPreview.rowsShown", "rows")}
-        </div>
 
         <div style={{ flex: 1 }} />
 
