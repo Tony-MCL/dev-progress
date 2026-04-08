@@ -231,20 +231,29 @@ export default function PrintPreviewOverlay({
             display: block !important;
           }
       
+          .p2-controls {
+            display: none !important;
+          }
+      
+          .p2-preview-scroll {
+            display: block !important;
+            flex: none !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+          }
+      
           .p2-print-area {
-            position: relative !important;
+            position: static !important;
             left: auto !important;
             top: auto !important;
             width: ${pageW}px !important;
             height: auto !important;
-            background: white !important;
             overflow: visible !important;
             padding: 0 !important;
             margin: 0 auto !important;
-          }
-      
-          .p2-controls {
-            display: none !important;
+            background: white !important;
           }
       
           @page {
@@ -355,6 +364,7 @@ export default function PrintPreviewOverlay({
       </div>
 
       <div
+        className="p2-preview-scroll"
         style={{
           flex: 1,
           overflow: "auto",
