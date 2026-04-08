@@ -610,6 +610,11 @@ A: These are the most helpful day-to-day shortcuts.
     printBtn: "Print / Save as PDF",
     closeBtn: "Close",
   
+    layoutModeLabel: "Print type",
+    modeFull: "Complete",
+    modeTable: "Table only",
+    modeGantt: "Gantt only",
+  
     customerLabel: "Customer:",
     projectPeriodLabel: "Project period:",
     notSet: "(not set)",
