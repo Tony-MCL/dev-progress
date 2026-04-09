@@ -11,12 +11,7 @@ import React, {
   useCallback,
 } from "react";
 import TableCore from "./core/TableCore";
-import type {
-  ColumnDef,
-  RowData,
-  Selection,
-  TableCoreDatePickerRequest,
-} from "./core/TableTypes";
+import type { ColumnDef, RowData, Selection } from "./core/TableTypes";
 
 import Header from "./components/Header";
 import HelpPanel from "./components/HelpPanel";
@@ -466,41 +461,36 @@ export default function App() {
   // BLOCK: ROW_EDITING (END)
   // ============================
 
-  const {
-    datePickReq,
-    closeDatePickerUI,
-    setDatePickReq,
-  } = useDatePickerPopover();
+  const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
+    useDatePickerPopover();
 
-  const resolveDatePickerDraftValue = useCallback(
-    (req: TableCoreDatePickerRequest) => {
-      const ownValue = String(req.draftValue ?? "").trim();
-      if (ownValue) return ownValue;
+  const adaptedDatePickReq = useMemo(() => {
+    if (!datePickReq) return null;
   
-      const row = rows[req.row];
-      if (!row) return "";
+    const reqAny = datePickReq as any;
+    const rowIndex = Number(reqAny?.row);
+    const columnKey = String(reqAny?.columnKey ?? reqAny?.column?.key ?? "").trim();
   
-      const otherKey = req.columnKey === "start" ? "end" : "start";
-      const otherValue = String(row.cells?.[otherKey] ?? "").trim();
+    const ownValue = String(
+      reqAny?.draftValue ?? reqAny?.value ?? reqAny?.text ?? ""
+    ).trim();
   
-      if (otherValue) return otherValue;
+    let fallbackValue = ownValue;
   
-      return "";
-    },
-    [rows]
-  );
+    if (!fallbackValue && Number.isInteger(rowIndex) && rowIndex >= 0) {
+      const row = rows[rowIndex];
+      if (row && (columnKey === "start" || columnKey === "end")) {
+        const otherKey = columnKey === "start" ? "end" : "start";
+        fallbackValue = String(row.cells?.[otherKey] ?? "").trim();
+      }
+    }
   
-  const onRequestDatePicker = useCallback(
-    (req: TableCoreDatePickerRequest) => {
-      const nextDraftValue = resolveDatePickerDraftValue(req);
-  
-      setDatePickReq({
-        ...req,
-        draftValue: nextDraftValue,
-      });
-    },
-    [resolveDatePickerDraftValue, setDatePickReq]
-  );
+    return {
+      ...reqAny,
+      columnKey,
+      draftValue: fallbackValue,
+    };
+  }, [datePickReq, rows]);
 
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
@@ -1065,7 +1055,7 @@ export default function App() {
       />
 
       <AppDatePickerPopover
-        req={datePickReq as any}
+        req={adaptedDatePickReq}
         onRequestClose={closeDatePickerUI}
       />
 
