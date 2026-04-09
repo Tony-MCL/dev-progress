@@ -11,7 +11,12 @@ import React, {
   useCallback,
 } from "react";
 import TableCore from "./core/TableCore";
-import type { ColumnDef, RowData, Selection } from "./core/TableTypes";
+import type {
+  ColumnDef,
+  RowData,
+  Selection,
+  TableCoreDatePickerRequest,
+} from "./core/TableTypes";
 
 import Header from "./components/Header";
 import HelpPanel from "./components/HelpPanel";
@@ -461,8 +466,41 @@ export default function App() {
   // BLOCK: ROW_EDITING (END)
   // ============================
 
-  const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
-    useDatePickerPopover();
+  const {
+    datePickReq,
+    closeDatePickerUI,
+    setDatePickReq,
+  } = useDatePickerPopover();
+
+  const resolveDatePickerDraftValue = useCallback(
+    (req: TableCoreDatePickerRequest) => {
+      const ownValue = String(req.draftValue ?? "").trim();
+      if (ownValue) return ownValue;
+  
+      const row = rows[req.row];
+      if (!row) return "";
+  
+      const otherKey = req.columnKey === "start" ? "end" : "start";
+      const otherValue = String(row.cells?.[otherKey] ?? "").trim();
+  
+      if (otherValue) return otherValue;
+  
+      return "";
+    },
+    [rows]
+  );
+  
+  const onRequestDatePicker = useCallback(
+    (req: TableCoreDatePickerRequest) => {
+      const nextDraftValue = resolveDatePickerDraftValue(req);
+  
+      setDatePickReq({
+        ...req,
+        draftValue: nextDraftValue,
+      });
+    },
+    [resolveDatePickerDraftValue, setDatePickReq]
+  );
 
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
