@@ -471,24 +471,29 @@ export default function App() {
     const rowIndex = Number(reqAny?.row);
     const columnKey = String(reqAny?.columnKey ?? reqAny?.column?.key ?? "").trim();
   
-    const ownValue = String(
+    const row =
+      Number.isInteger(rowIndex) && rowIndex >= 0 ? rows[rowIndex] : null;
+  
+    const cellOwnValue =
+      row && columnKey
+        ? String(row.cells?.[columnKey] ?? "").trim()
+        : "";
+  
+    const requestOwnValue = String(
       reqAny?.draftValue ?? reqAny?.value ?? reqAny?.text ?? ""
     ).trim();
   
-    let fallbackValue = ownValue;
+    let draftValue = cellOwnValue || requestOwnValue;
   
-    if (!fallbackValue && Number.isInteger(rowIndex) && rowIndex >= 0) {
-      const row = rows[rowIndex];
-      if (row && (columnKey === "start" || columnKey === "end")) {
-        const otherKey = columnKey === "start" ? "end" : "start";
-        fallbackValue = String(row.cells?.[otherKey] ?? "").trim();
-      }
+    if (!draftValue && row && (columnKey === "start" || columnKey === "end")) {
+      const otherKey = columnKey === "start" ? "end" : "start";
+      draftValue = String(row.cells?.[otherKey] ?? "").trim();
     }
   
     return {
       ...reqAny,
       columnKey,
-      draftValue: fallbackValue,
+      draftValue,
     };
   }, [datePickReq, rows]);
 
