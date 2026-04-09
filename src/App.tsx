@@ -1162,7 +1162,7 @@ export default function App() {
 
       {print2Open ? (
         <PrintPreviewOverlay
-          columns={printColumnsPatched}
+          columns={visibleColumnsPatched}
           rows={rows}
           visibleRowIds={visibleRowIds}
           showBarLabels={ganttShowBarText}
