@@ -269,20 +269,31 @@ export function buildPrintModel(input: PrintInput, opts?: Partial<PrintOptions>)
   // 4) PrintRow
   const printRows: PrintRow[] = filteredRows.map((r, index) => {
     const cells: Record<string, string> = {};
-    for (const c of columns) {
-      const v = (r.cells as any)?.[c.key];
-      cells[c.key] = v === null || v === undefined ? "" : String(v).trim();
+  
+    // Behold ALLE celler fra raden som datagrunnlag for print-modellen,
+    // også når kolonner er skjult i app/print.
+    for (const [key, value] of Object.entries((r.cells as any) ?? {})) {
+      cells[key] = value === null || value === undefined ? "" : String(value).trim();
     }
-
+  
+    // Sørg også for at alle innkommende kolonner finnes eksplisitt i cells
+    // (trygt hvis enkelte rader mangler en key).
+    for (const c of columns) {
+      if (!(c.key in cells)) {
+        const v = (r.cells as any)?.[c.key];
+        cells[c.key] = v === null || v === undefined ? "" : String(v).trim();
+      }
+    }
+  
     let sISO: string | null = null;
     let eISO: string | null = null;
-
+  
     if (startKey && endKey) {
       const { s, e } = readStartEnd(r, startKey, endKey);
       sISO = s ? toISODate(s) : null;
       eISO = e ? toISODate(e) : null;
     }
-
+  
     return {
       id: r.id,
       indent: Math.max(0, Math.round(r.indent ?? 0)),
