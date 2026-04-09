@@ -65,6 +65,24 @@ export function useProgressRowEditing({ rows, setRows, progressCalendar }: Args)
   const onCellCommit = (evt: any) => {
     if (!evt) return;
 
+  const nextRaw = String(evt.next ?? "").trim();
+
+  if ((evt.columnKey === "start" || evt.columnKey === "end") && nextRaw === "") {
+    setRows((prev) => {
+      const next = prev.map((rr, i) =>
+        i === evt.row ? { ...rr, cells: { ...(rr as any).cells } } : rr
+      ) as any[];
+  
+      if (!next[evt.row]) return prev;
+  
+      next[evt.row].cells[evt.columnKey] = "";
+      next[evt.row].cells.dur = "";
+  
+      return recomputeAllRows(next, progressCalendar, null);
+    });
+    return;
+  }
+
     // weekend warning for start/end
     if (evt.columnKey === "start" || evt.columnKey === "end") {
       const rowIndex: number = evt.row;
