@@ -323,6 +323,19 @@
   font-style: italic;
 }
 
+/* Milestone styling */
+.tc-row.tc-milestone .tc-cell {
+  color: #8a2f2f;
+}
+
+.tc-row.tc-milestone .tc-title-text {
+  font-weight: 700;
+}
+
+.tc-row.tc-milestone.tc-child .tc-title-text {
+  font-style: italic;
+}
+
 /* Hover deaktivert */
 .tc-row:not(.tc-summary):hover .tc-cell:not(.sel) {
   background: transparent !important;
