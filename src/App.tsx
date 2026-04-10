@@ -471,23 +471,35 @@ export default function App() {
   } | null;
   
   const [rowContextMenu, setRowContextMenu] = useState<RowContextMenuState>(null);
+  const rowContextMenuRef = useRef<HTMLDivElement | null>(null);
   
   useEffect(() => {
     if (!rowContextMenu) return;
   
     const close = () => setRowContextMenu(null);
   
+    const onMouseDown = (e: MouseEvent) => {
+      const el = rowContextMenuRef.current;
+      if (!el) {
+        close();
+        return;
+      }
+  
+      if (el.contains(e.target as Node)) return;
+      close();
+    };
+  
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
   
-    window.addEventListener("mousedown", close, true);
+    window.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("resize", close);
     window.addEventListener("scroll", close, true);
     window.addEventListener("keydown", onKey, true);
   
     return () => {
-      window.removeEventListener("mousedown", close, true);
+      window.removeEventListener("mousedown", onMouseDown, true);
       window.removeEventListener("resize", close);
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("keydown", onKey, true);
@@ -1123,6 +1135,7 @@ export default function App() {
 
       {rowContextMenu ? (
         <div
+          ref={rowContextMenuRef}
           role="menu"
           aria-label="Row context menu"
           onMouseDown={(e) => e.stopPropagation()}
