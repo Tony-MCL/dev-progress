@@ -587,24 +587,23 @@ export default function GanttView({
       const isMilestone = !!(it.row as any).milestone;
       
       if (!sd || !title) return;
-      
+
       const y = idx * rowH + barTop + barH / 2;
       
       if (isMilestone) {
-        const milestoneDate = sd;
-        if (!milestoneDate) return;
-      
-        const x = diffDays(parsed.min, milestoneDate) * pxPerDay + pxPerDay / 2;
+        const x = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
         const half = 6;
         rectByRowId.set(it.row.id, { left: x - half, right: x + half, y });
         return;
       }
-
+      
+      if (!ed) return;
+      
       const left = diffDays(parsed.min, sd) * pxPerDay;
       const width = Math.max(pxPerDay, (diffDays(sd, ed) + 1) * pxPerDay);
       rectByRowId.set(it.row.id, { left, right: left + width, y });
-    });
-
+      });
+    
     const links = (dependencyLinks ?? [])
       .filter((ln) => rectByRowId.has(ln.fromRowId) && rectByRowId.has(ln.toRowId))
       .map((ln) => {
