@@ -935,7 +935,15 @@ const pts = goesPositiveToTarget
                   </div>
                 );
               }
-
+              
+              if (!ed) {
+                return (
+                  <div key={it.row.id} className="gv-row">
+                    <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
+                  </div>
+                );
+              }
+              
               const left = diffDays(parsed.min, sd) * pxPerDay;
               let width = (diffDays(sd, ed) + 1) * pxPerDay;
               width = Math.max(pxPerDay, width);
