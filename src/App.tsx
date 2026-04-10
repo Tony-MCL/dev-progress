@@ -464,6 +464,36 @@ export default function App() {
   const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
     useDatePickerPopover();
 
+  type RowContextMenuState = {
+    row: number;
+    x: number;
+    y: number;
+  } | null;
+  
+  const [rowContextMenu, setRowContextMenu] = useState<RowContextMenuState>(null);
+  
+  useEffect(() => {
+    if (!rowContextMenu) return;
+  
+    const close = () => setRowContextMenu(null);
+  
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+  
+    window.addEventListener("mousedown", close, true);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("keydown", onKey, true);
+  
+    return () => {
+      window.removeEventListener("mousedown", close, true);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("keydown", onKey, true);
+    };
+  }, [rowContextMenu]);
+
   const adaptedDatePickReq = useMemo(() => {
     if (!datePickReq) return null;
   
@@ -919,45 +949,55 @@ export default function App() {
                       ref={tableHostRef}
                     >
                       <div className="split-measure" ref={tableMeasureRef}>
-                        <TableCore
-                          columns={visibleColumnsPatched}
-                          rows={rows}
-                          onChange={onRowsChange}
-                          onCellCommit={onCellCommit}
-                          onRequestDatePicker={onRequestDatePicker}
-                          showSummary
-                          headerInfoText={headerInfo}
-                          onVisibleRowIdsChange={setVisibleRowIds}
-                          onSelectionChange={setSelection}
-                          onColumnsChange={(nextCols: ColumnDef[]) => {
+                        {React.createElement(TableCore as any, {
+                          columns: visibleColumnsPatched,
+                          rows,
+                          onChange: onRowsChange,
+                          onCellCommit,
+                          onRequestDatePicker,
+                          onRowContextMenu: ({
+                            row,
+                            x,
+                            y,
+                          }: {
+                            row: number;
+                            x: number;
+                            y: number;
+                          }) => {
+                            setSelection({ r1: row, r2: row, c1: 0, c2: 0 });
+                            setRowContextMenu({ row, x, y });
+                          },
+                          showSummary: true,
+                          headerInfoText: headerInfo,
+                          onVisibleRowIdsChange: setVisibleRowIds,
+                          onSelectionChange: setSelection,
+                          onColumnsChange: (nextCols: ColumnDef[]) => {
                             setAppColumns((prev) => {
-                              const nextByKey = new Map(
-                                nextCols.map((c) => [c.key, c])
-                              );
+                              const nextByKey = new Map(nextCols.map((c) => [c.key, c]));
                               const nextKeys = nextCols.map((c) => c.key);
-
+                        
                               const prevByKey = new Map(prev.map((c) => [c.key, c]));
-
+                        
                               const reorderedVisible = nextKeys
                                 .map((key) => {
                                   const prevCol = prevByKey.get(key);
                                   const nextCol = nextByKey.get(key);
                                   if (!prevCol || !nextCol) return null;
-
+                        
                                   return {
                                     ...prevCol,
                                     width: nextCol.width ?? prevCol.width,
                                   } as ColumnDef;
                                 })
                                 .filter(Boolean) as ColumnDef[];
-
+                        
                               const seen = new Set(nextKeys);
                               const untouched = prev.filter((c) => !seen.has(c.key));
-
+                        
                               return [...reorderedVisible, ...untouched];
                             });
-                          }}
-                        />
+                          },
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1063,6 +1103,39 @@ export default function App() {
         req={adaptedDatePickReq}
         onRequestClose={closeDatePickerUI}
       />
+
+      {rowContextMenu ? (
+        <div
+          role="menu"
+          aria-label="Row context menu"
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            left: rowContextMenu.x,
+            top: rowContextMenu.y,
+            zIndex: 100000,
+            minWidth: 220,
+            background: "var(--mcl-surface, #fff)",
+            border: "1px solid rgba(0,0,0,0.16)",
+            borderRadius: 12,
+            boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
+            padding: 8,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setRowContextMenu(null)}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              border: "none",
+              background: "transparent",
+              padding: "10px 12px",
+              borderRadius: 8,
+              cursor: "pointer",
+              font: "inherit",
+            }}
+          >
 
       <ColumnManagerModal
         open={colMgrOpen}
