@@ -960,8 +960,12 @@ export default function TableCore(props: TableCoreProps) {
           const isRowCollapsed = collapsed.has(row.id);
 
           const rowClasses = ["tc-row"];
+          const isMilestone = !!(row as any).milestone;
+          
           if (isParent) rowClasses.push("tc-parent");
           if (row.indent > 0) rowClasses.push("tc-child");
+          if (isMilestone) rowClasses.push("tc-milestone");
+          
           if (rowDropHint && rowDropHint.idx === rVisibleIdx) {
             rowClasses.push(rowDropHint.after ? "tc-drop-after" : "tc-drop-before");
           }
