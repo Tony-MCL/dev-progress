@@ -591,7 +591,10 @@ export default function GanttView({
       const y = idx * rowH + barTop + barH / 2;
       
       if (isMilestone) {
-        const x = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
+        const milestoneDate = sd;
+        if (!milestoneDate) return;
+      
+        const x = diffDays(parsed.min, milestoneDate) * pxPerDay + pxPerDay / 2;
         const half = 6;
         rectByRowId.set(it.row.id, { left: x - half, right: x + half, y });
         return;
@@ -911,7 +914,10 @@ const pts = goesPositiveToTarget
               const textColor = readableTextColor(barColor);
 
               if (isMilestone) {
-                const left = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
+                const milestoneDate = sd;
+                if (!milestoneDate) return null;
+              
+                const left = diffDays(parsed.min, milestoneDate) * pxPerDay + pxPerDay / 2;
               
                 const msStyle: React.CSSProperties = {
                   left,
