@@ -912,14 +912,12 @@ const pts = goesPositiveToTarget
 
               const textColor = readableTextColor(barColor);
 
-              if (isMilestone) {
-                const milestoneDate = sd;
-                if (!milestoneDate) return null;
+              const milestoneLeft = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
+              const hasBarRange = !!ed && diffDays(sd, ed) >= 0;
               
-                const left = diffDays(parsed.min, milestoneDate) * pxPerDay + pxPerDay / 2;
-              
+              if (isMilestone && !hasBarRange) {
                 const msStyle: React.CSSProperties = {
-                  left,
+                  left: milestoneLeft,
                   backgroundColor: barColor,
                   color: textColor,
                 };
@@ -927,11 +925,28 @@ const pts = goesPositiveToTarget
                 return (
                   <div key={it.row.id} className="gv-row">
                     <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
+                
                     <div
-                      className="gv-ms"
-                      style={msStyle}
-                      title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")}`}
-                    />
+                      className="gv-bar"
+                      style={barStyle}
+                      title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")} → ${String(
+                        (it.row as any).cells?.[endKey] ?? ""
+                      )}`}
+                    >
+                      {allowText && hasRoomForText ? <span className="gv-bar-text">{title}</span> : null}
+                    </div>
+                
+                    {isMilestone ? (
+                      <div
+                        className="gv-ms"
+                        style={{
+                          left: milestoneLeft,
+                          backgroundColor: barColor,
+                          color: textColor,
+                        }}
+                        title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")}`}
+                      />
+                    ) : null}
                   </div>
                 );
               }
@@ -940,6 +955,17 @@ const pts = goesPositiveToTarget
                 return (
                   <div key={it.row.id} className="gv-row">
                     <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
+                    {isMilestone ? (
+                      <div
+                        className="gv-ms"
+                        style={{
+                          left: milestoneLeft,
+                          backgroundColor: barColor,
+                          color: textColor,
+                        }}
+                        title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")}`}
+                      />
+                    ) : null}
                   </div>
                 );
               }
