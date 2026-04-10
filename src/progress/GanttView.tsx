@@ -925,28 +925,11 @@ const pts = goesPositiveToTarget
                 return (
                   <div key={it.row.id} className="gv-row">
                     <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
-                
                     <div
-                      className="gv-bar"
-                      style={barStyle}
-                      title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")} → ${String(
-                        (it.row as any).cells?.[endKey] ?? ""
-                      )}`}
-                    >
-                      {allowText && hasRoomForText ? <span className="gv-bar-text">{title}</span> : null}
-                    </div>
-                
-                    {isMilestone ? (
-                      <div
-                        className="gv-ms"
-                        style={{
-                          left: milestoneLeft,
-                          backgroundColor: barColor,
-                          color: textColor,
-                        }}
-                        title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")}`}
-                      />
-                    ) : null}
+                      className="gv-ms"
+                      style={msStyle}
+                      title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")}`}
+                    />
                   </div>
                 );
               }
@@ -996,6 +979,18 @@ const pts = goesPositiveToTarget
                   >
                     {allowText && hasRoomForText ? <span className="gv-bar-text">{title}</span> : null}
                   </div>
+              
+                  {isMilestone ? (
+                    <div
+                      className="gv-ms"
+                      style={{
+                        left: milestoneLeft,
+                        backgroundColor: barColor,
+                        color: textColor,
+                      }}
+                      title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")}`}
+                    />
+                  ) : null}
                 </div>
               );
             })}
