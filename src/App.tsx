@@ -1136,6 +1136,10 @@ export default function App() {
               font: "inherit",
             }}
           >
+            Row {rowContextMenu.row + 1}
+          </button>
+        </div>
+      ) : null}
 
       <ColumnManagerModal
         open={colMgrOpen}
