@@ -181,6 +181,10 @@ function computeHasChildren(rows: RowData[]): HasChildren {
 export default function TableCore(props: TableCoreProps) {
   const { t } = useI18n();
 
+  const onRowContextMenu = (props as any).onRowContextMenu as
+    | ((args: { row: number; x: number; y: number }) => void)
+    | undefined;
+
   const {
     columns,
     rows,
@@ -968,6 +972,18 @@ export default function TableCore(props: TableCoreProps) {
               className={rowClasses.join(" ")}
               style={{ gridTemplateColumns: gridCols }}
               data-r={rVisibleIdx}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+          
+                setSel({ r1: rVisibleIdx, r2: rVisibleIdx, c1: 0, c2: 0 });
+          
+                onRowContextMenu?.({
+                  row: rVisibleIdx,
+                  x: e.clientX,
+                  y: e.clientY,
+                });
+              }}
               onDragOver={(e) => {
                 const draggingRow = dragRowIndexRef.current != null;
 
