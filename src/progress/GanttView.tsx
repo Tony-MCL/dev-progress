@@ -584,11 +584,13 @@ export default function GanttView({
       const title = String((it.row as any).cells?.[titleKey] ?? "");
       const sd = it.sd ? startOfDay(it.sd) : null;
       const ed = it.ed ? startOfDay(it.ed) : null;
+      const isMilestone = !!(it.row as any).milestone;
+      
       if (!sd || !title) return;
-
+      
       const y = idx * rowH + barTop + barH / 2;
-
-      if (!ed) {
+      
+      if (isMilestone) {
         const x = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
         const half = 6;
         rectByRowId.set(it.row.id, { left: x - half, right: x + half, y });
@@ -889,7 +891,8 @@ const pts = goesPositiveToTarget
               const title = String((it.row as any).cells?.[titleKey] ?? "");
               const sd = it.sd ? startOfDay(it.sd) : null;
               const ed = it.ed ? startOfDay(it.ed) : null;
-
+              const isMilestone = !!(it.row as any).milestone;
+              
               if (!sd || !title) {
                 return (
                   <div key={it.row.id} className="gv-row">
@@ -907,15 +910,15 @@ const pts = goesPositiveToTarget
 
               const textColor = readableTextColor(barColor);
 
-              if (!ed) {
+              if (isMilestone) {
                 const left = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
-
+              
                 const msStyle: React.CSSProperties = {
                   left,
                   backgroundColor: barColor,
                   color: textColor,
                 };
-
+              
                 return (
                   <div key={it.row.id} className="gv-row">
                     <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
