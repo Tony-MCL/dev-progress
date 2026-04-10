@@ -953,10 +953,19 @@ const pts = goesPositiveToTarget
                 );
               }
               
-              const left = diffDays(parsed.min, sd) * pxPerDay;
-              let width = (diffDays(sd, ed) + 1) * pxPerDay;
-              width = Math.max(pxPerDay, width);
+              const totalDaysSpan = diffDays(sd, ed) + 1;
 
+              const left = isMilestone
+                ? diffDays(parsed.min, sd) * pxPerDay + pxPerDay
+                : diffDays(parsed.min, sd) * pxPerDay;
+              
+              let width = isMilestone
+                ? Math.max(0, (totalDaysSpan - 1) * pxPerDay)
+                : totalDaysSpan * pxPerDay;
+              
+              width = Math.max(0, width);
+
+              const showBar = width > 0;
               const hasRoomForText = width >= pxPerDay * 3;
               const allowText = showBarTextProp !== false;
 
@@ -970,15 +979,18 @@ const pts = goesPositiveToTarget
               return (
                 <div key={it.row.id} className="gv-row">
                   <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
-                  <div
-                    className="gv-bar"
-                    style={barStyle}
-                    title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")} → ${String(
-                      (it.row as any).cells?.[endKey] ?? ""
-                    )}`}
-                  >
-                    {allowText && hasRoomForText ? <span className="gv-bar-text">{title}</span> : null}
-                  </div>
+              
+                  {showBar ? (
+                    <div
+                      className="gv-bar"
+                      style={barStyle}
+                      title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")} → ${String(
+                        (it.row as any).cells?.[endKey] ?? ""
+                      )}`}
+                    >
+                      {allowText && hasRoomForText ? <span className="gv-bar-text">{title}</span> : null}
+                    </div>
+                  ) : null}
               
                   {isMilestone ? (
                     <div
