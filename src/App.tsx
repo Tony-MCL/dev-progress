@@ -527,6 +527,23 @@ export default function App() {
     };
   }, [datePickReq, rows]);
 
+  const toggleMilestoneForRow = useCallback((rowIndex: number) => {
+    setRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== rowIndex) return r;
+  
+        const current = !!(r as any).milestone;
+  
+        return {
+          ...(r as any),
+          milestone: !current,
+        } as RowData;
+      })
+    );
+  
+    setRowContextMenu(null);
+  }, [setRows]);
+
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
       if (!input) return null;
@@ -1120,11 +1137,25 @@ export default function App() {
             borderRadius: 12,
             boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
             padding: 8,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
           }}
         >
+          <div
+            style={{
+              padding: "8px 12px",
+              fontSize: 12,
+              fontWeight: 700,
+              opacity: 0.7,
+            }}
+          >
+            Row {rowContextMenu.row + 1}
+          </div>
+      
           <button
             type="button"
-            onClick={() => setRowContextMenu(null)}
+            onClick={() => toggleMilestoneForRow(rowContextMenu.row)}
             style={{
               width: "100%",
               textAlign: "left",
@@ -1136,7 +1167,9 @@ export default function App() {
               font: "inherit",
             }}
           >
-            Row {rowContextMenu.row + 1}
+            {!!(rows[rowContextMenu.row] as any)?.milestone
+              ? "Fjern milepæl"
+              : "Gjør om til milepæl"}
           </button>
         </div>
       ) : null}
