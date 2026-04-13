@@ -76,6 +76,16 @@ const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 const PROGRESS_TAB_REGISTRY_KEY = "progress_open_tabs_v1";
 const PROGRESS_TAB_ID_KEY = "progress_tab_id_v1";
 
+function makeRowId() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {}
+
+  return `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
 function readOpenTabRegistry(): Record<string, number> {
   try {
     const raw = localStorage.getItem(PROGRESS_TAB_REGISTRY_KEY);
@@ -275,6 +285,7 @@ export default function App() {
   // BLOCK: APP_STATE (START)
   // ============================
   const [rows, setRows] = useState<RowData[]>(() => buildBlankRows(120));
+  const [copiedRow, setCopiedRow] = useState<RowData | null>(null);
   const [lastSavedSnapshotJson, setLastSavedSnapshotJson] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -555,6 +566,37 @@ export default function App() {
   
     setRowContextMenu(null);
   }, [setRows]);
+
+  const copyRowToClipboard = useCallback((rowIndex: number) => {
+    const row = rows[rowIndex];
+    if (!row) return;
+
+    setCopiedRow({
+      ...(row as any),
+      cells: { ...(row.cells ?? {}) },
+    } as RowData);
+
+    setRowContextMenu(null);
+  }, [rows]);
+
+  const pasteRowBelow = useCallback((rowIndex: number) => {
+    if (!copiedRow) return;
+
+    setRows((prev) => {
+      const next = [...prev];
+
+      const newRow: RowData = {
+        ...(copiedRow as any),
+        id: makeRowId(),
+        cells: { ...(copiedRow.cells ?? {}) },
+      } as RowData;
+
+      next.splice(rowIndex + 1, 0, newRow);
+      return next;
+    });
+
+    setRowContextMenu(null);
+  }, [copiedRow, setRows]);
 
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
@@ -1163,9 +1205,83 @@ export default function App() {
               opacity: 0.7,
             }}
           >
+            {rowContextMenu ? (
+        <div
+          ref={rowContextMenuRef}
+          role="menu"
+          aria-label="Row context menu"
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            left: rowContextMenu.x,
+            top: rowContextMenu.y,
+            zIndex: 100000,
+            minWidth: 220,
+            background: "var(--mcl-surface, #fff)",
+            border: "1px solid rgba(0,0,0,0.16)",
+            borderRadius: 12,
+            boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
+            padding: 8,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          <div
+            style={{
+              padding: "8px 12px",
+              fontSize: 12,
+              fontWeight: 700,
+              opacity: 0.7,
+            }}
+          >
             Row {rowContextMenu.row + 1}
           </div>
-      
+
+          <button
+            type="button"
+            onClick={() => copyRowToClipboard(rowContextMenu.row)}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              border: "none",
+              background: "transparent",
+              padding: "10px 12px",
+              borderRadius: 8,
+              cursor: "pointer",
+              font: "inherit",
+            }}
+          >
+            Copy row
+          </button>
+
+          <button
+            type="button"
+            onClick={() => pasteRowBelow(rowContextMenu.row)}
+            disabled={!copiedRow}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              border: "none",
+              background: "transparent",
+              padding: "10px 12px",
+              borderRadius: 8,
+              cursor: copiedRow ? "pointer" : "default",
+              font: "inherit",
+              opacity: copiedRow ? 1 : 0.45,
+            }}
+          >
+            Paste row below
+          </button>
+
+          <div
+            style={{
+              height: 1,
+              background: "rgba(0,0,0,0.08)",
+              margin: "4px 0",
+            }}
+          />
+
           <button
             type="button"
             onClick={() => toggleMilestoneForRow(rowContextMenu.row)}
