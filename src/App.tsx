@@ -76,35 +76,6 @@ const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 const PROGRESS_TAB_REGISTRY_KEY = "progress_open_tabs_v1";
 const PROGRESS_TAB_ID_KEY = "progress_tab_id_v1";
 
-function makeRowId() {
-  try {
-    if (
-      typeof crypto !== "undefined" &&
-      typeof crypto.randomUUID === "function"
-    ) {
-      return crypto.randomUUID();
-    }
-  } catch {}
-
-  return `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-function getSubtreeRange(list: RowData[], startIndex: number) {
-  const startRow = list[startIndex];
-  if (!startRow) return { start: startIndex, endExclusive: startIndex + 1 };
-
-  const baseIndent = Number(startRow.indent ?? 0);
-  let endExclusive = startIndex + 1;
-
-  while (endExclusive < list.length) {
-    const indent = Number(list[endExclusive]?.indent ?? 0);
-    if (indent <= baseIndent) break;
-    endExclusive++;
-  }
-
-  return { start: startIndex, endExclusive };
-}
-
 function readOpenTabRegistry(): Record<string, number> {
   try {
     const raw = localStorage.getItem(PROGRESS_TAB_REGISTRY_KEY);
@@ -143,7 +114,9 @@ export default function App() {
 
   // TS-guard: useAuthUser typing can end up as "never" in some builds.
   // Normalize uid/email safely without changing runtime behavior.
-  const authUserObj = (auth as any)?.user as { uid?: string; email?: string } | null;
+  const authUserObj = (auth as any)?.user as
+    | { uid?: string; email?: string }
+    | null;
   const authUid = authUserObj?.uid ?? null;
   const authEmail = authUserObj?.email ?? null;
 
@@ -304,13 +277,9 @@ export default function App() {
   // BLOCK: APP_STATE (START)
   // ============================
   const [rows, setRows] = useState<RowData[]>(() => buildBlankRows(120));
-  type ClipboardData = {
-    type: "row" | "group";
-    rows: RowData[];
-  } | null;
-  
-  const [clipboard, setClipboard] = useState<ClipboardData>(null);
-  const [lastSavedSnapshotJson, setLastSavedSnapshotJson] = useState<string | null>(null);
+  const [lastSavedSnapshotJson, setLastSavedSnapshotJson] = useState<
+    string | null
+  >(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [print2Open, setPrint2Open] = useState(false);
@@ -342,10 +311,14 @@ export default function App() {
     snapshot: ProgressProjectSnapshotV1;
   } | null>(null);
 
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(() => {
-    return lsReadString(PROGRESS_KEYS.currentProjectId, null);
-  });
-  const [currentCloudProjectId, setCurrentCloudProjectId] = useState<string | null>(() => {
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(
+    () => {
+      return lsReadString(PROGRESS_KEYS.currentProjectId, null);
+    }
+  );
+  const [currentCloudProjectId, setCurrentCloudProjectId] = useState<
+    string | null
+  >(() => {
     return lsReadString("progress_currentCloudProjectId", null);
   });
 
@@ -499,74 +472,32 @@ export default function App() {
   const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
     useDatePickerPopover();
 
-  type RowContextMenuState = {
-    row: number;
-    x: number;
-    y: number;
-  } | null;
-  
-  const [rowContextMenu, setRowContextMenu] = useState<RowContextMenuState>(null);
-  const rowContextMenuRef = useRef<HTMLDivElement | null>(null);
-  
-  useEffect(() => {
-    if (!rowContextMenu) return;
-  
-    const close = () => setRowContextMenu(null);
-  
-    const onMouseDown = (e: MouseEvent) => {
-      const el = rowContextMenuRef.current;
-      if (!el) {
-        close();
-        return;
-      }
-  
-      if (el.contains(e.target as Node)) return;
-      close();
-    };
-  
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-  
-    window.addEventListener("mousedown", onMouseDown, true);
-    window.addEventListener("resize", close);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("keydown", onKey, true);
-  
-    return () => {
-      window.removeEventListener("mousedown", onMouseDown, true);
-      window.removeEventListener("resize", close);
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("keydown", onKey, true);
-    };
-  }, [rowContextMenu]);
-
   const adaptedDatePickReq = useMemo(() => {
     if (!datePickReq) return null;
-  
+
     const reqAny = datePickReq as any;
     const rowIndex = Number(reqAny?.row);
-    const columnKey = String(reqAny?.columnKey ?? reqAny?.column?.key ?? "").trim();
-  
+    const columnKey = String(
+      reqAny?.columnKey ?? reqAny?.column?.key ?? ""
+    ).trim();
+
     const row =
       Number.isInteger(rowIndex) && rowIndex >= 0 ? rows[rowIndex] : null;
-  
+
     const cellOwnValue =
-      row && columnKey
-        ? String(row.cells?.[columnKey] ?? "").trim()
-        : "";
-  
+      row && columnKey ? String(row.cells?.[columnKey] ?? "").trim() : "";
+
     const requestOwnValue = String(
       reqAny?.draftValue ?? reqAny?.value ?? reqAny?.text ?? ""
     ).trim();
-  
+
     let draftValue = cellOwnValue || requestOwnValue;
-  
+
     if (!draftValue && row && (columnKey === "start" || columnKey === "end")) {
       const otherKey = columnKey === "start" ? "end" : "start";
       draftValue = String(row.cells?.[otherKey] ?? "").trim();
     }
-  
+
     return {
       ...reqAny,
       columnKey,
@@ -574,98 +505,29 @@ export default function App() {
     };
   }, [datePickReq, rows]);
 
-  const toggleMilestoneForRow = useCallback((rowIndex: number) => {
-    setRows((prev) =>
-      prev.map((r, i) => {
-        if (i !== rowIndex) return r;
-  
-        const current = !!(r as any).milestone;
-  
+  const setSnapshotBaseline = useCallback(
+    (snap: ProgressProjectSnapshotV1 | null) => {
+      const normalize = (input: any) => {
+        if (!input) return null;
+
+        const normalizeRows = (rows: any[]) =>
+          (rows || []).map((r) => ({
+            indent: r.indent,
+            cells: r.cells,
+          }));
+
         return {
-          ...(r as any),
-          milestone: !current,
-        } as RowData;
-      })
-    );
-  
-    setRowContextMenu(null);
-  }, [setRows]);
-
-  const copySingleRow = useCallback((rowIndex: number) => {
-    const row = rows[rowIndex];
-    if (!row) return;
-  
-    setClipboard({
-      type: "row",
-      rows: [
-        {
-          ...(row as any),
-          cells: { ...(row.cells ?? {}) },
-        },
-      ],
-    });
-  
-    setRowContextMenu(null);
-  }, [rows]);
-  
-  const copyGroup = useCallback((rowIndex: number) => {
-    const row = rows[rowIndex];
-    if (!row) return;
-  
-    const { start, endExclusive } = getSubtreeRange(rows, rowIndex);
-  
-    const slice = rows.slice(start, endExclusive).map((r) => ({
-      ...(r as any),
-      cells: { ...(r.cells ?? {}) },
-    })) as RowData[];
-  
-    setClipboard({
-      type: "group",
-      rows: slice,
-    });
-  
-    setRowContextMenu(null);
-  }, [rows]);
-
-  const pasteRowBelow = useCallback((rowIndex: number) => {
-    if (!clipboard || clipboard.rows.length === 0) return;
-  
-    setRows((prev) => {
-      const next = [...prev];
-  
-      const pastedBlock = clipboard.rows.map((r) => ({
-        ...(r as any),
-        id: makeRowId(),
-        cells: { ...(r.cells ?? {}) },
-      })) as RowData[];
-  
-      next.splice(rowIndex + 1, 0, ...pastedBlock);
-      return next;
-    });
-  
-    setRowContextMenu(null);
-  }, [clipboard, setRows]);
-
-  const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
-    const normalize = (input: any) => {
-      if (!input) return null;
-  
-      const normalizeRows = (rows: any[]) =>
-        (rows || []).map((r) => ({
-          indent: r.indent,
-          cells: r.cells,
-        }));
-  
-      return {
-        rows: normalizeRows(input.rows),
-        appColumns: input.appColumns,
-        projectInfo: input.projectInfo,
-        calendarEntries: input.calendarEntries,
+          rows: normalizeRows(input.rows),
+          appColumns: input.appColumns,
+          projectInfo: input.projectInfo,
+          calendarEntries: input.calendarEntries,
+        };
       };
-    };
-  
-    setLastSavedSnapshotJson(snap ? JSON.stringify(normalize(snap)) : null);
-  }, []);
+
+      setLastSavedSnapshotJson(snap ? JSON.stringify(normalize(snap)) : null);
+    },
+    []
+  );
 
   const {
     applySnapshot,
@@ -755,7 +617,7 @@ export default function App() {
       }
     } catch {}
     return false;
-  }, [applySnapshot]);
+  }, [applySnapshot, setSnapshotBaseline]);
 
   const startNewBlankProject = useCallback(() => {
     requestGanttFocus();
@@ -794,736 +656,610 @@ export default function App() {
   // BLOCK: ACTIONS (END)
   // ============================
 
-     // ============================
-    // BLOCK: UNSAVED_CHANGES (START)
-    // ============================
-    const isRowDataEmpty = useCallback((list: RowData[]) => {
-      return !list.some((r) => {
-        const cells = (r as any)?.cells ?? {};
-        return Object.values(cells).some(
-          (v) => String(v ?? "").trim().length > 0
-        );
-      });
-    }, []);
-  
-    const isProjectInfoEmpty = useCallback((info: ProjectInfo) => {
-      return (
-        String(info.projectName ?? "").trim() === "" &&
-        String(info.customerName ?? "").trim() === "" &&
-        String(info.projectNo ?? "").trim() === "" &&
-        String(info.notes ?? "").trim() === "" &&
-        Array.isArray(info.owners) &&
-        info.owners.length === 0
+  // ============================
+  // BLOCK: UNSAVED_CHANGES (START)
+  // ============================
+  const isRowDataEmpty = useCallback((list: RowData[]) => {
+    return !list.some((r) => {
+      const cells = (r as any)?.cells ?? {};
+      return Object.values(cells).some(
+        (v) => String(v ?? "").trim().length > 0
       );
-    }, []);
-  
-    const isCurrentPlanEffectivelyBlank = useMemo(() => {
-      return isRowDataEmpty(rows) && isProjectInfoEmpty(projectInfo);
-    }, [rows, projectInfo, isRowDataEmpty, isProjectInfoEmpty]);
-  
-    const hasUnsavedChanges = useMemo(() => {
-  if (isCurrentPlanEffectivelyBlank) return false;
-    
-      const normalize = (input: any) => {
-        if (!input) return null;
-    
-        const normalizeRows = (rows: any[]) =>
-          (rows || []).map((r) => ({
-            indent: r.indent,
-            cells: r.cells,
-          }));
-    
-        return {
-          rows: normalizeRows(input.rows),
-          appColumns: input.appColumns,
-          projectInfo: input.projectInfo,
-          calendarEntries: input.calendarEntries,
-        };
-      };
-    
-      try {
-        const current = JSON.stringify(normalize(buildSnapshot()));
-        const last = lastSavedSnapshotJson;
-    
-        if (!last) return true;
-    
-        return current !== last;
-      } catch {
-        return true;
-      }
-    }, [buildSnapshot, isCurrentPlanEffectivelyBlank, lastSavedSnapshotJson]);
-    // ============================
-    // BLOCK: UNSAVED_CHANGES (END)
-    // ============================
+    });
+  }, []);
 
-    // ============================
-    // BLOCK: BEFORE_UNLOAD_GUARD (START)
-    // ============================
-    useEffect(() => {
-      if (!hasUnsavedChanges) return;
-  
-      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-        e.preventDefault();
-        e.returnValue = "";
-      };
-  
-      window.addEventListener("beforeunload", handleBeforeUnload);
-  
-      return () => {
-        window.removeEventListener("beforeunload", handleBeforeUnload);
-      };
-    }, [hasUnsavedChanges]);
-    // ============================
-    // BLOCK: BEFORE_UNLOAD_GUARD (END)
-    // ============================
+  const isProjectInfoEmpty = useCallback((info: ProjectInfo) => {
+    return (
+      String(info.projectName ?? "").trim() === "" &&
+      String(info.customerName ?? "").trim() === "" &&
+      String(info.projectNo ?? "").trim() === "" &&
+      String(info.notes ?? "").trim() === "" &&
+      Array.isArray(info.owners) &&
+      info.owners.length === 0
+    );
+  }, []);
 
+  const isCurrentPlanEffectivelyBlank = useMemo(() => {
+    return isRowDataEmpty(rows) && isProjectInfoEmpty(projectInfo);
+  }, [rows, projectInfo, isRowDataEmpty, isProjectInfoEmpty]);
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (isCurrentPlanEffectivelyBlank) return false;
+
+    const normalize = (input: any) => {
+      if (!input) return null;
+
+      const normalizeRows = (rows: any[]) =>
+        (rows || []).map((r) => ({
+          indent: r.indent,
+          cells: r.cells,
+        }));
+
+      return {
+        rows: normalizeRows(input.rows),
+        appColumns: input.appColumns,
+        projectInfo: input.projectInfo,
+        calendarEntries: input.calendarEntries,
+      };
+    };
+
+    try {
+      const current = JSON.stringify(normalize(buildSnapshot()));
+      const last = lastSavedSnapshotJson;
+
+      if (!last) return true;
+
+      return current !== last;
+    } catch {
+      return true;
+    }
+  }, [buildSnapshot, isCurrentPlanEffectivelyBlank, lastSavedSnapshotJson]);
+  // ============================
+  // BLOCK: UNSAVED_CHANGES (END)
+  // ============================
+
+  // ============================
+  // BLOCK: BEFORE_UNLOAD_GUARD (START)
+  // ============================
   useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+  
+    // ============================
+// BLOCK: BEFORE_UNLOAD_GUARD (END)
+// ============================
+
+useEffect(() => {
+  const plan = String(org.activePlan ?? "free");
+  const isProOrTrial = plan === "pro" || plan === "trial";
+
+  if (!isProOrTrial) {
+    setOpenTabCount(1);
+    return;
+  }
+
+  let tabId = sessionStorage.getItem(PROGRESS_TAB_ID_KEY);
+  if (!tabId) {
+    tabId = `progress_tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    sessionStorage.setItem(PROGRESS_TAB_ID_KEY, tabId);
+  }
+
+  const updatePresence = () => {
+    const next = readOpenTabRegistry();
+    next[tabId!] = Date.now();
+    writeOpenTabRegistry(next);
+    setOpenTabCount(Math.max(1, Object.keys(next).length));
+  };
+
+  const removePresence = () => {
+    const next = readOpenTabRegistry();
+    delete next[tabId!];
+    writeOpenTabRegistry(next);
+  };
+
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== PROGRESS_TAB_REGISTRY_KEY) return;
+    const next = readOpenTabRegistry();
+    setOpenTabCount(Math.max(1, Object.keys(next).length));
+  };
+
+  const onVisibility = () => {
+    if (document.visibilityState === "visible") {
+      updatePresence();
+    }
+  };
+
+  updatePresence();
+
+  const intervalId = window.setInterval(updatePresence, 10000);
+  window.addEventListener("storage", onStorage);
+  window.addEventListener("beforeunload", removePresence);
+  document.addEventListener("visibilitychange", onVisibility);
+
+  return () => {
+    window.clearInterval(intervalId);
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener("beforeunload", removePresence);
+    document.removeEventListener("visibilitychange", onVisibility);
+    removePresence();
+  };
+}, [org.activePlan]);
+
+const handleOpenLocalProjectSmart = useCallback(
+  (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
     const plan = String(org.activePlan ?? "free");
     const isProOrTrial = plan === "pro" || plan === "trial";
 
+    // Free: åpne direkte i single-slot flyt
     if (!isProOrTrial) {
-      setOpenTabCount(1);
+      setCurrentProjectId(rec.id);
+      setCurrentCloudProjectId(null);
+      applySnapshot(rec.snapshot);
+      setSnapshotBaseline(rec.snapshot);
       return;
     }
 
-    let tabId = sessionStorage.getItem(PROGRESS_TAB_ID_KEY);
-    if (!tabId) {
-      tabId = `progress_tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      sessionStorage.setItem(PROGRESS_TAB_ID_KEY, tabId);
+    // Pro/Trial: tom fane -> åpne direkte
+    if (isCurrentPlanEffectivelyBlank) {
+      setCurrentProjectId(rec.id);
+      setCurrentCloudProjectId(null);
+      applySnapshot(rec.snapshot);
+      setSnapshotBaseline(rec.snapshot);
+      return;
     }
 
-    const updatePresence = () => {
-      const next = readOpenTabRegistry();
-      next[tabId!] = Date.now();
-      writeOpenTabRegistry(next);
-      setOpenTabCount(Math.max(1, Object.keys(next).length));
-    };
+    // Pro/Trial: eksisterende data -> vis dialog
+    setOpenProjectDialog({
+      id: rec.id,
+      source: "local",
+      snapshot: rec.snapshot,
+    });
+  },
+  [
+    org.activePlan,
+    isCurrentPlanEffectivelyBlank,
+    applySnapshot,
+    setSnapshotBaseline,
+    setCurrentProjectId,
+    setCurrentCloudProjectId,
+  ]
+);
 
-    const removePresence = () => {
-      const next = readOpenTabRegistry();
-      delete next[tabId!];
-      writeOpenTabRegistry(next);
-    };
+const handleOpenCloudProjectSmart = useCallback(
+  (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
+    // Cloud library brukes bare i Pro/Trial, så vi trenger ikke egen free-branch her
 
-    const onStorage = (e: StorageEvent) => {
-      if (e.key !== PROGRESS_TAB_REGISTRY_KEY) return;
-      const next = readOpenTabRegistry();
-      setOpenTabCount(Math.max(1, Object.keys(next).length));
-    };
+    if (isCurrentPlanEffectivelyBlank) {
+      setCurrentProjectId(null);
+      setCurrentCloudProjectId(rec.id);
+      applySnapshot(rec.snapshot);
+      setSnapshotBaseline(rec.snapshot);
+      return;
+    }
 
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        updatePresence();
+    setOpenProjectDialog({
+      id: rec.id,
+      source: "cloud",
+      snapshot: rec.snapshot,
+    });
+  },
+  [
+    isCurrentPlanEffectivelyBlank,
+    applySnapshot,
+    setSnapshotBaseline,
+    setCurrentProjectId,
+    setCurrentCloudProjectId,
+  ]
+);
+
+// ============================
+// BLOCK: JSX (START)
+// ============================
+return (
+  <div className="app-shell">
+    <div className="mcl-watermark" aria-hidden="true">
+      <img src={watermarkUrl} alt="" />
+    </div>
+
+    <Header
+      onToggleHelp={() => setHelpOpen(true)}
+      openTabCount={openTabCount}
+      account={{
+        apiBase: apiBase,
+        authReady: auth.ready,
+        userEmail: authEmail,
+        plan: org.activePlan,
+        expiresAt: org.expiresAt,
+        errorText: org.error || null,
+        signIn: auth.signIn,
+        register: registerAndStartTrial,
+        signOut: auth.signOut,
+        getIdToken: auth.getIdToken,
+        refreshPlan: org.refresh,
+      }}
+    />
+
+    <Toolbar
+      left={
+        <ProgressToolbar
+          activePlan={org.activePlan}
+          hasUnsavedChanges={hasUnsavedChanges}
+          confirmOnNew={String(org.activePlan ?? "free") === "free"}
+          onFileAction={handleFileAction}
+          onTableAction={handleTableAction}
+          onGanttAction={handleGanttAction}
+          onCalendarAction={handleCalendarAction}
+          onProjectAction={handleProjectAction}
+          workWeekDays={projectInfo.workWeekDays}
+          onSetWorkWeekDays={(next) =>
+            setProjectInfo((p) => ({ ...p, workWeekDays: next }))
+          }
+          ganttShowBarText={ganttShowBarText}
+          onSetGanttShowBarText={setGanttShowBarText}
+          ganttDefaultBarColor={ganttDefaultBarColor}
+          onSetGanttDefaultBarColor={setGanttDefaultBarColor}
+        />
       }
-    };
+      center={null}
+      right={null}
+    />
 
-    updatePresence();
+    <main className="app-main">
+      <section className="app-section app-section--split-card">
+        <div className="split-card">
+          <div className="split-body">
+            <div
+              className="split-grid"
+              ref={splitGridRef}
+              style={{ ["--split-left" as any]: splitLeft }}
+            >
+              <div className="split-panel">
+                <div className="split-panel-clip">
+                  <div
+                    className="split-track split-track--table"
+                    ref={tableHostRef}
+                  >
+                    <div className="split-measure" ref={tableMeasureRef}>
+                      {React.createElement(TableCore as any, {
+                        columns: visibleColumnsPatched,
+                        rows,
+                        onChange: onRowsChange,
+                        onCellCommit,
+                        onRequestDatePicker,
+                        showSummary: true,
+                        headerInfoText: headerInfo,
+                        onVisibleRowIdsChange: setVisibleRowIds,
+                        onSelectionChange: setSelection,
+                        onColumnsChange: (nextCols: ColumnDef[]) => {
+                          setAppColumns((prev) => {
+                            const nextByKey = new Map(nextCols.map((c) => [c.key, c]));
+                            const nextKeys = nextCols.map((c) => c.key);
 
-    const intervalId = window.setInterval(updatePresence, 10000);
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("beforeunload", removePresence);
-    document.addEventListener("visibilitychange", onVisibility);
+                            const prevByKey = new Map(prev.map((c) => [c.key, c]));
 
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("beforeunload", removePresence);
-      document.removeEventListener("visibilitychange", onVisibility);
-      removePresence();
-    };
-  }, [org.activePlan]);
+                            const reorderedVisible = nextKeys
+                              .map((key) => {
+                                const prevCol = prevByKey.get(key);
+                                const nextCol = nextByKey.get(key);
+                                if (!prevCol || !nextCol) return null;
 
-  const handleOpenLocalProjectSmart = useCallback(
-    (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
-      const plan = String(org.activePlan ?? "free");
-      const isProOrTrial = plan === "pro" || plan === "trial";
+                                return {
+                                  ...prevCol,
+                                  width: nextCol.width ?? prevCol.width,
+                                } as ColumnDef;
+                              })
+                              .filter(Boolean) as ColumnDef[];
 
-      // Free: åpne direkte i single-slot flyt
-      if (!isProOrTrial) {
-        setCurrentProjectId(rec.id);
-        setCurrentCloudProjectId(null);
-        applySnapshot(rec.snapshot);
-        setSnapshotBaseline(rec.snapshot);
-        return;
-      }
+                            const seen = new Set(nextKeys);
+                            const untouched = prev.filter((c) => !seen.has(c.key));
 
-      // Pro/Trial: tom fane -> åpne direkte
-      if (isCurrentPlanEffectivelyBlank) {
-        setCurrentProjectId(rec.id);
-        setCurrentCloudProjectId(null);
-        applySnapshot(rec.snapshot);
-        setSnapshotBaseline(rec.snapshot);
-        return;
-      }
+                            return [...reorderedVisible, ...untouched];
+                          });
+                        },
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-      // Pro/Trial: eksisterende data -> vis dialog
-      setOpenProjectDialog({
-        id: rec.id,
-        source: "local",
-        snapshot: rec.snapshot,
-      });
-    },
-    [
-      org.activePlan,
-      isCurrentPlanEffectivelyBlank,
-      applySnapshot,
-      setSnapshotBaseline,
-      setCurrentProjectId,
-      setCurrentCloudProjectId,
-    ]
-  );
+              <div
+                className="split-divider"
+                role="separator"
+                aria-orientation="vertical"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(splitLeft)}
+                tabIndex={0}
+                onPointerDown={onDividerPointerDown}
+                onKeyDown={onDividerKeyDown}
+                title={t("app.split.dragToResize")}
+              >
+                <div className="split-divider-grip" aria-hidden="true" />
+              </div>
 
-  const handleOpenCloudProjectSmart = useCallback(
-    (rec: { id: string; snapshot: ProgressProjectSnapshotV1 }) => {
-      // Cloud library brukes bare i Pro/Trial, så vi trenger ikke egen free-branch her
+              <div className="split-panel">
+                <div className="split-panel-clip">
+                  <div
+                    className="split-track split-track--gantt"
+                    ref={ganttHostRef}
+                  >
+                    <div className="split-measure" ref={ganttMeasureRef}>
+                      <GanttView
+                        columns={visibleColumnsPatched}
+                        rows={rows}
+                        headerInfoText={headerInfo}
+                        dateFormat="dd.mm.yyyy"
+                        visibleRowIds={visibleRowIds}
+                        pxPerDay={ganttPxPerDay}
+                        onZoomDelta={(step, anchorX) =>
+                          handleGanttZoomDelta(step, anchorX)
+                        }
+                        workWeekdays={progressCalendar.workWeekdays}
+                        showWeekendShade={ganttWeekendShade}
+                        showTodayLine={ganttTodayLine}
+                        ownerColors={ownerColorMap}
+                        dependencyLinks={deps.links}
+                        showBarText={ganttShowBarText}
+                        defaultBarColor={ganttDefaultBarColor}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      if (isCurrentPlanEffectivelyBlank) {
-        setCurrentProjectId(null);
-        setCurrentCloudProjectId(rec.id);
-        applySnapshot(rec.snapshot);
-        setSnapshotBaseline(rec.snapshot);
-        return;
-      }
+          <div className="split-xbars">
+            <div
+              className="split-xbar-grid"
+              style={{ ["--split-left" as any]: splitLeft }}
+            >
+              <div
+                className="split-xbar"
+                ref={tableBarRef}
+                aria-label={t("app.aria.tableHorizontalScroll")}
+              >
+                <div className="split-xbar-spacer" ref={tableSpacerRef} />
+              </div>
 
-      setOpenProjectDialog({
-        id: rec.id,
-        source: "cloud",
-        snapshot: rec.snapshot,
-      });
-    },
-    [
-      isCurrentPlanEffectivelyBlank,
-      applySnapshot,
-      setSnapshotBaseline,
-      setCurrentProjectId,
-      setCurrentCloudProjectId,
-    ]
-  );
+              <div className="split-xbar-divider" aria-hidden="true" />
 
-  // ============================
-  // BLOCK: JSX (START)
-  // ============================
-  return (
-    <div className="app-shell">
-      <div className="mcl-watermark" aria-hidden="true">
-        <img src={watermarkUrl} alt="" />
+              <div
+                className="split-xbar"
+                ref={ganttBarRef}
+                aria-label={t("app.aria.ganttHorizontalScroll")}
+              >
+                <div className="split-xbar-spacer" ref={ganttSpacerRef} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <DurationAdjustPopover
+      state={durPop}
+      onPick={applyDurationChoice}
+      onClose={closeDurationPopover}
+      titleText={t("app.durationPopover.title")}
+      moveStartText={t("app.durationPopover.moveStart")}
+      moveEndText={t("app.durationPopover.moveEnd")}
+      keepEndMoveStartTitle={t("app.durationPopover.keepEndMoveStartTitle")}
+      keepStartMoveEndTitle={t("app.durationPopover.keepStartMoveEndTitle")}
+    />
+
+    <WeekendAdjustPopover
+      state={weekendPop}
+      onPick={applyWeekendChoice}
+      onCancel={cancelWeekendAdjust}
+      titleText={t("app.weekendPopover.title")}
+      prevText={t("app.weekendPopover.prevWorkday")}
+      nextText={t("app.weekendPopover.nextWorkday")}
+      cancelText={t("app.weekendPopover.cancel")}
+    />
+
+    <AppDatePickerPopover
+      req={adaptedDatePickReq}
+      onRequestClose={closeDatePickerUI}
+    />
+
+    <ColumnManagerModal
+      open={colMgrOpen}
+      columns={appColumns}
+      onClose={() => setColMgrOpen(false)}
+      onChange={(next) => setAppColumns(ensureAtLeastTitleVisible(next))}
+      onAddColumn={(spec) => {
+        const nextCols = ensureAtLeastTitleVisible(
+          addCustomColumn(appColumns, spec)
+        );
+        const nextRows = applyColumnsToRows(nextCols, rows);
+        setAppColumns(nextCols);
+        setRows(nextRows);
+      }}
+    />
+
+    <CalendarModal
+      open={calendarOpen}
+      entries={calendarEntries}
+      onChange={setCalendarEntries}
+      onClose={() => setCalendarOpen(false)}
+    />
+
+    <ProjectModal
+      open={projectOpen}
+      value={projectInfo}
+      onChange={setProjectInfo}
+      onClose={() => setProjectOpen(false)}
+    />
+
+    {isPaid && org.activeOrgId ? (
+      <CloudProjectLibraryModal
+        open={projectLibraryOpen}
+        currentId={currentCloudProjectId}
+        onSetCurrentId={setCurrentCloudProjectId}
+        onClose={() => setProjectLibraryOpen(false)}
+        onOpenProject={(rec: any) => {
+          handleOpenCloudProjectSmart(rec);
+        }}
+        apiBase={apiBase}
+        auth={auth}
+        orgId={org.activeOrgId}
+      />
+    ) : (
+      <ProjectLibraryModal
+        open={projectLibraryOpen}
+        db={projectStore}
+        currentId={currentProjectId}
+        onSetCurrentId={setCurrentProjectId}
+        onClose={() => setProjectLibraryOpen(false)}
+        onOpenProject={(rec: any) => {
+          handleOpenLocalProjectSmart(rec);
+        }}
+      />
+    )}
+
+    {openProjectDialog ? (
+      <div className="ptb-modal-backdrop" role="dialog" aria-modal="true">
+        <div className="ptb-modal">
+          <div className="ptb-modal-title">
+            {t("projectLibrary.openConflictTitle")}
+          </div>
+
+          <div className="ptb-modal-text">
+            {t("projectLibrary.openConflictText")}
+          </div>
+
+          <div className="ptb-modal-actions">
+            <button
+              type="button"
+              className="ptb-btn ptb-btn--cancel"
+              onClick={() => setOpenProjectDialog(null)}
+            >
+              {t("projectLibrary.cancel")}
+            </button>
+
+            <button
+              type="button"
+              className="ptb-btn ptb-btn--confirm"
+              style={{ background: "#1e66ff" }}
+              onClick={() => {
+                try {
+                  lsWriteString(
+                    OPEN_PROJECT_HANDOFF_KEY,
+                    JSON.stringify({
+                      id: openProjectDialog.id,
+                      source: openProjectDialog.source,
+                      snapshot: openProjectDialog.snapshot,
+                      ts: Date.now(),
+                    })
+                  );
+                } catch {}
+
+                const u = new URL(window.location.href);
+                u.searchParams.set("openProjectId", openProjectDialog.id);
+                u.searchParams.set("openProjectHandoff", "1");
+                u.searchParams.set("_t", String(Date.now()));
+                window.open(u.toString(), "_blank", "noopener,noreferrer");
+                setOpenProjectDialog(null);
+              }}
+            >
+              {t("projectLibrary.openInNewTab")}
+            </button>
+
+            <button
+              type="button"
+              className="ptb-btn ptb-btn--confirm"
+              onClick={() => {
+                if (openProjectDialog.source === "cloud") {
+                  setCurrentProjectId(null);
+                  setCurrentCloudProjectId(openProjectDialog.id);
+                } else {
+                  setCurrentProjectId(openProjectDialog.id);
+                  setCurrentCloudProjectId(null);
+                }
+
+                applySnapshot(openProjectDialog.snapshot);
+                setSnapshotBaseline(openProjectDialog.snapshot);
+                setOpenProjectDialog(null);
+              }}
+            >
+              {t("projectLibrary.overwriteCurrent")}
+            </button>
+          </div>
+        </div>
       </div>
+    ) : null}
 
-      <Header
-        onToggleHelp={() => setHelpOpen(true)}
-        openTabCount={openTabCount}
-        account={{
-          apiBase: apiBase,
-          authReady: auth.ready,
-          userEmail: authEmail,
-          plan: org.activePlan,
-          expiresAt: org.expiresAt,
-          errorText: org.error || null,
-          signIn: auth.signIn,
-          register: registerAndStartTrial,
-          signOut: auth.signOut,
-          getIdToken: auth.getIdToken,
-          refreshPlan: org.refresh,
-        }}
+    <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+    {print2Open ? (
+      <PrintPreviewOverlay
+        columns={visibleColumnsPatched}
+        rows={rows}
+        visibleRowIds={visibleRowIds}
+        showBarLabels={ganttShowBarText}
+        dependencies={deps.links}
+        projectInfo={projectInfo}
+        logoSrc={undefined}
+        showWatermark={!isPaid}
+        watermarkSvgSrc={watermarkUrl}
+        defaultBarColor={ganttDefaultBarColor}
+        onClose={() => setPrint2Open(false)}
       />
+    ) : null}
 
-      <Toolbar
-        left={
-          <ProgressToolbar
-            activePlan={org.activePlan}
-            hasUnsavedChanges={hasUnsavedChanges}
-            confirmOnNew={String(org.activePlan ?? "free") === "free"}
-            onFileAction={handleFileAction}
-            onTableAction={handleTableAction}
-            onGanttAction={handleGanttAction}
-            onCalendarAction={handleCalendarAction}
-            onProjectAction={handleProjectAction}
-            workWeekDays={projectInfo.workWeekDays}
-            onSetWorkWeekDays={(next) =>
-              setProjectInfo((p) => ({ ...p, workWeekDays: next }))
-            }
-            ganttShowBarText={ganttShowBarText}
-            onSetGanttShowBarText={setGanttShowBarText}
-            ganttDefaultBarColor={ganttDefaultBarColor}
-            onSetGanttDefaultBarColor={setGanttDefaultBarColor}
-          />
-        }
-        center={null}
-        right={null}
-      />
-
-      <main className="app-main">
-        <section className="app-section app-section--split-card">
-          <div className="split-card">
-            <div className="split-body">
-              <div
-                className="split-grid"
-                ref={splitGridRef}
-                style={{ ["--split-left" as any]: splitLeft }}
-              >
-                <div className="split-panel">
-                  <div className="split-panel-clip">
-                    <div
-                      className="split-track split-track--table"
-                      ref={tableHostRef}
-                    >
-                      <div className="split-measure" ref={tableMeasureRef}>
-                        {React.createElement(TableCore as any, {
-                          columns: visibleColumnsPatched,
-                          rows,
-                          onChange: onRowsChange,
-                          onCellCommit,
-                          onRequestDatePicker,
-                          onRowContextMenu: ({
-                            row,
-                            x,
-                            y,
-                          }: {
-                            row: number;
-                            x: number;
-                            y: number;
-                          }) => {
-                            setSelection({ r1: row, r2: row, c1: 0, c2: 0 });
-                            setRowContextMenu({ row, x, y });
-                          },
-                          showSummary: true,
-                          headerInfoText: headerInfo,
-                          onVisibleRowIdsChange: setVisibleRowIds,
-                          onSelectionChange: setSelection,
-                          onColumnsChange: (nextCols: ColumnDef[]) => {
-                            setAppColumns((prev) => {
-                              const nextByKey = new Map(nextCols.map((c) => [c.key, c]));
-                              const nextKeys = nextCols.map((c) => c.key);
-                        
-                              const prevByKey = new Map(prev.map((c) => [c.key, c]));
-                        
-                              const reorderedVisible = nextKeys
-                                .map((key) => {
-                                  const prevCol = prevByKey.get(key);
-                                  const nextCol = nextByKey.get(key);
-                                  if (!prevCol || !nextCol) return null;
-                        
-                                  return {
-                                    ...prevCol,
-                                    width: nextCol.width ?? prevCol.width,
-                                  } as ColumnDef;
-                                })
-                                .filter(Boolean) as ColumnDef[];
-                        
-                              const seen = new Set(nextKeys);
-                              const untouched = prev.filter((c) => !seen.has(c.key));
-                        
-                              return [...reorderedVisible, ...untouched];
-                            });
-                          },
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className="split-divider"
-                  role="separator"
-                  aria-orientation="vertical"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(splitLeft)}
-                  tabIndex={0}
-                  onPointerDown={onDividerPointerDown}
-                  onKeyDown={onDividerKeyDown}
-                  title={t("app.split.dragToResize")}
-                >
-                  <div className="split-divider-grip" aria-hidden="true" />
-                </div>
-
-                <div className="split-panel">
-                  <div className="split-panel-clip">
-                    <div
-                      className="split-track split-track--gantt"
-                      ref={ganttHostRef}
-                    >
-                      <div className="split-measure" ref={ganttMeasureRef}>
-                        <GanttView
-                          columns={visibleColumnsPatched}
-                          rows={rows}
-                          headerInfoText={headerInfo}
-                          dateFormat="dd.mm.yyyy"
-                          visibleRowIds={visibleRowIds}
-                          pxPerDay={ganttPxPerDay}
-                          onZoomDelta={(step, anchorX) =>
-                            handleGanttZoomDelta(step, anchorX)
-                          }
-                          workWeekdays={progressCalendar.workWeekdays}
-                          showWeekendShade={ganttWeekendShade}
-                          showTodayLine={ganttTodayLine}
-                          ownerColors={ownerColorMap}
-                          dependencyLinks={deps.links}
-                          showBarText={ganttShowBarText}
-                          defaultBarColor={ganttDefaultBarColor}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="split-xbars">
-              <div
-                className="split-xbar-grid"
-                style={{ ["--split-left" as any]: splitLeft }}
-              >
-                <div
-                  className="split-xbar"
-                  ref={tableBarRef}
-                  aria-label={t("app.aria.tableHorizontalScroll")}
-                >
-                  <div className="split-xbar-spacer" ref={tableSpacerRef} />
-                </div>
-
-                <div className="split-xbar-divider" aria-hidden="true" />
-
-                <div
-                  className="split-xbar"
-                  ref={ganttBarRef}
-                  aria-label={t("app.aria.ganttHorizontalScroll")}
-                >
-                  <div className="split-xbar-spacer" ref={ganttSpacerRef} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <DurationAdjustPopover
-        state={durPop}
-        onPick={applyDurationChoice}
-        onClose={closeDurationPopover}
-        titleText={t("app.durationPopover.title")}
-        moveStartText={t("app.durationPopover.moveStart")}
-        moveEndText={t("app.durationPopover.moveEnd")}
-        keepEndMoveStartTitle={t("app.durationPopover.keepEndMoveStartTitle")}
-        keepStartMoveEndTitle={t("app.durationPopover.keepStartMoveEndTitle")}
-      />
-
-      <WeekendAdjustPopover
-        state={weekendPop}
-        onPick={applyWeekendChoice}
-        onCancel={cancelWeekendAdjust}
-        titleText={t("app.weekendPopover.title")}
-        prevText={t("app.weekendPopover.prevWorkday")}
-        nextText={t("app.weekendPopover.nextWorkday")}
-        cancelText={t("app.weekendPopover.cancel")}
-      />
-
-      <AppDatePickerPopover
-        req={adaptedDatePickReq}
-        onRequestClose={closeDatePickerUI}
-      />
-
-      {rowContextMenu ? (
-        <div
-          ref={rowContextMenuRef}
-          role="menu"
-          aria-label="Row context menu"
-          onMouseDown={(e) => e.stopPropagation()}
-          style={{
-            position: "fixed",
-            left: rowContextMenu.x,
-            top: rowContextMenu.y,
-            zIndex: 100000,
-            minWidth: 220,
-            background: "var(--mcl-surface, #fff)",
-            border: "1px solid rgba(0,0,0,0.16)",
-            borderRadius: 12,
-            boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
-            padding: 8,
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
+    <footer className="app-footer">
+      <div className="app-footer-inner">
+        <a
+          href={LINKS.mcl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="app-footer-brand"
         >
-          <div
-            style={{
-              padding: "8px 12px",
-              fontSize: 12,
-              fontWeight: 700,
-              opacity: 0.7,
-            }}
-          >
-            Row {rowContextMenu.row + 1}
-          </div>
+          {t("app.footer.copyright")}
+        </a>
 
-          <button
-            type="button"
-            onClick={() => copySingleRow(rowContextMenu.row)}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              border: "none",
-              background: "transparent",
-              padding: "10px 12px",
-              borderRadius: 8,
-              cursor: "pointer",
-              font: "inherit",
-            }}
-          >
-            Copy row
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => copyGroup(rowContextMenu.row)}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              border: "none",
-              background: "transparent",
-              padding: "10px 12px",
-              borderRadius: 8,
-              cursor: "pointer",
-              font: "inherit",
-            }}
-          >
-            Copy group
-          </button>
-
-          <button
-            type="button"
-            onClick={() => pasteRowBelow(rowContextMenu.row)}
-            disabled={!clipboard || clipboard.rows.length === 0}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              border: "none",
-              background: "transparent",
-              padding: "10px 12px",
-              borderRadius: 8,
-              cursor: clipboard ? "pointer" : "default",
-              font: "inherit",
-              opacity: clipboard ? 1 : 0.45,
-            }}
-          >
-            Paste row below
-          </button>
-
-          <div
-            style={{
-              height: 1,
-              background: "rgba(0,0,0,0.08)",
-              margin: "4px 0",
-            }}
-          />
-
-          <button
-            type="button"
-            onClick={() => toggleMilestoneForRow(rowContextMenu.row)}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              border: "none",
-              background: "transparent",
-              padding: "10px 12px",
-              borderRadius: 8,
-              cursor: "pointer",
-              font: "inherit",
-            }}
-          >
-            {!!(rows[rowContextMenu.row] as any)?.milestone
-              ? "Fjern milepæl"
-              : "Gjør om til milepæl"}
-          </button>
-        </div>
-      ) : null}
-
-      <ColumnManagerModal
-        open={colMgrOpen}
-        columns={appColumns}
-        onClose={() => setColMgrOpen(false)}
-        onChange={(next) => setAppColumns(ensureAtLeastTitleVisible(next))}
-        onAddColumn={(spec) => {
-          const nextCols = ensureAtLeastTitleVisible(
-            addCustomColumn(appColumns, spec)
-          );
-          const nextRows = applyColumnsToRows(nextCols, rows);
-          setAppColumns(nextCols);
-          setRows(nextRows);
-        }}
-      />
-
-      <CalendarModal
-        open={calendarOpen}
-        entries={calendarEntries}
-        onChange={setCalendarEntries}
-        onClose={() => setCalendarOpen(false)}
-      />
-
-      <ProjectModal
-        open={projectOpen}
-        value={projectInfo}
-        onChange={setProjectInfo}
-        onClose={() => setProjectOpen(false)}
-      />
-
-      {isPaid && org.activeOrgId ? (
-        <CloudProjectLibraryModal
-          open={projectLibraryOpen}
-          currentId={currentCloudProjectId}
-          onSetCurrentId={setCurrentCloudProjectId}
-          onClose={() => setProjectLibraryOpen(false)}
-          onOpenProject={(rec: any) => {
-            handleOpenCloudProjectSmart(rec);
-          }}
-          apiBase={apiBase}
-          auth={auth}
-          orgId={org.activeOrgId}
-        />
-      ) : (
-        <ProjectLibraryModal
-          open={projectLibraryOpen}
-          db={projectStore}
-          currentId={currentProjectId}
-          onSetCurrentId={setCurrentProjectId}
-          onClose={() => setProjectLibraryOpen(false)}
-          onOpenProject={(rec: any) => {
-            handleOpenLocalProjectSmart(rec);
-          }}
-        />
-      )}
-
-            {openProjectDialog ? (
-        <div className="ptb-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="ptb-modal">
-            <div className="ptb-modal-title">
-              {t("projectLibrary.openConflictTitle")}
-            </div>
-
-            <div className="ptb-modal-text">
-              {t("projectLibrary.openConflictText")}
-            </div>
-
-            <div className="ptb-modal-actions">
-              <button
-                type="button"
-                className="ptb-btn ptb-btn--cancel"
-                onClick={() => setOpenProjectDialog(null)}
-              >
-                {t("projectLibrary.cancel")}
-              </button>
-
-              <button
-                type="button"
-                className="ptb-btn ptb-btn--confirm"
-                style={{ background: "#1e66ff" }}
-                onClick={() => {
-                  try {
-                    lsWriteString(
-                      OPEN_PROJECT_HANDOFF_KEY,
-                      JSON.stringify({
-                        id: openProjectDialog.id,
-                        source: openProjectDialog.source,
-                        snapshot: openProjectDialog.snapshot,
-                        ts: Date.now(),
-                      })
-                    );
-                  } catch {}
-                
-                  const u = new URL(window.location.href);
-                  u.searchParams.set("openProjectId", openProjectDialog.id);
-                  u.searchParams.set("openProjectHandoff", "1");
-                  u.searchParams.set("_t", String(Date.now()));
-                  window.open(u.toString(), "_blank", "noopener,noreferrer");
-                  setOpenProjectDialog(null);
-                }}
-              >
-                {t("projectLibrary.openInNewTab")}
-              </button>
-
-              <button
-                type="button"
-                className="ptb-btn ptb-btn--confirm"
-                onClick={() => {
-                  if (openProjectDialog.source === "cloud") {
-                    setCurrentProjectId(null);
-                    setCurrentCloudProjectId(openProjectDialog.id);
-                  } else {
-                    setCurrentProjectId(openProjectDialog.id);
-                    setCurrentCloudProjectId(null);
-                  }
-
-                  applySnapshot(openProjectDialog.snapshot);
-                  setSnapshotBaseline(openProjectDialog.snapshot);
-                  setOpenProjectDialog(null);
-                }}
-              >
-                {t("projectLibrary.overwriteCurrent")}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
-
-      {print2Open ? (
-        <PrintPreviewOverlay
-          columns={visibleColumnsPatched}
-          rows={rows}
-          visibleRowIds={visibleRowIds}
-          showBarLabels={ganttShowBarText}
-          dependencies={deps.links}
-          projectInfo={projectInfo}
-          logoSrc={undefined}
-          showWatermark={!isPaid}
-          watermarkSvgSrc={watermarkUrl}
-          defaultBarColor={ganttDefaultBarColor}
-          onClose={() => setPrint2Open(false)}
-        />
-      ) : null}
-
-      <footer className="app-footer">
-        <div className="app-footer-inner">
+        <span className="app-footer-links">
           <a
-            href={LINKS.mcl}
+            href={`${LINKS.mcl}/#brukervilkar`}
             target="_blank"
             rel="noopener noreferrer"
-            className="app-footer-brand"
           >
-            {t("app.footer.copyright")}
+            {t("app.footer.terms")}
           </a>
 
-          <span className="app-footer-links">
-            <a
-              href={`${LINKS.mcl}/#brukervilkar`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t("app.footer.terms")}
-            </a>
+          <span className="app-footer-separator">•</span>
 
-            <span className="app-footer-separator">•</span>
+          <a
+            href={`${LINKS.mcl}/#personvern`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t("app.footer.privacy")}
+          </a>
+        </span>
 
-            <a
-              href={`${LINKS.mcl}/#personvern`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t("app.footer.privacy")}
-            </a>
-          </span>
-
-          <span className="app-footer-icon" aria-hidden="true">
-            ☕
-          </span>
-        </div>
-      </footer>
-    </div>
-  );
-  // ============================
-  // BLOCK: JSX (END)
-  // ============================
+        <span className="app-footer-icon" aria-hidden="true">
+          ☕
+        </span>
+      </div>
+    </footer>
+  </div>
+);
+// ============================
+// BLOCK: JSX (END)
+// ============================
 }
 // ============================
 // BLOCK: APP_COMPONENT (END)
