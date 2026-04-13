@@ -286,9 +286,7 @@ type HeaderLayout = {
 };
 
 function pickHeaderLayout(pxPerDay: number): HeaderLayout {
-  // Detaljmodus:
-  // dag-grid gir mening først når vi faktisk har litt luft per dag
-  if (pxPerDay >= 20) {
+  if (pxPerDay >= 18) {
     return {
       lineCount: 3,
       top: "yearMonth",
@@ -300,9 +298,7 @@ function pickHeaderLayout(pxPerDay: number): HeaderLayout {
     };
   }
 
-  // Mellomnivå:
-  // uke-grid, men fortsatt 3 header-bånd
-  if (pxPerDay >= 8) {
+  if (pxPerDay >= 6) {
     return {
       lineCount: 3,
       top: "year",
@@ -314,9 +310,7 @@ function pickHeaderLayout(pxPerDay: number): HeaderLayout {
     };
   }
 
-  // Zoomet ut:
-  // månedslinjer, 2 header-bånd
-  if (pxPerDay >= 3) {
+  if (pxPerDay >= 1.5) {
     return {
       lineCount: 2,
       top: "year",
@@ -328,8 +322,6 @@ function pickHeaderLayout(pxPerDay: number): HeaderLayout {
     };
   }
 
-  // Overview:
-  // kun år-header + månedslinjer i bakgrunnen
   return {
     lineCount: 1,
     top: "year",
@@ -499,7 +491,7 @@ export default function GanttView({
   const isTightWeek = pxPerDayProp === 10 || pxPerDayProp === 12 || pxPerDayProp === 14;
   const weekPrefix = isTightWeek && isEnglishWeek ? "wk" : weekPrefixBase;
 
-  const pxPerDay = clamp(Math.round(pxPerDayProp ?? 24), 3, 80);
+  const pxPerDay = clamp(pxPerDayProp ?? 24, 0.5, 80);
 
   const parsed = useMemo(() => {
     const items = viewRows.map((r) => {
