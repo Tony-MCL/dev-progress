@@ -304,7 +304,12 @@ export default function App() {
   // BLOCK: APP_STATE (START)
   // ============================
   const [rows, setRows] = useState<RowData[]>(() => buildBlankRows(120));
-  const [copiedRows, setCopiedRows] = useState<RowData[] | null>(null);
+  type ClipboardData = {
+    type: "row" | "group";
+    rows: RowData[];
+  } | null;
+  
+  const [clipboard, setClipboard] = useState<ClipboardData>(null);
   const [lastSavedSnapshotJson, setLastSavedSnapshotJson] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -586,38 +591,60 @@ export default function App() {
     setRowContextMenu(null);
   }, [setRows]);
 
-  const copyRowToClipboard = useCallback((rowIndex: number) => {
+  const copySingleRow = useCallback((rowIndex: number) => {
     const row = rows[rowIndex];
     if (!row) return;
-
+  
+    setClipboard({
+      type: "row",
+      rows: [
+        {
+          ...(row as any),
+          cells: { ...(row.cells ?? {}) },
+        },
+      ],
+    });
+  
+    setRowContextMenu(null);
+  }, [rows]);
+  
+  const copyGroup = useCallback((rowIndex: number) => {
+    const row = rows[rowIndex];
+    if (!row) return;
+  
     const { start, endExclusive } = getSubtreeRange(rows, rowIndex);
+  
     const slice = rows.slice(start, endExclusive).map((r) => ({
       ...(r as any),
       cells: { ...(r.cells ?? {}) },
     })) as RowData[];
-
-    setCopiedRows(slice);
+  
+    setClipboard({
+      type: "group",
+      rows: slice,
+    });
+  
     setRowContextMenu(null);
   }, [rows]);
 
   const pasteRowBelow = useCallback((rowIndex: number) => {
-    if (!copiedRows || copiedRows.length === 0) return;
-
+    if (!clipboard || clipboard.rows.length === 0) return;
+  
     setRows((prev) => {
       const next = [...prev];
-
-      const pastedBlock = copiedRows.map((r) => ({
+  
+      const pastedBlock = clipboard.rows.map((r) => ({
         ...(r as any),
         id: makeRowId(),
         cells: { ...(r.cells ?? {}) },
       })) as RowData[];
-
+  
       next.splice(rowIndex + 1, 0, ...pastedBlock);
       return next;
     });
-
+  
     setRowContextMenu(null);
-  }, [copiedRows, setRows]);
+  }, [clipboard, setRows]);
 
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
@@ -1231,25 +1258,24 @@ export default function App() {
 
           <button
             type="button"
-            onClick={() => copyRowToClipboard(rowContextMenu.row)}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              border: "none",
-              background: "transparent",
-              padding: "10px 12px",
-              borderRadius: 8,
-              cursor: "pointer",
-              font: "inherit",
-            }}
+            onClick={() => copySingleRow(rowContextMenu.row)}
+            style={menuBtnStyle}
           >
             Copy row
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => copyGroup(rowContextMenu.row)}
+            style={menuBtnStyle}
+          >
+            Copy group
           </button>
 
           <button
             type="button"
             onClick={() => pasteRowBelow(rowContextMenu.row)}
-            disabled={!copiedRows || copiedRows.length === 0}
+            disabled={!clipboard || clipboard.rows.length === 0}
             style={{
               width: "100%",
               textAlign: "left",
@@ -1257,9 +1283,9 @@ export default function App() {
               background: "transparent",
               padding: "10px 12px",
               borderRadius: 8,
-              cursor: copiedRows && copiedRows.length > 0 ? "pointer" : "default",
+              cursor: clipboard ? "pointer" : "default",
               font: "inherit",
-              opacity: copiedRows && copiedRows.length > 0 ? 1 : 0.45,
+              opacity: clipboard ? 1 : 0.45,
             }}
           >
             Paste row below
