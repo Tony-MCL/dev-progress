@@ -127,7 +127,6 @@ export default function AppDatePickerPopover(props: {
       if (!el) return;
       if (el.contains(e.target as Node)) return;
 
-      req.cancel();
       onRequestClose();
     };
 
