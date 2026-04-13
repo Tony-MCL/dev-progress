@@ -284,7 +284,7 @@ export function computeDerivedRows(
       r.cells[keys.dur] = "";
       delete r[PARENT_DERIVED_FLAG];
     }
-
+  }
   // 3) Optional: make parent rows “feel” like parents (purely display data)
   // (no-op here; styling is handled in TableCore CSS)
 
