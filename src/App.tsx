@@ -1259,7 +1259,16 @@ export default function App() {
           <button
             type="button"
             onClick={() => copySingleRow(rowContextMenu.row)}
-            style={menuBtnStyle}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              border: "none",
+              background: "transparent",
+              padding: "10px 12px",
+              borderRadius: 8,
+              cursor: "pointer",
+              font: "inherit",
+            }}
           >
             Copy row
           </button>
@@ -1267,7 +1276,16 @@ export default function App() {
           <button
             type="button"
             onClick={() => copyGroup(rowContextMenu.row)}
-            style={menuBtnStyle}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              border: "none",
+              background: "transparent",
+              padding: "10px 12px",
+              borderRadius: 8,
+              cursor: "pointer",
+              font: "inherit",
+            }}
           >
             Copy group
           </button>
