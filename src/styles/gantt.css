@@ -185,8 +185,17 @@
   background-size: var(--gv-grid-size, var(--gv-px-per-day, 24px)) 100%;
   background-repeat: repeat;
 
-  opacity: 0.90;
+  opacity: 0.72;
   z-index: 2;
+}
+
+/* Mindre støy når vi ikke er i full detaljmodus */
+.gv-grid-week .gv-row-grid {
+  opacity: 0.42;
+}
+
+.gv-grid-month .gv-row-grid {
+  opacity: 0;
 }
 
 .gv-row-grid.is-off {
@@ -209,12 +218,12 @@
   bottom: 0;
   width: 0;
   border-left: 1px solid var(--mcl-outline, rgba(0, 0, 0, 0.25));
-  opacity: 0.95;
+  opacity: 0.46;
 }
 
 .gv-mgrid-line.is-year {
   border-left-width: 2px;
-  opacity: 0.98;
+  opacity: 0.72;
 }
 
 /* =========================================================
