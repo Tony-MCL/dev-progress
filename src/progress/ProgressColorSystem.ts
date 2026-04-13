@@ -11,6 +11,7 @@ export type ProgressSwatch = {
 
 // Fast rekkefølge (muskelminne):
 // 1-3 Blå, 4-6 Grønn, 7-9 Rød/Oransje/Gul, 10 Teal, 11 Lilla, 12 Grå
+// 13-18 Ekstra utvidelse: Cyan, Olive, Burgundy, Amber, Plum, Slate
 
 export const PROGRESS_GLOBAL_BAR_PALETTE: ProgressSwatch[] = [
   { id: "blueLight", label: "Light Blue", hex: "#6B8FB3", text: "#ffffff" },
@@ -28,6 +29,14 @@ export const PROGRESS_GLOBAL_BAR_PALETTE: ProgressSwatch[] = [
   { id: "tealDeep", label: "Teal", hex: "#3F7F7A", text: "#ffffff" },
   { id: "violetMuted", label: "Muted Violet", hex: "#6E5A8A", text: "#ffffff" },
   { id: "greyMid", label: "Mid Grey", hex: "#6F6F6F", text: "#ffffff" },
+
+  { id: "cyanMuted", label: "Muted Cyan", hex: "#4C8DA6", text: "#ffffff" },
+  { id: "oliveDeep", label: "Deep Olive", hex: "#7A8442", text: "#ffffff" },
+  { id: "burgundyMuted", label: "Muted Burgundy", hex: "#7E4257", text: "#ffffff" },
+
+  { id: "amberWarm", label: "Warm Amber", hex: "#C28A2C", text: "#111111" },
+  { id: "plumDusty", label: "Dusty Plum", hex: "#7A5A74", text: "#ffffff" },
+  { id: "slateBlueGrey", label: "Slate Blue Grey", hex: "#5E6F7E", text: "#ffffff" },
 ];
 
 export const PROGRESS_RESPONSIBILITY_PALETTE: ProgressSwatch[] = [
@@ -46,6 +55,14 @@ export const PROGRESS_RESPONSIBILITY_PALETTE: ProgressSwatch[] = [
   { id: "tealClear", label: "Clear Teal", hex: "#1ABC9C", text: "#111111" },
   { id: "purpleStrong", label: "Strong Purple", hex: "#7D3C98", text: "#ffffff" },
   { id: "greyDark", label: "Dark Grey", hex: "#4A4A4A", text: "#ffffff" },
+
+  { id: "cyanClear", label: "Clear Cyan", hex: "#2D9CDB", text: "#ffffff" },
+  { id: "oliveStrong", label: "Strong Olive", hex: "#7D8B2F", text: "#ffffff" },
+  { id: "burgundyStrong", label: "Strong Burgundy", hex: "#8E2948", text: "#ffffff" },
+
+  { id: "amberClear", label: "Clear Amber", hex: "#E0A106", text: "#111111" },
+  { id: "plumStrong", label: "Strong Plum", hex: "#8E44AD", text: "#ffffff" },
+  { id: "slateStrong", label: "Strong Slate", hex: "#566573", text: "#ffffff" },
 ];
 
 // Handy helpers (vi lagrer hex i state, men velger fra palett)
