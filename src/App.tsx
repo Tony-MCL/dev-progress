@@ -464,6 +464,34 @@ export default function App() {
   const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
     useDatePickerPopover();
 
+  const adaptedDatePickReq = useMemo(() => {
+    if (!datePickReq) return null;
+  
+    const reqAny = datePickReq as any;
+    const rowIndex = Number(reqAny?.row);
+    const columnKey = String(reqAny?.columnKey ?? reqAny?.column?.key ?? "").trim();
+  
+    const ownValue = String(
+      reqAny?.draftValue ?? reqAny?.value ?? reqAny?.text ?? ""
+    ).trim();
+  
+    let fallbackValue = ownValue;
+  
+    if (!fallbackValue && Number.isInteger(rowIndex) && rowIndex >= 0) {
+      const row = rows[rowIndex];
+      if (row && (columnKey === "start" || columnKey === "end")) {
+        const otherKey = columnKey === "start" ? "end" : "start";
+        fallbackValue = String(row.cells?.[otherKey] ?? "").trim();
+      }
+    }
+  
+    return {
+      ...reqAny,
+      columnKey,
+      draftValue: fallbackValue,
+    };
+  }, [datePickReq, rows]);
+
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
       if (!input) return null;
@@ -1027,7 +1055,7 @@ export default function App() {
       />
 
       <AppDatePickerPopover
-        req={datePickReq as any}
+        req={adaptedDatePickReq}
         onRequestClose={closeDatePickerUI}
       />
 
