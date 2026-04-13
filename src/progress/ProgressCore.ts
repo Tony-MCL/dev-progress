@@ -166,8 +166,16 @@ function hasValue(v: any): boolean {
   return v !== null && v !== undefined && String(v).trim().length > 0;
 }
 
+const PARENT_DERIVED_FLAG = "__progressParentDerived";
+
 function cloneRow(r: RowData): RowData {
-  return { ...r, cells: { ...r.cells } };
+  const out = { ...r, cells: { ...r.cells } } as any;
+
+  if ((r as any)?.[PARENT_DERIVED_FLAG]) {
+    out[PARENT_DERIVED_FLAG] = true;
+  }
+
+  return out;
 }
 
 function isParentRowTitle(title: string): boolean {
@@ -226,13 +234,22 @@ export function computeDerivedRows(
   //    Parent definition here is purely visual/hierarchy: indent rules.
   //    We treat any row that has children (next rows with higher indent) as parent.
   for (let i = out.length - 1; i >= 0; i--) {
-    const r = out[i];
+    const r = out[i] as any;
     const indent = r.indent ?? 0;
-
+    
     // Find children contiguous after i with higher indent until indent <= this indent.
     let j = i + 1;
-    if (j >= out.length) continue;
-    if ((out[j].indent ?? 0) <= indent) continue; // no children
+    const hasChildren = j < out.length && (out[j].indent ?? 0) > indent;
+    
+    if (!hasChildren) {
+      if (r[PARENT_DERIVED_FLAG]) {
+        r.cells[keys.start] = "";
+        r.cells[keys.end] = "";
+        r.cells[keys.dur] = "";
+        delete r[PARENT_DERIVED_FLAG];
+      }
+      continue;
+    }
 
     let minStart: Date | null = null;
     let maxEnd: Date | null = null;
@@ -255,9 +272,18 @@ export function computeDerivedRows(
       r.cells[keys.start] = formatDMY(minStart);
       r.cells[keys.end] = formatDMY(maxEnd);
       const wd = workdaysInclusive(minStart, maxEnd, cal);
-      if (wd > 0) r.cells[keys.dur] = wd;
+      if (wd > 0) {
+        r.cells[keys.dur] = wd;
+      } else {
+        r.cells[keys.dur] = "";
+      }
+      r[PARENT_DERIVED_FLAG] = true;
+    } else if (r[PARENT_DERIVED_FLAG]) {
+      r.cells[keys.start] = "";
+      r.cells[keys.end] = "";
+      r.cells[keys.dur] = "";
+      delete r[PARENT_DERIVED_FLAG];
     }
-  }
 
   // 3) Optional: make parent rows “feel” like parents (purely display data)
   // (no-op here; styling is handled in TableCore CSS)
