@@ -12,7 +12,7 @@ import {
   lsWriteString,
 } from "../../storage/localSettings";
 
-const ZOOM_LEVELS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40, 56] as const;
+const ZOOM_LEVELS = [0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40] as const;
 type ZoomIdx = number;
 
 type Result = {
