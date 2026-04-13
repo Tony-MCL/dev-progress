@@ -813,10 +813,28 @@ export default function GanttView({
               </div>
             ) : null}
 
-            {layout.gridMode === "day" || layout.gridMode === "week" ? (
+            {layout.gridMode === "day" ? (
               <div className="gv-vlines" aria-hidden="true">
                 {Array.from({ length: parsed.totalDays + 1 }).map((_, i) => (
-                  <div key={`vl-${i}`} className="gv-vline" style={{ left: i * pxPerDay }} />
+                  <div
+                    key={`vl-day-${i}`}
+                    className="gv-vline"
+                    style={{ left: i * pxPerDay }}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            {layout.gridMode === "week" ? (
+              <div className="gv-vlines" aria-hidden="true">
+                {Array.from({
+                  length: Math.ceil(parsed.totalDays / 7) + 1,
+                }).map((_, i) => (
+                  <div
+                    key={`vl-week-${i}`}
+                    className="gv-vline"
+                    style={{ left: i * pxPerDay * 7 }}
+                  />
                 ))}
               </div>
             ) : null}
