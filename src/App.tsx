@@ -78,6 +78,19 @@ const PROGRESS_TAB_ID_KEY = "progress_tab_id_v1";
 
 function makeRowId() {
   try {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+    ) {
+      return crypto.randomUUID();
+    }
+  } catch {}
+
+  return `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function makeRowId() {
+  try {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID();
     }
@@ -1176,36 +1189,6 @@ export default function App() {
       />
 
       {rowContextMenu ? (
-        <div
-          ref={rowContextMenuRef}
-          role="menu"
-          aria-label="Row context menu"
-          onMouseDown={(e) => e.stopPropagation()}
-          style={{
-            position: "fixed",
-            left: rowContextMenu.x,
-            top: rowContextMenu.y,
-            zIndex: 100000,
-            minWidth: 220,
-            background: "var(--mcl-surface, #fff)",
-            border: "1px solid rgba(0,0,0,0.16)",
-            borderRadius: 12,
-            boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
-            padding: 8,
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
-        >
-          <div
-            style={{
-              padding: "8px 12px",
-              fontSize: 12,
-              fontWeight: 700,
-              opacity: 0.7,
-            }}
-          >
-            {rowContextMenu ? (
         <div
           ref={rowContextMenuRef}
           role="menu"
