@@ -1036,26 +1036,26 @@ export default function TableCore(props: TableCoreProps) {
                 setAndPropagate(next);
               }}
             >
-              <div
-                className="tc-cell tc-idx tc-row-handle"
-                draggable
-                title={t("tableCore.dragToMoveRow")}
-                onDragStart={(e) => {
-                  dragRowIndexRef.current = rVisibleIdx;
-
-                  e.dataTransfer.setData("text/x-row-index", String(rVisibleIdx));
-                  e.dataTransfer.setData("text/plain", String(rVisibleIdx));
-
-                  e.dataTransfer.effectAllowed = "move";
-                  setRowDropHint(null);
-                }}
-                onDragEnd={() => {
-                  dragRowIndexRef.current = null;
-                  setRowDropHint(null);
-                }}
-              >
-                {showIndex ? visiblePos + 1 : ""}
-              </div>
+               <div
+                  className="tc-cell tc-idx tc-row-handle"
+                  draggable
+                  title={t("tableCore.dragToMoveRow")}
+                  onDragStart={(e) => {
+                    dragRowIndexRef.current = rVisibleIdx;
+  
+                    e.dataTransfer.setData("text/x-row-index", String(rVisibleIdx));
+                    e.dataTransfer.setData("text/plain", String(rVisibleIdx));
+  
+                    e.dataTransfer.effectAllowed = "move";
+                    setRowDropHint(null);
+                  }}
+                  onDragEnd={() => {
+                    dragRowIndexRef.current = null;
+                    setRowDropHint(null);
+                  }}
+                >
+                  {showIndex ? rVisibleIdx + 1 : ""}
+                </div>
 
               {cols.map((col, cIdx) => {
                 const curSel = sel;
