@@ -89,6 +89,22 @@ function makeRowId() {
   return `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
+function getSubtreeRange(list: RowData[], startIndex: number) {
+  const startRow = list[startIndex];
+  if (!startRow) return { start: startIndex, endExclusive: startIndex + 1 };
+
+  const baseIndent = Number(startRow.indent ?? 0);
+  let endExclusive = startIndex + 1;
+
+  while (endExclusive < list.length) {
+    const indent = Number(list[endExclusive]?.indent ?? 0);
+    if (indent <= baseIndent) break;
+    endExclusive++;
+  }
+
+  return { start: startIndex, endExclusive };
+}
+
 function readOpenTabRegistry(): Record<string, number> {
   try {
     const raw = localStorage.getItem(PROGRESS_TAB_REGISTRY_KEY);
@@ -288,7 +304,7 @@ export default function App() {
   // BLOCK: APP_STATE (START)
   // ============================
   const [rows, setRows] = useState<RowData[]>(() => buildBlankRows(120));
-  const [copiedRow, setCopiedRow] = useState<RowData | null>(null);
+  const [copiedRows, setCopiedRows] = useState<RowData[] | null>(null);
   const [lastSavedSnapshotJson, setLastSavedSnapshotJson] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -574,32 +590,34 @@ export default function App() {
     const row = rows[rowIndex];
     if (!row) return;
 
-    setCopiedRow({
-      ...(row as any),
-      cells: { ...(row.cells ?? {}) },
-    } as RowData);
+    const { start, endExclusive } = getSubtreeRange(rows, rowIndex);
+    const slice = rows.slice(start, endExclusive).map((r) => ({
+      ...(r as any),
+      cells: { ...(r.cells ?? {}) },
+    })) as RowData[];
 
+    setCopiedRows(slice);
     setRowContextMenu(null);
   }, [rows]);
 
   const pasteRowBelow = useCallback((rowIndex: number) => {
-    if (!copiedRow) return;
+    if (!copiedRows || copiedRows.length === 0) return;
 
     setRows((prev) => {
       const next = [...prev];
 
-      const newRow: RowData = {
-        ...(copiedRow as any),
+      const pastedBlock = copiedRows.map((r) => ({
+        ...(r as any),
         id: makeRowId(),
-        cells: { ...(copiedRow.cells ?? {}) },
-      } as RowData;
+        cells: { ...(r.cells ?? {}) },
+      })) as RowData[];
 
-      next.splice(rowIndex + 1, 0, newRow);
+      next.splice(rowIndex + 1, 0, ...pastedBlock);
       return next;
     });
 
     setRowContextMenu(null);
-  }, [copiedRow, setRows]);
+  }, [copiedRows, setRows]);
 
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
@@ -1231,7 +1249,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => pasteRowBelow(rowContextMenu.row)}
-            disabled={!copiedRow}
+            disabled={!copiedRows || copiedRows.length === 0}
             style={{
               width: "100%",
               textAlign: "left",
@@ -1239,9 +1257,9 @@ export default function App() {
               background: "transparent",
               padding: "10px 12px",
               borderRadius: 8,
-              cursor: copiedRow ? "pointer" : "default",
+              cursor: copiedRows && copiedRows.length > 0 ? "pointer" : "default",
               font: "inherit",
-              opacity: copiedRow ? 1 : 0.45,
+              opacity: copiedRows && copiedRows.length > 0 ? 1 : 0.45,
             }}
           >
             Paste row below
