@@ -492,6 +492,39 @@ export default function App() {
     };
   }, [datePickReq, rows]);
 
+  const adaptedDatePickReq = useMemo(() => {
+  if (!datePickReq) return null;
+
+  const reqAny = datePickReq as any;
+  const rowIndex = Number(reqAny?.row);
+  const columnKey = String(reqAny?.columnKey ?? reqAny?.column?.key ?? "").trim();
+
+  const row =
+    Number.isInteger(rowIndex) && rowIndex >= 0 ? rows[rowIndex] : null;
+
+  const cellOwnValue =
+    row && columnKey
+      ? String(row.cells?.[columnKey] ?? "").trim()
+      : "";
+
+  const requestOwnValue = String(
+    reqAny?.draftValue ?? reqAny?.value ?? reqAny?.text ?? ""
+  ).trim();
+
+  let draftValue = cellOwnValue || requestOwnValue;
+
+  if (!draftValue && row && (columnKey === "start" || columnKey === "end")) {
+    const otherKey = columnKey === "start" ? "end" : "start";
+    draftValue = String(row.cells?.[otherKey] ?? "").trim();
+  }
+
+  return {
+    ...reqAny,
+    columnKey,
+    draftValue,
+  };
+}, [datePickReq, rows]);
+
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
       if (!input) return null;
