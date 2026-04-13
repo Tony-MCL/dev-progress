@@ -303,7 +303,7 @@ type HeaderLayout = {
   top: "year" | "monthOnly" | "yearMonth";
   mid: "year" | "monthOnly" | "week" | "none";
   bot: "week" | "day" | "none";
-  gridMode: "day" | "week" | "month";
+  gridMode: "day" | "week" | "month" | "year";
   monthLabelModeForTop?: "monthOnly" | "yearMonth";
   monthLabelModeForMid?: "monthOnly" | "yearMonth";
 };
