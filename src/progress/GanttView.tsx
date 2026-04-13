@@ -273,6 +273,29 @@ function buildMonthGridLines(min: Date, totalDays: number, pxPerDay: number): Gr
   return out;
 }
 
+function buildYearGridLines(min: Date, totalDays: number, pxPerDay: number): GridLine[] {
+  const out: GridLine[] = [];
+  const max = addDays(min, totalDays - 1);
+  const endExcl = addDays(max, 1);
+
+  let cursor = new Date(min.getFullYear(), 0, 1);
+  while (cursor > min) cursor = new Date(cursor.getFullYear() - 1, 0, 1);
+
+  while (cursor < endExcl) {
+    const leftDays = diffDays(min, cursor);
+    if (leftDays >= 0 && leftDays <= totalDays) {
+      out.push({
+        left: leftDays * pxPerDay,
+        kind: "year",
+      });
+    }
+    cursor = new Date(cursor.getFullYear() + 1, 0, 1);
+  }
+
+  out.push({ left: totalDays * pxPerDay, kind: "year" });
+  return out;
+}
+
 type BarRect = { left: number; right: number; y: number };
 
 type HeaderLayout = {
@@ -286,6 +309,7 @@ type HeaderLayout = {
 };
 
 function pickHeaderLayout(pxPerDay: number): HeaderLayout {
+  // Dag-header + dag-grid kun når dag faktisk er lesbar
   if (pxPerDay >= 18) {
     return {
       lineCount: 3,
@@ -298,7 +322,8 @@ function pickHeaderLayout(pxPerDay: number): HeaderLayout {
     };
   }
 
-  if (pxPerDay >= 6) {
+  // Uke-header + uke-grid
+  if (pxPerDay >= 4) {
     return {
       lineCount: 3,
       top: "year",
@@ -310,7 +335,8 @@ function pickHeaderLayout(pxPerDay: number): HeaderLayout {
     };
   }
 
-  if (pxPerDay >= 1.5) {
+  // Måned-header + måned-grid
+  if (pxPerDay >= 1.25) {
     return {
       lineCount: 2,
       top: "year",
@@ -322,13 +348,14 @@ function pickHeaderLayout(pxPerDay: number): HeaderLayout {
     };
   }
 
+  // Overview: bare år i header og år-grid i rows
   return {
     lineCount: 1,
     top: "year",
     mid: "none",
     bot: "none",
-    gridMode: "month",
-  };
+    gridMode: "year",
+  } as HeaderLayout & { gridMode: "year" };
 }
 
 function clamp(n: number, a: number, b: number) {
@@ -562,15 +589,26 @@ export default function GanttView({
     return buildMonthGridLines(parsed.min, parsed.totalDays, pxPerDay);
   }, [layout.gridMode, parsed.min, parsed.totalDays, pxPerDay]);
 
-  const pxVars = useMemo(
-    () =>
-      ({
-        ["--gv-px-per-day" as any]: `${pxPerDay}px`,
-        ["--gv-band-count" as any]: String(layout.lineCount),
-        ["--gv-grid-size" as any]: layout.gridMode === "week" ? `${pxPerDay * 7}px` : `${pxPerDay}px`,
-      } as React.CSSProperties),
-    [pxPerDay, layout.lineCount, layout.gridMode]
-  );
+  const yearGridLines = useMemo(() => {
+    if (layout.gridMode !== "year") return [];
+    return buildYearGridLines(parsed.min, parsed.totalDays, pxPerDay);
+  }, [layout.gridMode, parsed.min, parsed.totalDays, pxPerDay]);
+
+  const pxVars = useMemo(() => {
+    let gridSize = `${pxPerDay}px`;
+
+    if (layout.gridMode === "week") {
+      gridSize = `${pxPerDay * 7}px`;
+    } else if (layout.gridMode === "month" || layout.gridMode === "year") {
+      gridSize = "0px";
+    }
+
+    return {
+      ["--gv-px-per-day" as any]: `${pxPerDay}px`,
+      ["--gv-band-count" as any]: String(layout.lineCount),
+      ["--gv-grid-size" as any]: gridSize,
+    } as React.CSSProperties;
+  }, [pxPerDay, layout.lineCount, layout.gridMode]);
 
   // Dependencies render (includes milestones)
   const depRender = useMemo(() => {
@@ -763,11 +801,25 @@ export default function GanttView({
               </div>
             ) : null}
 
-            <div className="gv-vlines" aria-hidden="true">
-              {Array.from({ length: parsed.totalDays + 1 }).map((_, i) => (
-                <div key={`vl-${i}`} className="gv-vline" style={{ left: i * pxPerDay }} />
-              ))}
-            </div>
+            {layout.gridMode === "year" ? (
+              <div className="gv-mgrid" aria-hidden="true">
+                {yearGridLines.map((ln, i) => (
+                  <div
+                    key={`yg-${i}`}
+                    className="gv-mgrid-line is-year"
+                    style={{ left: ln.left }}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            {layout.gridMode === "day" || layout.gridMode === "week" ? (
+              <div className="gv-vlines" aria-hidden="true">
+                {Array.from({ length: parsed.totalDays + 1 }).map((_, i) => (
+                  <div key={`vl-${i}`} className="gv-vline" style={{ left: i * pxPerDay }} />
+                ))}
+              </div>
+            ) : null}
 
             {depRender.links.length ? (
               <svg
