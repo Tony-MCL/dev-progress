@@ -594,6 +594,13 @@ export default function TableCore(props: TableCoreProps) {
   };
 
   const onCellMouseDown = (r: number, c: number) => (ev: React.MouseEvent) => {
+    // Høyreklikk skal IKKE ødelegge eksisterende markering.
+    // Hvis bruker høyreklikker utenfor markeringen, lar vi app-laget
+    // avgjøre om selection skal flyttes når context menu åpnes.
+    if (ev.button === 2) {
+      return;
+    }
+  
     setSel({ r1: r, r2: r, c1: c, c2: c });
     dragState.current = {
       active: true,
