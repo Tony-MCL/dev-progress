@@ -1,12 +1,23 @@
 import React from "react";
 import type { TableCoreContextMenuRequest } from "../core/TableTypes";
 
+type MenuAction =
+  | "milestoneDummy"
+  | "indentRows"
+  | "outdentRows"
+  | "cutSelection"
+  | "copySelection"
+  | "pasteClipboard"
+  | "insertRowAbove"
+  | "insertRowBelow"
+  | "deleteRows"
+  | "print"
+  | "close";
+
 type Props = {
   state: TableCoreContextMenuRequest | null;
   onClose: () => void;
-  onInsertRowAbove: () => void;
-  onInsertRowBelow: () => void;
-  onDeleteRows: () => void;
+  onAction: (action: MenuAction) => void | Promise<void>;
 };
 
 function MenuButton(props: {
@@ -58,9 +69,7 @@ function Divider() {
 export default function ProgressTableContextMenu({
   state,
   onClose,
-  onInsertRowAbove,
-  onInsertRowBelow,
-  onDeleteRows,
+  onAction,
 }: Props) {
   if (!state) return null;
 
@@ -139,35 +148,44 @@ export default function ProgressTableContextMenu({
 
       <Divider />
 
-      <MenuButton label="Gjør til milepæl" onClick={onClose} />
+      <MenuButton
+        label="Gjør til milepæl"
+        onClick={() => onAction("milestoneDummy")}
+      />
       <MenuButton
         label="Radinnrykk / gjør til underaktivitet"
-        onClick={onClose}
+        onClick={() => onAction("indentRows")}
       />
       <MenuButton
         label="Radutrykk / gjør til hovedaktivitet"
-        onClick={onClose}
+        onClick={() => onAction("outdentRows")}
       />
 
       <Divider />
 
-      <MenuButton label="Klipp ut" onClick={onClose} />
-      <MenuButton label="Kopier" onClick={onClose} />
-      <MenuButton label="Lim inn" onClick={onClose} />
+      <MenuButton label="Klipp ut" onClick={() => onAction("cutSelection")} />
+      <MenuButton label="Kopier" onClick={() => onAction("copySelection")} />
+      <MenuButton label="Lim inn" onClick={() => onAction("pasteClipboard")} />
 
       <Divider />
 
-      <MenuButton label="Sett inn rad over" onClick={onInsertRowAbove} />
-      <MenuButton label="Sett inn rad under" onClick={onInsertRowBelow} />
-      <MenuButton label="Slett rad(er)" onClick={onDeleteRows} />
+      <MenuButton
+        label="Sett inn rad over"
+        onClick={() => onAction("insertRowAbove")}
+      />
+      <MenuButton
+        label="Sett inn rad under"
+        onClick={() => onAction("insertRowBelow")}
+      />
+      <MenuButton label="Slett rad(er)" onClick={() => onAction("deleteRows")} />
 
       <Divider />
 
-      <MenuButton label="Skriv ut" onClick={onClose} />
+      <MenuButton label="Skriv ut" onClick={() => onAction("print")} />
 
       <Divider />
 
-      <MenuButton label="Lukk" onClick={onClose} />
+      <MenuButton label="Lukk" onClick={() => onAction("close")} />
     </div>
   );
 }
