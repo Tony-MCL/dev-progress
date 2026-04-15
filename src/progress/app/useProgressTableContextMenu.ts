@@ -4,11 +4,22 @@ import type {
   TableCoreContextMenuRequest,
 } from "../../core/TableTypes";
 
+type MenuAction =
+  | "milestoneDummy"
+  | "indentRows"
+  | "outdentRows"
+  | "cutSelection"
+  | "copySelection"
+  | "pasteClipboard"
+  | "insertRowAbove"
+  | "insertRowBelow"
+  | "deleteRows"
+  | "print"
+  | "close";
+
 type Args = {
   setSelection: React.Dispatch<React.SetStateAction<Selection | null>>;
-  onInsertRowAbove: () => void;
-  onInsertRowBelow: () => void;
-  onDeleteRows: () => void;
+  onAction: (action: MenuAction) => void | Promise<void>;
 };
 
 function hasSelection(sel: Selection | null | undefined): sel is Selection {
@@ -33,9 +44,7 @@ function isCellInsideSelection(
 
 export function useProgressTableContextMenu({
   setSelection,
-  onInsertRowAbove,
-  onInsertRowBelow,
-  onDeleteRows,
+  onAction,
 }: Args) {
   const [tableContextMenu, setTableContextMenu] =
     useState<TableCoreContextMenuRequest | null>(null);
@@ -70,20 +79,18 @@ export function useProgressTableContextMenu({
     [setSelection]
   );
 
-  const handleInsertRowAbove = useCallback(() => {
-    onInsertRowAbove();
-    closeTableContextMenu();
-  }, [onInsertRowAbove, closeTableContextMenu]);
+  const handleMenuAction = useCallback(
+    async (action: MenuAction) => {
+      if (action === "close") {
+        closeTableContextMenu();
+        return;
+      }
 
-  const handleInsertRowBelow = useCallback(() => {
-    onInsertRowBelow();
-    closeTableContextMenu();
-  }, [onInsertRowBelow, closeTableContextMenu]);
-
-  const handleDeleteRows = useCallback(() => {
-    onDeleteRows();
-    closeTableContextMenu();
-  }, [onDeleteRows, closeTableContextMenu]);
+      await Promise.resolve(onAction(action));
+      closeTableContextMenu();
+    },
+    [onAction, closeTableContextMenu]
+  );
 
   useEffect(() => {
     if (!tableContextMenu) return;
@@ -118,8 +125,6 @@ export function useProgressTableContextMenu({
     tableContextMenu,
     openTableContextMenu,
     closeTableContextMenu,
-    handleInsertRowAbove,
-    handleInsertRowBelow,
-    handleDeleteRows,
+    handleMenuAction,
   };
 }
