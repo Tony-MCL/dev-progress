@@ -11,7 +11,12 @@ import React, {
   useCallback,
 } from "react";
 import TableCore from "./core/TableCore";
-import type { ColumnDef, RowData, Selection } from "./core/TableTypes";
+import type {
+  ColumnDef,
+  RowData,
+  Selection,
+  TableCoreContextMenuRequest,
+} from "./core/TableTypes";
 
 import Header from "./components/Header";
 import HelpPanel from "./components/HelpPanel";
@@ -28,6 +33,8 @@ import { useProgressProjectIO } from "./progress/app/useProgressProjectIO";
 import { useProgressRowEditing } from "./progress/app/useProgressRowEditing";
 import { useProgressViewModel } from "./progress/app/useProgressViewModel";
 import { useProgressActions } from "./progress/app/useProgressActions";
+import ProgressTableContextMenu from "./progress/ProgressTableContextMenu";
+import { useProgressTableContextMenu } from "./progress/app/useProgressTableContextMenu";
 import { useSplitPane } from "./progress/app/useSplitPane";
 import { useGanttUiSettings } from "./progress/app/useGanttUiSettings";
 import CloudProjectLibraryModal from "./progress/CloudProjectLibraryModal";
@@ -464,6 +471,14 @@ export default function App() {
   const { datePickReq, closeDatePickerUI, onRequestDatePicker } =
     useDatePickerPopover();
 
+  const {
+    tableContextMenu,
+    openTableContextMenu,
+    closeTableContextMenu,
+  } = useProgressTableContextMenu({
+    setSelection,
+  });
+
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
     const normalize = (input: any) => {
       if (!input) return null;
@@ -892,6 +907,9 @@ export default function App() {
                           onChange={onRowsChange}
                           onCellCommit={onCellCommit}
                           onRequestDatePicker={onRequestDatePicker}
+                          onRequestContextMenu={(req: TableCoreContextMenuRequest) => {
+                            openTableContextMenu(req);
+                          }}
                           showSummary
                           headerInfoText={headerInfo}
                           onVisibleRowIdsChange={setVisibleRowIds}
@@ -1175,6 +1193,11 @@ export default function App() {
           onClose={() => setPrint2Open(false)}
         />
       ) : null}
+
+      <ProgressTableContextMenu
+        state={tableContextMenu}
+        onClose={closeTableContextMenu}
+      />
 
       <footer className="app-footer">
         <div className="app-footer-inner">
