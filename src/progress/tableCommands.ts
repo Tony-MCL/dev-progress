@@ -156,6 +156,37 @@ export function addRowBelowSelection(
   return ensureMinRows(next, cols, minRows);
 }
 
+/** Insert a row right BEFORE the first selected row */
+export function addRowAboveSelection(
+  rows: RowData[],
+  cols: AppColumnDef[],
+  sel: Selection | null,
+  minRows = 120
+): RowData[] {
+  if (!rows.length) {
+    const seeded = ensureMinRows([], cols, Math.max(1, minRows));
+    return seeded;
+  }
+
+  const range = selectionRange(sel, rows.length);
+  if (!range) {
+    // fallback: add at top
+    const next = [...rows];
+    const newRow = makeBlankRow(cols, next, 0);
+    next.unshift(newRow);
+    return ensureMinRows(next, cols, minRows);
+  }
+
+  const beforeIdx = range.rMin;
+  const baseIndent = rows[beforeIdx]?.indent ?? 0;
+
+  const next = rows.map((r) => r);
+  const newRow = makeBlankRow(cols, next, baseIndent);
+
+  next.splice(beforeIdx, 0, newRow);
+  return ensureMinRows(next, cols, minRows);
+}
+
 /** Delete selected rows (range). Keeps at least minRows by padding blanks. */
 export function deleteSelectedRows(
   rows: RowData[],
