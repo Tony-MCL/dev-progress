@@ -1,6 +1,7 @@
 // src/progress/ProgressToolbar.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n";
+import { PROGRESS_GLOBAL_BAR_PALETTE } from "./ProgressColorSystem";
 
 type FileAction =
   | "newBlank"
@@ -389,21 +390,8 @@ export default function ProgressToolbar({
 
   const ganttStandardColor = "#b98a3a";
 
-  const ganttPalette12 = useMemo(() => {
-    return [
-      ganttStandardColor,
-      "#2f7dd1",
-      "#1e3a8a",
-      "#2e9f6d",
-      "#166534",
-      "#d65b5b",
-      "#b91c1c",
-      "#8f63d2",
-      "#6d28d9",
-      "#4b5563",
-      "#111827",
-      "#f59e0b",
-    ];
+  const ganttPalette = useMemo(() => {
+    return PROGRESS_GLOBAL_BAR_PALETTE.map((sw) => sw.hex);
   }, []);
 
   const ganttMenu: MenuNode[] = useMemo(
@@ -524,7 +512,7 @@ export default function ProgressToolbar({
                       alignItems: "center",
                     }}
                   >
-                    {ganttPalette12.map((c) => {
+                    {ganttPalette.map((c) => {
                       const cc = c.toLowerCase();
                       const isSelected = current === cc;
                       const isStandard =
@@ -571,7 +559,7 @@ export default function ProgressToolbar({
       onSetGanttShowBarText,
       ganttDefaultBarColor,
       onSetGanttDefaultBarColor,
-      ganttPalette12,
+      ganttPalette,
     ]
   );
 
