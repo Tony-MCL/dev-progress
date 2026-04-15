@@ -1034,7 +1034,7 @@ export default function TableCore(props: TableCoreProps) {
                   setRowDropHint(null);
                 }}
               >
-                {showIndex ? visiblePos + 1 : ""}
+                {showIndex ? rVisibleIdx + 1 : ""}
               </div>
 
               {cols.map((col, cIdx) => {
