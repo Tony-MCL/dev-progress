@@ -286,7 +286,9 @@ type HeaderLayout = {
 };
 
 function pickHeaderLayout(pxPerDay: number): HeaderLayout {
-  if (pxPerDay >= 24) {
+  // Detaljmodus:
+  // dag-grid gir mening først når vi faktisk har litt luft per dag
+  if (pxPerDay >= 20) {
     return {
       lineCount: 3,
       top: "yearMonth",
@@ -298,7 +300,9 @@ function pickHeaderLayout(pxPerDay: number): HeaderLayout {
     };
   }
 
-  if (pxPerDay >= 10) {
+  // Mellomnivå:
+  // uke-grid, men fortsatt 3 header-bånd
+  if (pxPerDay >= 8) {
     return {
       lineCount: 3,
       top: "year",
@@ -310,6 +314,8 @@ function pickHeaderLayout(pxPerDay: number): HeaderLayout {
     };
   }
 
+  // Zoomet ut:
+  // månedslinjer, 2 header-bånd
   if (pxPerDay >= 3) {
     return {
       lineCount: 2,
@@ -322,6 +328,8 @@ function pickHeaderLayout(pxPerDay: number): HeaderLayout {
     };
   }
 
+  // Overview:
+  // kun år-header + månedslinjer i bakgrunnen
   return {
     lineCount: 1,
     top: "year",
