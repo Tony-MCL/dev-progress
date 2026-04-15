@@ -1,5 +1,6 @@
 // src/progress/tableCommands.ts
 import type { ColumnDef, RowData, Selection } from "../core/TableTypes";
+import { parseClipboard, toTSV } from "../core/utils/clipboard";
 
 export type AppColumnDef = ColumnDef & {
   visible?: boolean; // default true
@@ -208,4 +209,143 @@ export function deleteSelectedRows(
 
   const next = rows.slice(0, rMin).concat(rows.slice(rMax + 1));
   return ensureMinRows(next, cols, minRows);
+}
+
+function clamp(n: number, a: number, b: number) {
+  return Math.max(a, Math.min(b, n));
+}
+
+export function selectionRect(
+  sel: Selection | null,
+  rowCount: number,
+  colCount: number
+):
+  | { rMin: number; rMax: number; cMin: number; cMax: number }
+  | null {
+  if (!sel) return null;
+
+  const r1 = Number(sel.r1);
+  const r2 = Number(sel.r2);
+  const c1 = Number(sel.c1);
+  const c2 = Number(sel.c2);
+
+  if (![r1, r2, c1, c2].every(Number.isFinite)) return null;
+  if (rowCount <= 0 || colCount <= 0) return null;
+
+  return {
+    rMin: clamp(Math.min(r1, r2), 0, rowCount - 1),
+    rMax: clamp(Math.max(r1, r2), 0, rowCount - 1),
+    cMin: clamp(Math.min(c1, c2), 0, colCount - 1),
+    cMax: clamp(Math.max(c1, c2), 0, colCount - 1),
+  };
+}
+
+export function selectionToTsv(
+  rows: RowData[],
+  cols: AppColumnDef[],
+  sel: Selection | null
+): string {
+  const rect = selectionRect(sel, rows.length, cols.length);
+  if (!rect) return "";
+
+  const matrix: (string | number | "")[][] = [];
+
+  for (let r = rect.rMin; r <= rect.rMax; r++) {
+    const line: (string | number | "")[] = [];
+    for (let c = rect.cMin; c <= rect.cMax; c++) {
+      const key = cols[c]?.key;
+      line.push(key ? (rows[r]?.cells?.[key] ?? "") : "");
+    }
+    matrix.push(line);
+  }
+
+  return toTSV(matrix);
+}
+
+export function clearSelectionCells(
+  rows: RowData[],
+  cols: AppColumnDef[],
+  sel: Selection | null
+): RowData[] {
+  const rect = selectionRect(sel, rows.length, cols.length);
+  if (!rect) return rows;
+
+  const next = rows.map((r) => ({ ...r, cells: { ...r.cells } }));
+
+  for (let r = rect.rMin; r <= rect.rMax; r++) {
+    for (let c = rect.cMin; c <= rect.cMax; c++) {
+      const key = cols[c]?.key;
+      if (!key) continue;
+      next[r].cells[key] = "";
+    }
+  }
+
+  return next;
+}
+
+export function pasteTextIntoSelection(
+  rows: RowData[],
+  cols: AppColumnDef[],
+  sel: Selection | null,
+  text: string
+): RowData[] {
+  const rect = selectionRect(sel, rows.length, cols.length);
+  if (!rect) return rows;
+  if (!text.trim()) return rows;
+
+  const matrix = parseClipboard(text);
+  if (!matrix.length) return rows;
+
+  const next = rows.map((r) => ({ ...r, cells: { ...r.cells } }));
+
+  for (let i = 0; i < matrix.length; i++) {
+    const rr = rect.rMin + i;
+    if (rr >= next.length) break;
+
+    for (let j = 0; j < matrix[i].length; j++) {
+      const cc = rect.cMin + j;
+      if (cc >= cols.length) break;
+
+      const key = cols[cc]?.key;
+      if (!key) continue;
+
+      next[rr].cells[key] = matrix[i][j] as any;
+    }
+  }
+
+  return next;
+}
+
+export function indentSelectedRows(
+  rows: RowData[],
+  sel: Selection | null
+): RowData[] {
+  const range = selectionRange(sel, rows.length);
+  if (!range) return rows;
+
+  const next = rows.map((r) => ({ ...r }));
+
+  for (let i = range.rMin; i <= range.rMax; i++) {
+    const prevIndent = i > 0 ? next[i - 1].indent : 0;
+    const maxIndent = prevIndent + 1;
+    next[i].indent = clamp((next[i].indent ?? 0) + 1, 0, maxIndent);
+  }
+
+  return next;
+}
+
+export function outdentSelectedRows(
+  rows: RowData[],
+  sel: Selection | null
+): RowData[] {
+  const range = selectionRange(sel, rows.length);
+  if (!range) return rows;
+
+  const next = rows.map((r) => ({ ...r }));
+
+  for (let i = range.rMin; i <= range.rMax; i++) {
+    next[i].indent = clamp((next[i].indent ?? 0) - 1, 0, 999);
+  }
+
+  return next;
 }
