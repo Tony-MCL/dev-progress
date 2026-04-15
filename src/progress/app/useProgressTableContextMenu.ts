@@ -6,6 +6,9 @@ import type {
 
 type Args = {
   setSelection: React.Dispatch<React.SetStateAction<Selection | null>>;
+  onInsertRowAbove: () => void;
+  onInsertRowBelow: () => void;
+  onDeleteRows: () => void;
 };
 
 function hasSelection(sel: Selection | null | undefined): sel is Selection {
@@ -28,7 +31,12 @@ function isCellInsideSelection(
   return row >= rMin && row <= rMax && col >= cMin && col <= cMax;
 }
 
-export function useProgressTableContextMenu({ setSelection }: Args) {
+export function useProgressTableContextMenu({
+  setSelection,
+  onInsertRowAbove,
+  onInsertRowBelow,
+  onDeleteRows,
+}: Args) {
   const [tableContextMenu, setTableContextMenu] =
     useState<TableCoreContextMenuRequest | null>(null);
 
@@ -38,25 +46,44 @@ export function useProgressTableContextMenu({ setSelection }: Args) {
 
   const openTableContextMenu = useCallback(
     (req: TableCoreContextMenuRequest) => {
-      // Hvis bruker høyreklikker utenfor eksisterende markering,
-      // sett selection til akkurat den cellen først.
       if (
         typeof req.row === "number" &&
         typeof req.col === "number" &&
         !isCellInsideSelection(req.selection, req.row, req.col)
       ) {
-        setSelection({
+        const nextSel = {
           r1: req.row,
           r2: req.row,
           c1: req.col,
           c2: req.col,
+        };
+        setSelection(nextSel);
+        setTableContextMenu({
+          ...req,
+          selection: nextSel,
         });
+        return;
       }
 
       setTableContextMenu(req);
     },
     [setSelection]
   );
+
+  const handleInsertRowAbove = useCallback(() => {
+    onInsertRowAbove();
+    closeTableContextMenu();
+  }, [onInsertRowAbove, closeTableContextMenu]);
+
+  const handleInsertRowBelow = useCallback(() => {
+    onInsertRowBelow();
+    closeTableContextMenu();
+  }, [onInsertRowBelow, closeTableContextMenu]);
+
+  const handleDeleteRows = useCallback(() => {
+    onDeleteRows();
+    closeTableContextMenu();
+  }, [onDeleteRows, closeTableContextMenu]);
 
   useEffect(() => {
     if (!tableContextMenu) return;
@@ -91,5 +118,8 @@ export function useProgressTableContextMenu({ setSelection }: Args) {
     tableContextMenu,
     openTableContextMenu,
     closeTableContextMenu,
+    handleInsertRowAbove,
+    handleInsertRowBelow,
+    handleDeleteRows,
   };
 }
