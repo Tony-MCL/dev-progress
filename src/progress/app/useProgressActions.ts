@@ -11,6 +11,11 @@ import {
   addRowBelowSelection,
   addRowAboveSelection,
   deleteSelectedRows,
+  selectionToTsv,
+  clearSelectionCells,
+  pasteTextIntoSelection,
+  indentSelectedRows,
+  outdentSelectedRows,
 } from "../tableCommands";
 
 type ParseActionResult = string;
@@ -211,6 +216,50 @@ export function useProgressActions({
           const nextRows = deleteSelectedRows(rows, nextCols, selection, 120);
           setAppColumns(nextCols);
           onRowsChange(applyColumnsToRows(nextCols, nextRows));
+          return;
+        }
+
+        case "indentRows": {
+          const nextRows = indentSelectedRows(rows, selection);
+          onRowsChange(nextRows);
+          return;
+        }
+        
+        case "outdentRows": {
+          const nextRows = outdentSelectedRows(rows, selection);
+          onRowsChange(nextRows);
+          return;
+        }
+        
+        case "copySelection": {
+          const nextCols = ensureAtLeastTitleVisible(appColumns);
+          const text = selectionToTsv(rows, nextCols, selection);
+          if (text) {
+            void navigator.clipboard.writeText(text).catch(() => {});
+          }
+          return;
+        }
+        
+        case "cutSelection": {
+          const nextCols = ensureAtLeastTitleVisible(appColumns);
+          const text = selectionToTsv(rows, nextCols, selection);
+          if (text) {
+            void navigator.clipboard.writeText(text).catch(() => {});
+          }
+          const nextRows = clearSelectionCells(rows, nextCols, selection);
+          onRowsChange(nextRows);
+          return;
+        }
+        
+        case "pasteClipboard": {
+          void navigator.clipboard
+            .readText()
+            .then((text) => {
+              const nextCols = ensureAtLeastTitleVisible(appColumns);
+              const nextRows = pasteTextIntoSelection(rows, nextCols, selection, text);
+              onRowsChange(nextRows);
+            })
+            .catch(() => {});
           return;
         }
 
