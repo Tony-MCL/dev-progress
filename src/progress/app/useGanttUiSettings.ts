@@ -12,7 +12,7 @@ import {
   lsWriteString,
 } from "../../storage/localSettings";
 
-const ZOOM_LEVELS = [3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40] as const;
+const ZOOM_LEVELS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40, 56] as const;
 type ZoomIdx = number;
 
 type Result = {
@@ -38,7 +38,7 @@ export function useGanttUiSettings(): Result {
   const ganttZoomLevels = ZOOM_LEVELS;
 
   const [ganttZoomIdx, setGanttZoomIdx] = useState<ZoomIdx>(() => {
-    const idx = lsReadNumber(PROGRESS_KEYS.ganttZoomIdx, 11, {
+    const idx = lsReadNumber(PROGRESS_KEYS.ganttZoomIdx, 12, {
       min: 0,
       max: ganttZoomLevels.length - 1,
     });
