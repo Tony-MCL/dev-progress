@@ -9,6 +9,7 @@ import {
   applyColumnsToRows,
   addRowAtEnd,
   addRowBelowSelection,
+  addRowAboveSelection,
   deleteSelectedRows,
 } from "../tableCommands";
 
@@ -184,6 +185,14 @@ export function useProgressActions({
         case "addRowEnd": {
           const nextCols = ensureAtLeastTitleVisible(appColumns);
           const nextRows = addRowAtEnd(rows, nextCols, 120);
+          setAppColumns(nextCols);
+          onRowsChange(applyColumnsToRows(nextCols, nextRows));
+          return;
+        }
+
+        case "addRowAbove": {
+          const nextCols = ensureAtLeastTitleVisible(appColumns);
+          const nextRows = addRowAboveSelection(rows, nextCols, selection, 120);
           setAppColumns(nextCols);
           onRowsChange(applyColumnsToRows(nextCols, nextRows));
           return;
