@@ -310,16 +310,32 @@
   background: var(--tc-bg);
 }
 
-/* ✅ Forelder: kun bold, IKKE uppercase */
-.tc-row.tc-parent .tc-cell {
-  font-weight: 700;
-  text-transform: none;
-}
-
 .tc-row.tc-child {
   background: var(--mcl-table-child, var(--tc-bg));
 }
-.tc-row.tc-child .tc-cell {
+
+/* Kun title-teksten skal differensieres tydelig i hierarkiet */
+.tc-title-text {
+  font-weight: 400;
+  font-style: normal;
+  text-transform: none;
+}
+
+/* Top parent */
+.tc-row.tc-parent:not(.tc-child) .tc-title-text {
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Parent som selv ligger under en parent */
+.tc-row.tc-parent.tc-child .tc-title-text {
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* Ren child */
+.tc-row.tc-child:not(.tc-parent) .tc-title-text {
+  font-weight: 400;
   font-style: italic;
 }
 
@@ -466,20 +482,6 @@
    PROGRESS / HIERARCHY VISUALS (B)
    - Pure visuals only (no semantics)
 ============================================================ */
-
-.tc-row.tc-parent {
-  font-weight: 600;
-}
-
-/* ✅ Forelder-title: kun litt tydeligere, IKKE uppercase/ekstra-tung */
-.tc-row.tc-parent .tc-title-text {
-  font-weight: 700;
-  text-transform: none;
-}
-
-.tc-row.tc-child .tc-title-text {
-  font-style: italic;
-}
 
 /* Subtle row differentiation */
 .tc-row.tc-parent {
