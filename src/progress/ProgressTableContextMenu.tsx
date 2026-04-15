@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React from "react";
 import type { TableCoreContextMenuRequest } from "../core/TableTypes";
 
 type MenuAction =
@@ -75,44 +75,6 @@ export default function ProgressTableContextMenu({
   onClose,
   onAction,
 }: Props) {
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(
-    null
-  );
-
-  useLayoutEffect(() => {
-    if (!state) {
-      setMenuPos(null);
-      return;
-    }
-
-    const el = menuRef.current;
-    if (!el) {
-      setMenuPos({
-        left: state.clientX,
-        top: state.clientY,
-      });
-      return;
-    }
-
-    const MARGIN = 8;
-    const rect = el.getBoundingClientRect();
-
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-
-    const maxLeft = Math.max(MARGIN, vw - rect.width - MARGIN);
-    const maxTop = Math.max(MARGIN, vh - rect.height - MARGIN);
-
-    const nextLeft = clamp(state.clientX, MARGIN, maxLeft);
-    const nextTop = clamp(state.clientY, MARGIN, maxTop);
-
-    setMenuPos({
-      left: nextLeft,
-      top: nextTop,
-    });
-  }, [state]);
-
   if (!state) return null;
 
   const rowLabel =
@@ -135,18 +97,29 @@ export default function ProgressTableContextMenu({
     ? `Markering: R${Math.min(sel.r1, sel.r2) + 1}–${Math.max(sel.r1, sel.r2) + 1}, K${Math.min(sel.c1, sel.c2) + 1}–${Math.max(sel.c1, sel.c2) + 1}`
     : "Ingen markering";
 
-  const resolvedPos = useMemo(() => {
-    return (
-      menuPos ?? {
-        left: state.clientX,
-        top: state.clientY,
-      }
-    );
-  }, [menuPos, state.clientX, state.clientY]);
+  // Trygg, enkel plassering uten ekstra hooks/state.
+  // Vi bruker et konservativt estimat for menyhøyde/bredde.
+  const ESTIMATED_W = 320;
+  const ESTIMATED_H = 420;
+  const MARGIN = 8;
+
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+
+  const left = clamp(
+    state.clientX,
+    MARGIN,
+    Math.max(MARGIN, vw - ESTIMATED_W - MARGIN)
+  );
+
+  const top = clamp(
+    state.clientY,
+    MARGIN,
+    Math.max(MARGIN, vh - ESTIMATED_H - MARGIN)
+  );
 
   return (
     <div
-      ref={menuRef}
       role="menu"
       aria-label="Tabellmeny"
       onContextMenu={(e) => {
@@ -158,11 +131,14 @@ export default function ProgressTableContextMenu({
       }}
       style={{
         position: "fixed",
-        left: resolvedPos.left,
-        top: resolvedPos.top,
+        left,
+        top,
         zIndex: 100000,
         minWidth: 260,
-        maxWidth: 320,
+        width: 320,
+        maxWidth: "calc(100vw - 16px)",
+        maxHeight: "calc(100vh - 16px)",
+        overflowY: "auto",
         background: "var(--mcl-surface, #fff)",
         color: "var(--mcl-text, #111)",
         border: "1px solid rgba(0,0,0,0.16)",
@@ -237,7 +213,7 @@ export default function ProgressTableContextMenu({
 
       <Divider />
 
-      <MenuButton label="Lukk" onClick={() => onAction("close")} />
+      <MenuButton label="Lukk" onClick={onClose} />
     </div>
   );
 }
