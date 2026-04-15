@@ -594,6 +594,7 @@ const PaywallModal: React.FC<Props> = ({
       setPassword("");
       setPasswordTouched(false);
       setViewMode("account");
+      onClose();
     } catch (e: any) {
       if (String(e?.message || "") === "INVALID_LOGIN") {
         setError(t.invalidLogin);
