@@ -9,60 +9,73 @@ export type ProgressSwatch = {
   text: "#111111" | "#ffffff";
 };
 
-// Fast rekkefølge (muskelminne):
-// 1-3 Blå, 4-6 Grønn, 7-9 Rød/Oransje/Gul, 10 Teal, 11 Lilla, 12 Grå
-// 13-18 Ekstra utvidelse: Cyan, Olive, Burgundy, Amber, Plum, Slate
+// Mål:
+// - Tydeligere spekter
+// - Færre "nesten like"
+// - Mer klare farger, mindre dushet
+// - Sortert med lignende farger etter hverandre
+//
+// Rekkefølge:
+// 1-3  Blå
+// 4-5  Cyan / Teal
+// 6-8  Grønn
+// 9-10 Gul / Amber
+// 11-12 Oransje
+// 13-15 Rød / Burgunder
+// 16-18 Lilla / Slate / Grå
 
 export const PROGRESS_GLOBAL_BAR_PALETTE: ProgressSwatch[] = [
-  { id: "blueLight", label: "Light Blue", hex: "#6B8FB3", text: "#ffffff" },
-  { id: "blueSteel", label: "Steel Blue", hex: "#4F6F8F", text: "#ffffff" },
-  { id: "blueNavy", label: "Navy", hex: "#2E4A66", text: "#ffffff" },
+  { id: "blueSky", label: "Sky Blue", hex: "#4A90E2", text: "#ffffff" },
+  { id: "blueRoyal", label: "Royal Blue", hex: "#2F6FE4", text: "#ffffff" },
+  { id: "blueNavy", label: "Navy", hex: "#1E3A8A", text: "#ffffff" },
 
-  { id: "greenLight", label: "Light Green", hex: "#7FA67F", text: "#111111" },
-  { id: "greenMoss", label: "Moss Green", hex: "#5F875F", text: "#ffffff" },
-  { id: "greenForest", label: "Forest", hex: "#3F633F", text: "#ffffff" },
+  { id: "cyanClear", label: "Clear Cyan", hex: "#2DA8D8", text: "#ffffff" },
+  { id: "tealClear", label: "Clear Teal", hex: "#1FA38A", text: "#ffffff" },
 
-  { id: "redBrick", label: "Brick", hex: "#9A4F4F", text: "#ffffff" },
-  { id: "orangeBurnt", label: "Burnt Orange", hex: "#B36A3C", text: "#ffffff" },
-  { id: "yellowMustard", label: "Mustard", hex: "#B89A3C", text: "#111111" },
+  { id: "greenFresh", label: "Fresh Green", hex: "#4CAF50", text: "#ffffff" },
+  { id: "greenStrong", label: "Strong Green", hex: "#2E8B57", text: "#ffffff" },
+  { id: "greenForest", label: "Forest", hex: "#1F6B45", text: "#ffffff" },
 
-  { id: "tealDeep", label: "Teal", hex: "#3F7F7A", text: "#ffffff" },
-  { id: "violetMuted", label: "Muted Violet", hex: "#6E5A8A", text: "#ffffff" },
-  { id: "greyMid", label: "Mid Grey", hex: "#6F6F6F", text: "#ffffff" },
+  { id: "yellowGolden", label: "Golden Yellow", hex: "#D4A017", text: "#111111" },
+  { id: "amberWarm", label: "Warm Amber", hex: "#C88719", text: "#111111" },
 
-  { id: "cyanMuted", label: "Muted Cyan", hex: "#4C8DA6", text: "#ffffff" },
-  { id: "oliveDeep", label: "Deep Olive", hex: "#7A8442", text: "#ffffff" },
-  { id: "burgundyMuted", label: "Muted Burgundy", hex: "#7E4257", text: "#ffffff" },
+  { id: "orangeClear", label: "Clear Orange", hex: "#E67E22", text: "#111111" },
+  { id: "orangeBurnt", label: "Burnt Orange", hex: "#C96A1B", text: "#ffffff" },
 
-  { id: "amberWarm", label: "Warm Amber", hex: "#C28A2C", text: "#111111" },
-  { id: "plumDusty", label: "Dusty Plum", hex: "#7A5A74", text: "#ffffff" },
-  { id: "slateBlueGrey", label: "Slate Blue Grey", hex: "#5E6F7E", text: "#ffffff" },
+  { id: "redClear", label: "Clear Red", hex: "#D64545", text: "#ffffff" },
+  { id: "redBrick", label: "Brick Red", hex: "#B03A3A", text: "#ffffff" },
+  { id: "burgundy", label: "Burgundy", hex: "#7E2F4F", text: "#ffffff" },
+
+  { id: "purpleStrong", label: "Strong Purple", hex: "#7D3C98", text: "#ffffff" },
+  { id: "slateBlue", label: "Slate Blue", hex: "#5C6FA3", text: "#ffffff" },
+  { id: "greyMid", label: "Mid Grey", hex: "#6B7280", text: "#ffffff" },
 ];
 
 export const PROGRESS_RESPONSIBILITY_PALETTE: ProgressSwatch[] = [
-  { id: "blueClear", label: "Clear Blue", hex: "#2F80ED", text: "#ffffff" },
-  { id: "blueRoyal", label: "Royal Blue", hex: "#1C5CCF", text: "#ffffff" },
-  { id: "blueDeep", label: "Deep Navy", hex: "#153E75", text: "#ffffff" },
+  { id: "blueSky", label: "Sky Blue", hex: "#3FA0FF", text: "#ffffff" },
+  { id: "blueRoyal", label: "Royal Blue", hex: "#2F80ED", text: "#ffffff" },
+  { id: "blueNavy", label: "Navy", hex: "#1C4FB8", text: "#ffffff" },
 
-  { id: "greenClear", label: "Clear Green", hex: "#27AE60", text: "#ffffff" },
-  { id: "greenStrong", label: "Strong Green", hex: "#1E874B", text: "#ffffff" },
-  { id: "greenDeep", label: "Deep Green", hex: "#145A32", text: "#ffffff" },
-
-  { id: "redClear", label: "Clear Red", hex: "#D64545", text: "#ffffff" },
-  { id: "orangeStrong", label: "Strong Orange", hex: "#E67E22", text: "#111111" },
-  { id: "yellowGolden", label: "Golden Yellow", hex: "#D4A017", text: "#111111" },
-
+  { id: "cyanClear", label: "Clear Cyan", hex: "#20B8D4", text: "#111111" },
   { id: "tealClear", label: "Clear Teal", hex: "#1ABC9C", text: "#111111" },
-  { id: "purpleStrong", label: "Strong Purple", hex: "#7D3C98", text: "#ffffff" },
+
+  { id: "greenFresh", label: "Fresh Green", hex: "#34C759", text: "#111111" },
+  { id: "greenClear", label: "Clear Green", hex: "#27AE60", text: "#ffffff" },
+  { id: "greenDeep", label: "Deep Green", hex: "#1E874B", text: "#ffffff" },
+
+  { id: "yellowGolden", label: "Golden Yellow", hex: "#E0B400", text: "#111111" },
+  { id: "amberClear", label: "Clear Amber", hex: "#F5A623", text: "#111111" },
+
+  { id: "orangeClear", label: "Clear Orange", hex: "#F28C28", text: "#111111" },
+  { id: "orangeDeep", label: "Deep Orange", hex: "#D96B1D", text: "#ffffff" },
+
+  { id: "redClear", label: "Clear Red", hex: "#E74C3C", text: "#ffffff" },
+  { id: "redStrong", label: "Strong Red", hex: "#C0392B", text: "#ffffff" },
+  { id: "burgundy", label: "Burgundy", hex: "#8E2948", text: "#ffffff" },
+
+  { id: "purpleStrong", label: "Strong Purple", hex: "#8E44AD", text: "#ffffff" },
+  { id: "slateBlue", label: "Slate Blue", hex: "#607D8B", text: "#ffffff" },
   { id: "greyDark", label: "Dark Grey", hex: "#4A4A4A", text: "#ffffff" },
-
-  { id: "cyanClear", label: "Clear Cyan", hex: "#2D9CDB", text: "#ffffff" },
-  { id: "oliveStrong", label: "Strong Olive", hex: "#7D8B2F", text: "#ffffff" },
-  { id: "burgundyStrong", label: "Strong Burgundy", hex: "#8E2948", text: "#ffffff" },
-
-  { id: "amberClear", label: "Clear Amber", hex: "#E0A106", text: "#111111" },
-  { id: "plumStrong", label: "Strong Plum", hex: "#8E44AD", text: "#ffffff" },
-  { id: "slateStrong", label: "Strong Slate", hex: "#566573", text: "#ffffff" },
 ];
 
 // Handy helpers (vi lagrer hex i state, men velger fra palett)
