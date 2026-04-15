@@ -74,6 +74,24 @@ export type TableCoreDatePickerRequest = {
   close: () => void;
 };
 
+/* ============================================================
+   CONTEXT MENU (app-owned): generic request
+   ============================================================ */
+
+export type TableCoreContextMenuRequest = {
+  area: "cell" | "rowHeader" | "columnHeader" | "tableBody";
+  clientX: number;
+  clientY: number;
+  targetRect: DOMRect | null;
+  selection: Selection;
+
+  row: number | null;
+  col: number | null;
+  rowId?: string;
+  column?: ColumnDef;
+  currentValue?: CellValue;
+};
+
 export type TableCoreProps = {
   columns: ColumnDef[];
   rows: RowData[];
@@ -93,6 +111,9 @@ export type TableCoreProps = {
 
   /** Hook for å åpne ekstern datepicker (app-owned popover) */
   onRequestDatePicker?: (req: TableCoreDatePickerRequest) => void;
+
+  /** Hook for å åpne app-owned context menu */
+  onRequestContextMenu?: (req: TableCoreContextMenuRequest) => void;
 
   /** Preview fra appen: vis valgt dato uten commit (før outside/Tab/Enter) */
   datePreview?: TableCoreDatePreview;
