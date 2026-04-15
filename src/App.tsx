@@ -475,8 +475,20 @@ export default function App() {
     tableContextMenu,
     openTableContextMenu,
     closeTableContextMenu,
+    handleInsertRowAbove,
+    handleInsertRowBelow,
+    handleDeleteRows,
   } = useProgressTableContextMenu({
     setSelection,
+    onInsertRowAbove: () => {
+      handleTableAction("addRowAbove");
+    },
+    onInsertRowBelow: () => {
+      handleTableAction("addRowBelow");
+    },
+    onDeleteRows: () => {
+      handleTableAction("deleteSelectedRows");
+    },
   });
 
   const setSnapshotBaseline = useCallback((snap: ProgressProjectSnapshotV1 | null) => {
@@ -1197,6 +1209,9 @@ export default function App() {
       <ProgressTableContextMenu
         state={tableContextMenu}
         onClose={closeTableContextMenu}
+        onInsertRowAbove={handleInsertRowAbove}
+        onInsertRowBelow={handleInsertRowBelow}
+        onDeleteRows={handleDeleteRows}
       />
 
       <footer className="app-footer">
