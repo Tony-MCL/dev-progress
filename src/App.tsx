@@ -475,19 +475,53 @@ export default function App() {
     tableContextMenu,
     openTableContextMenu,
     closeTableContextMenu,
-    handleInsertRowAbove,
-    handleInsertRowBelow,
-    handleDeleteRows,
+    handleMenuAction,
   } = useProgressTableContextMenu({
     setSelection,
-    onInsertRowAbove: () => {
-      handleTableAction("addRowAbove");
-    },
-    onInsertRowBelow: () => {
-      handleTableAction("addRowBelow");
-    },
-    onDeleteRows: () => {
-      handleTableAction("deleteSelectedRows");
+    onAction: (action) => {
+      switch (action) {
+        case "insertRowAbove":
+          handleTableAction("addRowAbove");
+          return;
+  
+        case "insertRowBelow":
+          handleTableAction("addRowBelow");
+          return;
+  
+        case "deleteRows":
+          handleTableAction("deleteSelectedRows");
+          return;
+  
+        case "indentRows":
+          handleTableAction("indentRows");
+          return;
+  
+        case "outdentRows":
+          handleTableAction("outdentRows");
+          return;
+  
+        case "copySelection":
+          handleTableAction("copySelection");
+          return;
+  
+        case "cutSelection":
+          handleTableAction("cutSelection");
+          return;
+  
+        case "pasteClipboard":
+          handleTableAction("pasteClipboard");
+          return;
+  
+        case "print":
+          handleFileAction("print");
+          return;
+  
+        case "milestoneDummy":
+          return;
+  
+        case "close":
+          return;
+      }
     },
   });
 
@@ -1209,9 +1243,7 @@ export default function App() {
       <ProgressTableContextMenu
         state={tableContextMenu}
         onClose={closeTableContextMenu}
-        onInsertRowAbove={handleInsertRowAbove}
-        onInsertRowBelow={handleInsertRowBelow}
-        onDeleteRows={handleDeleteRows}
+        onAction={handleMenuAction}
       />
 
       <footer className="app-footer">
