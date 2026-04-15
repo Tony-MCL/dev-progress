@@ -4,6 +4,9 @@ import type { TableCoreContextMenuRequest } from "../core/TableTypes";
 type Props = {
   state: TableCoreContextMenuRequest | null;
   onClose: () => void;
+  onInsertRowAbove: () => void;
+  onInsertRowBelow: () => void;
+  onDeleteRows: () => void;
 };
 
 function MenuButton(props: {
@@ -55,6 +58,9 @@ function Divider() {
 export default function ProgressTableContextMenu({
   state,
   onClose,
+  onInsertRowAbove,
+  onInsertRowBelow,
+  onDeleteRows,
 }: Props) {
   if (!state) return null;
 
@@ -134,8 +140,14 @@ export default function ProgressTableContextMenu({
       <Divider />
 
       <MenuButton label="Gjør til milepæl" onClick={onClose} />
-      <MenuButton label="Radinnrykk / gjør til underaktivitet" onClick={onClose} />
-      <MenuButton label="Radutrykk / gjør til hovedaktivitet" onClick={onClose} />
+      <MenuButton
+        label="Radinnrykk / gjør til underaktivitet"
+        onClick={onClose}
+      />
+      <MenuButton
+        label="Radutrykk / gjør til hovedaktivitet"
+        onClick={onClose}
+      />
 
       <Divider />
 
@@ -145,9 +157,9 @@ export default function ProgressTableContextMenu({
 
       <Divider />
 
-      <MenuButton label="Sett inn rad over" onClick={onClose} />
-      <MenuButton label="Sett inn rad under" onClick={onClose} />
-      <MenuButton label="Slett markert område" onClick={onClose} />
+      <MenuButton label="Sett inn rad over" onClick={onInsertRowAbove} />
+      <MenuButton label="Sett inn rad under" onClick={onInsertRowBelow} />
+      <MenuButton label="Slett rad(er)" onClick={onDeleteRows} />
 
       <Divider />
 
