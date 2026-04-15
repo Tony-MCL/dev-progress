@@ -15,6 +15,7 @@ import type {
   CellValue,
   TableCoreCellCommit,
   TableCoreDatePickerRequest,
+  TableCoreContextMenuRequest,
 } from "./TableTypes";
 import { parseClipboard, toTSV } from "./utils/clipboard";
 import { useI18n } from "../i18n";
@@ -191,6 +192,7 @@ export default function TableCore(props: TableCoreProps) {
     ui,
     dateFormat = "dd.mm.yyyy",
     onRequestDatePicker,
+    onRequestContextMenu,
     datePreview,
     onSelectionChange,
     onEditingChange,
@@ -654,6 +656,43 @@ export default function TableCore(props: TableCoreProps) {
     if (!el) return null;
     return el.getBoundingClientRect();
   };
+
+  const requestContextMenu = useCallback(
+    (args: {
+      area: TableCoreContextMenuRequest["area"];
+      row: number | null;
+      col: number | null;
+      clientX: number;
+      clientY: number;
+    }) => {
+      if (!onRequestContextMenu) return;
+
+      const { area, row, col, clientX, clientY } = args;
+      const column =
+        typeof col === "number" && col >= 0 ? colsRef.current[col] ?? undefined : undefined;
+      const rowData =
+        typeof row === "number" && row >= 0 ? dataRef.current[row] ?? undefined : undefined;
+
+      let targetRect: DOMRect | null = null;
+      if (typeof row === "number" && row >= 0 && typeof col === "number" && col >= 0) {
+        targetRect = findCellRect(row, col);
+      }
+
+      onRequestContextMenu({
+        area,
+        clientX,
+        clientY,
+        targetRect,
+        selection: selRef.current,
+        row,
+        col,
+        rowId: rowData?.id,
+        column,
+        currentValue: column && rowData ? rowData.cells?.[column.key] : undefined,
+      });
+    },
+    [onRequestContextMenu]
+  );
 
   const requestDatePicker = useCallback(
     (r: number, c: number, mode: "view" | "edit") => {
@@ -1284,6 +1323,17 @@ export default function TableCore(props: TableCoreProps) {
                     data-c={cIdx}
                     onMouseDown={onCellMouseDown(rVisibleIdx, cIdx)}
                     onDoubleClick={onCellDoubleClick(rVisibleIdx, cIdx)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      requestContextMenu({
+                        area: "cell",
+                        row: rVisibleIdx,
+                        col: cIdx,
+                        clientX: e.clientX,
+                        clientY: e.clientY,
+                      });
+                    }}
                     title={String(shownVal)}
                     style={showDateBtnInView ? { position: "relative" } : undefined}
                   >
