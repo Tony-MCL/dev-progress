@@ -1092,6 +1092,7 @@ export default function App() {
 
       <AppDatePickerPopover
         req={datePickReq as any}
+        rows={rows}
         onRequestClose={closeDatePickerUI}
       />
 
