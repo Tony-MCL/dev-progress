@@ -2,44 +2,59 @@
 // src/progress/app/useProgressRowEditing.ts
 // ===============================
 import { useEffect, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import type { RowData } from "../../core/TableTypes";
 
 import { recomputeAllRows } from "../autoSchedule";
-import {
-  formatDMY,
-  parseDMYLoose,
-  addWorkdays,
-} from "../ProgressCore";
+import { formatDMY, parseDMYLoose, addWorkdays } from "../ProgressCore";
 import { startOfDay } from "../ganttDateUtils";
 import type { DurPopoverState, WeekendPopoverState } from "../AdjustPopovers";
 
 type Args = {
   rows: RowData[];
-  setRows: React.Dispatch<React.SetStateAction<RowData[]>>;
-  progressCalendar: any; // behold "any" for å unngå å dra typer inn her
+  setRows: Dispatch<SetStateAction<RowData[]>>;
+  progressCalendar: any;
 };
 
-export function useProgressRowEditing({ rows, setRows, progressCalendar }: Args) {
-  // ============================
-  // Popover state + refs
-  // ============================
+function isEmptyCellValue(value: any): boolean {
+  return value === null || value === undefined || String(value).trim() === "";
+}
+
+function cloneRows(rows: RowData[]): RowData[] {
+  return rows.map((row) => ({
+    ...row,
+    cells: { ...(row as any).cells },
+  }));
+}
+
+export function useProgressRowEditing({
+  rows,
+  setRows,
+  progressCalendar,
+}: Args) {
   const [durPop, setDurPop] = useState<DurPopoverState | null>(null);
   const durPopRef = useRef<DurPopoverState | null>(null);
+
   useEffect(() => {
     durPopRef.current = durPop;
   }, [durPop]);
 
-  const [weekendPop, setWeekendPop] = useState<WeekendPopoverState | null>(null);
+  const [weekendPop, setWeekendPop] = useState<WeekendPopoverState | null>(
+    null
+  );
   const weekendPopRef = useRef<WeekendPopoverState | null>(null);
+
   useEffect(() => {
     weekendPopRef.current = weekendPop;
   }, [weekendPop]);
 
   const lastPointerRef = useRef<{ x: number; y: number }>({ x: 24, y: 24 });
+
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       lastPointerRef.current = { x: e.clientX, y: e.clientY };
     };
+
     window.addEventListener("pointermove", onMove, { passive: true });
     return () => window.removeEventListener("pointermove", onMove);
   }, []);
@@ -49,13 +64,9 @@ export function useProgressRowEditing({ rows, setRows, progressCalendar }: Args)
     const isWeekend = day === 0 || day === 6;
     if (!isWeekend) return false;
 
-    // Trigger kun hvis denne helgedagen faktisk er stengt i prosjektets kalender
     return !progressCalendar.workWeekdays.has(day);
   };
 
-  // ============================
-  // Table handlers
-  // ============================
   const onRowsChange = (next: RowData[]) => {
     const freeze = durPopRef.current?.row ?? weekendPopRef.current?.row ?? null;
     const computed = recomputeAllRows(next, progressCalendar, freeze);
@@ -65,7 +76,45 @@ export function useProgressRowEditing({ rows, setRows, progressCalendar }: Args)
   const onCellCommit = (evt: any) => {
     if (!evt) return;
 
-    // weekend warning for start/end
+    if (
+      (evt.columnKey === "start" || evt.columnKey === "end") &&
+      isEmptyCellValue(evt.next)
+    ) {
+      const rowIndex: number = evt.row;
+      const key: "start" | "end" = evt.columnKey;
+
+      const next = cloneRows(rows);
+      const row = next[rowIndex] as any;
+      if (!row) return;
+
+      row.cells[key] = "";
+      row.cells.dur = "";
+
+      setDurPop(null);
+      setWeekendPop(null);
+
+      const computed = recomputeAllRows(next, progressCalendar, rowIndex);
+      setRows(computed);
+      return;
+    }
+
+    if (evt.columnKey === "dur" && isEmptyCellValue(evt.next)) {
+      const rowIndex: number = evt.row;
+
+      const next = cloneRows(rows);
+      const row = next[rowIndex] as any;
+      if (!row) return;
+
+      row.cells.dur = "";
+
+      setDurPop(null);
+      setWeekendPop(null);
+
+      const computed = recomputeAllRows(next, progressCalendar, rowIndex);
+      setRows(computed);
+      return;
+    }
+
     if (evt.columnKey === "start" || evt.columnKey === "end") {
       const rowIndex: number = evt.row;
       const r = rows[rowIndex];
@@ -90,7 +139,6 @@ export function useProgressRowEditing({ rows, setRows, progressCalendar }: Args)
       }
     }
 
-    // duration popover
     if (evt.columnKey !== "dur") return;
 
     const rowIndex: number = evt.row;
@@ -113,9 +161,6 @@ export function useProgressRowEditing({ rows, setRows, progressCalendar }: Args)
     });
   };
 
-  // ============================
-  // Weekend adjust actions
-  // ============================
   const applyWeekendChoice = (choice: "prevWorkday" | "nextWorkday") => {
     const p = weekendPopRef.current;
     if (!p) return;
@@ -129,11 +174,11 @@ export function useProgressRowEditing({ rows, setRows, progressCalendar }: Args)
         ? addWorkdays(base, -1, progressCalendar)
         : addWorkdays(base, +1, progressCalendar);
 
-    const next = rows.map((rr, i) =>
-      i === idx ? { ...rr, cells: { ...(rr as any).cells } } : rr
-    );
+    const next = cloneRows(rows);
+    const row = next[idx] as any;
+    if (!row) return;
 
-    (next[idx] as any).cells[key] = formatDMY(adjusted);
+    row.cells[key] = formatDMY(adjusted);
 
     const computed = recomputeAllRows(next, progressCalendar, null);
     setWeekendPop(null);
@@ -150,20 +195,20 @@ export function useProgressRowEditing({ rows, setRows, progressCalendar }: Args)
     const idx = p.row;
     const key = p.columnKey;
 
-    const next = rows.map((rr, i) =>
-      i === idx ? { ...rr, cells: { ...(rr as any).cells } } : rr
-    );
+    const next = cloneRows(rows);
+    const row = next[idx] as any;
+    if (!row) {
+      setWeekendPop(null);
+      return;
+    }
 
-    (next[idx] as any).cells[key] = p.prevValue ?? "";
+    row.cells[key] = p.prevValue ?? "";
 
     const computed = recomputeAllRows(next, progressCalendar, null);
     setWeekendPop(null);
     setRows(computed);
   };
 
-  // ============================
-  // Duration adjust actions
-  // ============================
   const applyDurationChoice = (choice: "moveStart" | "moveEnd") => {
     const p = durPopRef.current;
     if (!p) return;
@@ -184,9 +229,7 @@ export function useProgressRowEditing({ rows, setRows, progressCalendar }: Args)
       return;
     }
 
-    const next = rows.map((rr, i) =>
-      i === idx ? { ...rr, cells: { ...(rr as any).cells } } : rr
-    ) as any[];
+    const next = cloneRows(rows) as any[];
 
     if (choice === "moveEnd") {
       const newEnd = addWorkdays(s, newDur - 1, progressCalendar);
