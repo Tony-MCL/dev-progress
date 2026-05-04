@@ -75,11 +75,41 @@ function formatDMYLocal(d: Date) {
   return `${dd}.${mm}.${yy}`;
 }
 
+function findBestInitialViewDate(req: DatePickerRequest, rows: any[]): Date {
+  const clickedValue = parseDMYLooseLocal(req.draftValue);
+  if (clickedValue) return clickedValue;
+
+  const currentRow = rows[req.row];
+  const currentRowCells = currentRow?.cells ?? {};
+
+  const rowDates = Object.values(currentRowCells)
+    .map((value) => parseDMYLooseLocal(String(value ?? "")))
+    .filter((date): date is Date => !!date)
+    .sort((a, b) => +a - +b);
+
+  if (rowDates.length > 0) {
+    return rowDates[0];
+  }
+
+  const planDates = rows
+    .flatMap((row) => Object.values(row?.cells ?? {}))
+    .map((value) => parseDMYLooseLocal(String(value ?? "")))
+    .filter((date): date is Date => !!date)
+    .sort((a, b) => +a - +b);
+
+  if (planDates.length > 0) {
+    return planDates[0];
+  }
+
+  return new Date();
+}
+
 export default function AppDatePickerPopover(props: {
   req: DatePickerRequest | null;
+  rows: any[];
   onRequestClose: () => void;
 }) {
-  const { req, onRequestClose } = props;
+  const { req, rows, onRequestClose } = props;
   const { t } = useI18n();
 
   const popRef = useRef<HTMLDivElement | null>(null);
@@ -92,8 +122,8 @@ export default function AppDatePickerPopover(props: {
 
   const initialSelected = useMemo(() => {
     if (!req) return null;
-    return parseDMYLooseLocal(req.draftValue);
-  }, [req]);
+    return findBestInitialViewDate(req, rows);
+  }, [req, rows]);
 
   const [viewMonth, setViewMonth] = React.useState<Date>(() => {
     const base = initialSelected ?? new Date();
@@ -107,10 +137,9 @@ export default function AppDatePickerPopover(props: {
     setPickerOpen(null);
     setHoverChoice(null);
 
-    const base = parseDMYLooseLocal(req.draftValue) ?? new Date();
+    const base = findBestInitialViewDate(req, rows);
     setViewMonth(startOfMonth(base));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [req?.row, req?.columnKey]);
+  }, [req, rows]);
 
   const setDraftBoth = (next: string) => {
     setDraft(next);
@@ -234,14 +263,9 @@ export default function AppDatePickerPopover(props: {
   }));
 
   const currentViewYear = viewMonth.getFullYear();
-
   const yearOptions: number[] = [];
 
   for (let y = currentViewYear - 5; y <= currentViewYear + 20; y++) {
-    yearOptions.push(y);
-  }
-
-  for (let y = currentViewYear - 1; y >= currentViewYear - 20; y--) {
     yearOptions.push(y);
   }
 
@@ -420,7 +444,9 @@ export default function AppDatePickerPopover(props: {
                       onMouseEnter={() => setHoverChoice(key)}
                       onMouseLeave={() => setHoverChoice(null)}
                       onClick={() => {
-                        setViewMonth((v) => new Date(v.getFullYear(), m.value, 1));
+                        setViewMonth(
+                          (v) => new Date(v.getFullYear(), m.value, 1)
+                        );
                         setPickerOpen(null);
                         setHoverChoice(null);
                       }}
@@ -460,8 +486,8 @@ export default function AppDatePickerPopover(props: {
 
             {pickerOpen === "year" ? (
               <div style={pickerPanelStyle}>
-                {yearOptions.map((year, index) => {
-                  const key = `year-${year}-${index}`;
+                {yearOptions.map((year) => {
+                  const key = `year-${year}`;
                   const isSelected = year === viewMonth.getFullYear();
 
                   return (
