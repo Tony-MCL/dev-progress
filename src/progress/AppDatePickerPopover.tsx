@@ -22,11 +22,13 @@ function clamp(v: number, min: number, max: number) {
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
+
 function addMonths(d: Date, m: number) {
   const x = new Date(d);
   x.setMonth(x.getMonth() + m);
   return x;
 }
+
 function isSameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -45,12 +47,24 @@ function parseDMYLooseLocal(raw: string): Date | null {
   const dd = Number(m[1]);
   const mm = Number(m[2]);
   let yy = Number(m[3]);
-  if (!Number.isFinite(dd) || !Number.isFinite(mm) || !Number.isFinite(yy)) return null;
+
+  if (!Number.isFinite(dd) || !Number.isFinite(mm) || !Number.isFinite(yy)) {
+    return null;
+  }
+
   if (yy < 100) yy = 2000 + yy;
 
   const d = new Date(yy, mm - 1, dd);
   if (Number.isNaN(+d)) return null;
-  if (d.getFullYear() !== yy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+
+  if (
+    d.getFullYear() !== yy ||
+    d.getMonth() !== mm - 1 ||
+    d.getDate() !== dd
+  ) {
+    return null;
+  }
+
   return d;
 }
 
@@ -83,7 +97,9 @@ export default function AppDatePickerPopover(props: {
 
   useEffect(() => {
     if (!req) return;
+
     setDraft(String(req.draftValue ?? ""));
+
     const base = parseDMYLooseLocal(req.draftValue) ?? new Date();
     setViewMonth(startOfMonth(base));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,7 +134,6 @@ export default function AppDatePickerPopover(props: {
         e.preventDefault();
         req.commit(draft, { move: "next" });
         onRequestClose();
-        return;
       }
     };
 
@@ -142,11 +157,6 @@ export default function AppDatePickerPopover(props: {
 
   if (!req) return null;
 
-  // =========================================================
-  // ✅ Responsive scale
-  // - Tidligere var SCALE = 0.5 (ble veldig liten)
-  // - Nå skalerer vi opp, særlig på touch / små skjermer.
-  // =========================================================
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
@@ -156,24 +166,16 @@ export default function AppDatePickerPopover(props: {
     window.matchMedia("(pointer: coarse)").matches;
 
   const SCALE = (() => {
-    // Touch/små skjermer: større og mer “thumb friendly”
     if (isCoarsePointer || vw <= 720) return 0.95;
-
-    // Mellomskjermer (typisk laptop): godt lesbart uten å bli enorm
     if (vw <= 1100) return 0.88;
-
-    // Store skjermer: fortsatt større enn før, men kompakt
     return 0.82;
   })();
 
   const s = (v: number) => Math.round(v * SCALE);
 
-  // ---------- Position ----------
   const PAD = 8;
-
-  // Estimater for clamp (må matche omtrent det vi faktisk rendrer)
-  const estW = s(360);
-  const estH = s(340);
+  const estW = s(380);
+  const estH = s(350);
 
   let left = req.anchorRect.left;
   let top = req.anchorRect.bottom + 6;
@@ -182,9 +184,8 @@ export default function AppDatePickerPopover(props: {
   if (top + estH > vh - PAD) top = req.anchorRect.top - 6 - estH;
   top = clamp(top, PAD, vh - PAD - estH);
 
-  // ---------- Calendar grid ----------
   const first = startOfMonth(viewMonth);
-  const firstWeekday = (first.getDay() + 6) % 7; // Monday=0
+  const firstWeekday = (first.getDay() + 6) % 7;
   const gridStart = new Date(first);
   gridStart.setDate(first.getDate() - firstWeekday);
 
@@ -214,7 +215,25 @@ export default function AppDatePickerPopover(props: {
     "dec",
   ] as const;
 
-  const monthLabel = `${t(`app.datePicker.monthFull.${monthKeys[viewMonth.getMonth()]}`)} ${viewMonth.getFullYear()}`;
+  const monthOptions = monthKeys.map((key, index) => ({
+    value: index,
+    label: t(`app.datePicker.monthFull.${key}`),
+  }));
+
+  const yearOptions = useMemo(() => {
+    const center = viewMonth.getFullYear();
+    const years: number[] = [];
+
+    for (let y = center - 20; y <= center + 20; y++) {
+      years.push(y);
+    }
+
+    return years;
+  }, [viewMonth]);
+
+  const monthLabel = `${t(
+    `app.datePicker.monthFull.${monthKeys[viewMonth.getMonth()]}`
+  )} ${viewMonth.getFullYear()}`;
 
   const weekdayLabels = [
     t("app.datePicker.weekdayShort.mon"),
@@ -227,10 +246,44 @@ export default function AppDatePickerPopover(props: {
   ];
 
   const clear = () => setDraftBoth("");
+
   const goToday = () => {
     const tdy = new Date();
     setViewMonth(startOfMonth(tdy));
     setDraftBoth(formatDMYLocal(tdy));
+  };
+
+  const selectStyle: React.CSSProperties = {
+    appearance: "none",
+    WebkitAppearance: "none",
+    MozAppearance: "none",
+    border: "1px solid rgba(0,0,0,0.12)",
+    background: "white",
+    borderRadius: s(10),
+    cursor: "pointer",
+    fontWeight: 700,
+    color: "#111",
+    fontSize: s(15),
+    height: s(36),
+    padding: `0 ${s(28)}px 0 ${s(10)}px`,
+    lineHeight: `${s(34)}px`,
+    outline: "none",
+    maxWidth: s(150),
+  };
+
+  const selectWrapStyle: React.CSSProperties = {
+    position: "relative",
+    display: "inline-flex",
+    alignItems: "center",
+  };
+
+  const selectArrowStyle: React.CSSProperties = {
+    position: "absolute",
+    right: s(10),
+    pointerEvents: "none",
+    color: "rgba(0,0,0,0.55)",
+    fontSize: s(10),
+    lineHeight: 1,
   };
 
   return (
@@ -253,70 +306,115 @@ export default function AppDatePickerPopover(props: {
       role="dialog"
       aria-label={t("app.datePicker.ariaLabel")}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: s(8),
+          gap: s(8),
         }}
       >
-        <div
+        <button
+          type="button"
+          onClick={() => setViewMonth((v) => startOfMonth(addMonths(v, -1)))}
           style={{
+            width: s(36),
+            height: s(36),
+            border: "1px solid rgba(0,0,0,0.12)",
+            background: "white",
+            borderRadius: s(10),
+            cursor: "pointer",
             fontWeight: 700,
-            fontSize: s(18),
-            letterSpacing: -0.2,
             color: "#111",
+            lineHeight: `${s(34)}px`,
+            padding: 0,
+            flex: "0 0 auto",
+          }}
+          aria-label={t("app.datePicker.prevMonthAria")}
+        >
+          ‹
+        </button>
+
+        <div
+          aria-label={monthLabel}
+          style={{
+            flex: "1 1 auto",
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: s(6),
           }}
         >
-          {monthLabel}
+          <span style={selectWrapStyle}>
+            <select
+              value={viewMonth.getMonth()}
+              onChange={(e) => {
+                const nextMonth = Number(e.target.value);
+                setViewMonth(
+                  (v) => new Date(v.getFullYear(), nextMonth, 1)
+                );
+              }}
+              style={selectStyle}
+              title={monthLabel}
+            >
+              {monthOptions.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <span style={selectArrowStyle}>▾</span>
+          </span>
+
+          <span style={selectWrapStyle}>
+            <select
+              value={viewMonth.getFullYear()}
+              onChange={(e) => {
+                const nextYear = Number(e.target.value);
+                setViewMonth(
+                  (v) => new Date(nextYear, v.getMonth(), 1)
+                );
+              }}
+              style={{
+                ...selectStyle,
+                maxWidth: s(100),
+              }}
+              title={monthLabel}
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+            <span style={selectArrowStyle}>▾</span>
+          </span>
         </div>
 
-        <div style={{ display: "flex", gap: s(8) }}>
-          <button
-            type="button"
-            onClick={() => setViewMonth((v) => startOfMonth(addMonths(v, -1)))}
-            style={{
-              width: s(36),
-              height: s(36),
-              border: "1px solid rgba(0,0,0,0.12)",
-              background: "white",
-              borderRadius: s(10),
-              cursor: "pointer",
-              fontWeight: 700,
-              color: "#111",
-              lineHeight: `${s(34)}px`,
-              padding: 0,
-            }}
-            aria-label={t("app.datePicker.prevMonthAria")}
-          >
-            ‹
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setViewMonth((v) => startOfMonth(addMonths(v, +1)))}
-            style={{
-              width: s(36),
-              height: s(36),
-              border: "1px solid rgba(0,0,0,0.12)",
-              background: "white",
-              borderRadius: s(10),
-              cursor: "pointer",
-              fontWeight: 700,
-              color: "#111",
-              lineHeight: `${s(34)}px`,
-              padding: 0,
-            }}
-            aria-label={t("app.datePicker.nextMonthAria")}
-          >
-            ›
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setViewMonth((v) => startOfMonth(addMonths(v, +1)))}
+          style={{
+            width: s(36),
+            height: s(36),
+            border: "1px solid rgba(0,0,0,0.12)",
+            background: "white",
+            borderRadius: s(10),
+            cursor: "pointer",
+            fontWeight: 700,
+            color: "#111",
+            lineHeight: `${s(34)}px`,
+            padding: 0,
+            flex: "0 0 auto",
+          }}
+          aria-label={t("app.datePicker.nextMonthAria")}
+        >
+          ›
+        </button>
       </div>
 
-      {/* Weekdays */}
       <div
         style={{
           display: "grid",
@@ -335,8 +433,13 @@ export default function AppDatePickerPopover(props: {
         ))}
       </div>
 
-      {/* Days */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 0,
+        }}
+      >
         {days.map((d, idx) => {
           const isSel = !!selected && isSameDay(d, selected);
           const other = d.getMonth() !== viewMonth.getMonth();
@@ -380,7 +483,9 @@ export default function AppDatePickerPopover(props: {
                   alignItems: "center",
                   justifyContent: "center",
                   background: isSel ? BLUE : "transparent",
-                  boxShadow: isSel ? "0 6px 14px rgba(30,102,255,0.22)" : "none",
+                  boxShadow: isSel
+                    ? "0 6px 14px rgba(30,102,255,0.22)"
+                    : "none",
                   border:
                     !isSel && isTod
                       ? `1px solid rgba(30,102,255,0.55)`
@@ -394,7 +499,6 @@ export default function AppDatePickerPopover(props: {
         })}
       </div>
 
-      {/* Bottom actions */}
       <div
         style={{
           display: "grid",
@@ -461,8 +565,6 @@ export default function AppDatePickerPopover(props: {
           {t("app.datePicker.today")}
         </button>
       </div>
-
-      {/* (FJERNET) hjelpetekst nederst – ble for liten/uleseleg i denne størrelsen */}
     </div>
   );
 }
