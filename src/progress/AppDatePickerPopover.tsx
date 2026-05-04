@@ -236,9 +236,8 @@ export default function AppDatePickerPopover(props: {
   const currentViewYear = viewMonth.getFullYear();
 
   const yearOptions: number[] = [];
-  yearOptions.push(currentViewYear);
 
-  for (let y = currentViewYear + 1; y <= currentViewYear + 20; y++) {
+  for (let y = currentViewYear - 5; y <= currentViewYear + 20; y++) {
     yearOptions.push(y);
   }
 
