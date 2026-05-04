@@ -83,7 +83,12 @@ export default function AppDatePickerPopover(props: {
   const { t } = useI18n();
 
   const popRef = useRef<HTMLDivElement | null>(null);
+
   const [draft, setDraft] = React.useState<string>("");
+  const [pickerOpen, setPickerOpen] = React.useState<"month" | "year" | null>(
+    null
+  );
+  const [hoverChoice, setHoverChoice] = React.useState<string | null>(null);
 
   const initialSelected = useMemo(() => {
     if (!req) return null;
@@ -99,6 +104,8 @@ export default function AppDatePickerPopover(props: {
     if (!req) return;
 
     setDraft(String(req.draftValue ?? ""));
+    setPickerOpen(null);
+    setHoverChoice(null);
 
     const base = parseDMYLooseLocal(req.draftValue) ?? new Date();
     setViewMonth(startOfMonth(base));
@@ -118,6 +125,12 @@ export default function AppDatePickerPopover(props: {
 
       if (e.key === "Escape") {
         e.preventDefault();
+
+        if (pickerOpen) {
+          setPickerOpen(null);
+          return;
+        }
+
         req.cancel();
         onRequestClose();
         return;
@@ -153,7 +166,7 @@ export default function AppDatePickerPopover(props: {
       window.removeEventListener("keydown", onKey, true);
       window.removeEventListener("mousedown", onDown, true);
     };
-  }, [req, onRequestClose, draft]);
+  }, [req, onRequestClose, draft, pickerOpen]);
 
   if (!req) return null;
 
@@ -220,10 +233,16 @@ export default function AppDatePickerPopover(props: {
     label: t(`app.datePicker.monthFull.${key}`),
   }));
 
-  const centerYear = viewMonth.getFullYear();
-  const yearOptions: number[] = [];
+  const currentViewYear = viewMonth.getFullYear();
 
-  for (let y = centerYear - 20; y <= centerYear + 20; y++) {
+  const yearOptions: number[] = [];
+  yearOptions.push(currentViewYear);
+
+  for (let y = currentViewYear + 1; y <= currentViewYear + 20; y++) {
+    yearOptions.push(y);
+  }
+
+  for (let y = currentViewYear - 1; y >= currentViewYear - 20; y--) {
     yearOptions.push(y);
   }
 
@@ -247,12 +266,10 @@ export default function AppDatePickerPopover(props: {
     const tdy = new Date();
     setViewMonth(startOfMonth(tdy));
     setDraftBoth(formatDMYLocal(tdy));
+    setPickerOpen(null);
   };
 
-  const selectStyle: React.CSSProperties = {
-    appearance: "none",
-    WebkitAppearance: "none",
-    MozAppearance: "none",
+  const pickerButtonStyle: React.CSSProperties = {
     border: "1px solid rgba(0,0,0,0.12)",
     background: "white",
     borderRadius: s(10),
@@ -264,22 +281,43 @@ export default function AppDatePickerPopover(props: {
     padding: `0 ${s(28)}px 0 ${s(10)}px`,
     lineHeight: `${s(34)}px`,
     outline: "none",
-    maxWidth: s(150),
-  };
-
-  const selectWrapStyle: React.CSSProperties = {
     position: "relative",
-    display: "inline-flex",
-    alignItems: "center",
+    whiteSpace: "nowrap",
   };
 
-  const selectArrowStyle: React.CSSProperties = {
+  const pickerPanelStyle: React.CSSProperties = {
     position: "absolute",
-    right: s(10),
-    pointerEvents: "none",
-    color: "rgba(0,0,0,0.55)",
-    fontSize: s(10),
-    lineHeight: 1,
+    top: `calc(100% + ${s(4)}px)`,
+    left: 0,
+    zIndex: 100000,
+    minWidth: "100%",
+    maxHeight: s(220),
+    overflowY: "auto",
+    background: "white",
+    border: "1px solid rgba(0,0,0,0.14)",
+    borderRadius: s(12),
+    boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+    padding: s(6),
+  };
+
+  const pickerItemStyle = (
+    key: string,
+    selected: boolean
+  ): React.CSSProperties => {
+    const hovered = hoverChoice === key;
+
+    return {
+      width: "100%",
+      border: "none",
+      borderRadius: s(9),
+      background: selected ? BLUE : hovered ? "rgba(0,0,0,0.06)" : "transparent",
+      color: selected ? "white" : "#111",
+      cursor: "pointer",
+      textAlign: "left",
+      padding: `${s(8)}px ${s(10)}px`,
+      fontSize: s(14),
+      fontWeight: selected ? 700 : 600,
+    };
   };
 
   return (
@@ -313,7 +351,10 @@ export default function AppDatePickerPopover(props: {
       >
         <button
           type="button"
-          onClick={() => setViewMonth((v) => startOfMonth(addMonths(v, -1)))}
+          onClick={() => {
+            setPickerOpen(null);
+            setViewMonth((v) => startOfMonth(addMonths(v, -1)));
+          }}
           style={{
             width: s(36),
             height: s(36),
@@ -343,55 +384,115 @@ export default function AppDatePickerPopover(props: {
             gap: s(6),
           }}
         >
-          <span style={selectWrapStyle}>
-            <select
-              value={viewMonth.getMonth()}
-              onChange={(e) => {
-                const nextMonth = Number(e.target.value);
-                setViewMonth(
-                  (v) => new Date(v.getFullYear(), nextMonth, 1)
-                );
-              }}
-              style={selectStyle}
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() =>
+                setPickerOpen((v) => (v === "month" ? null : "month"))
+              }
+              style={{ ...pickerButtonStyle, minWidth: s(132) }}
               title={monthLabel}
             >
-              {monthOptions.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <span style={selectArrowStyle}>▾</span>
-          </span>
+              {monthOptions[viewMonth.getMonth()]?.label}
+              <span
+                style={{
+                  position: "absolute",
+                  right: s(10),
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "rgba(0,0,0,0.55)",
+                  fontSize: s(10),
+                }}
+              >
+                ▾
+              </span>
+            </button>
 
-          <span style={selectWrapStyle}>
-            <select
-              value={viewMonth.getFullYear()}
-              onChange={(e) => {
-                const nextYear = Number(e.target.value);
-                setViewMonth(
-                  (v) => new Date(nextYear, v.getMonth(), 1)
-                );
-              }}
-              style={{
-                ...selectStyle,
-                maxWidth: s(100),
-              }}
+            {pickerOpen === "month" ? (
+              <div style={pickerPanelStyle}>
+                {monthOptions.map((m) => {
+                  const key = `month-${m.value}`;
+                  const isSelected = m.value === viewMonth.getMonth();
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onMouseEnter={() => setHoverChoice(key)}
+                      onMouseLeave={() => setHoverChoice(null)}
+                      onClick={() => {
+                        setViewMonth((v) => new Date(v.getFullYear(), m.value, 1));
+                        setPickerOpen(null);
+                        setHoverChoice(null);
+                      }}
+                      style={pickerItemStyle(key, isSelected)}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() =>
+                setPickerOpen((v) => (v === "year" ? null : "year"))
+              }
+              style={{ ...pickerButtonStyle, minWidth: s(92) }}
               title={monthLabel}
             >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-            <span style={selectArrowStyle}>▾</span>
-          </span>
+              {viewMonth.getFullYear()}
+              <span
+                style={{
+                  position: "absolute",
+                  right: s(10),
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "rgba(0,0,0,0.55)",
+                  fontSize: s(10),
+                }}
+              >
+                ▾
+              </span>
+            </button>
+
+            {pickerOpen === "year" ? (
+              <div style={pickerPanelStyle}>
+                {yearOptions.map((year, index) => {
+                  const key = `year-${year}-${index}`;
+                  const isSelected = year === viewMonth.getFullYear();
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onMouseEnter={() => setHoverChoice(key)}
+                      onMouseLeave={() => setHoverChoice(null)}
+                      onClick={() => {
+                        setViewMonth((v) => new Date(year, v.getMonth(), 1));
+                        setPickerOpen(null);
+                        setHoverChoice(null);
+                      }}
+                      style={pickerItemStyle(key, isSelected)}
+                    >
+                      {year}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <button
           type="button"
-          onClick={() => setViewMonth((v) => startOfMonth(addMonths(v, +1)))}
+          onClick={() => {
+            setPickerOpen(null);
+            setViewMonth((v) => startOfMonth(addMonths(v, +1)));
+          }}
           style={{
             width: s(36),
             height: s(36),
