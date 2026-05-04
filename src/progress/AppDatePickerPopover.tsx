@@ -220,16 +220,12 @@ export default function AppDatePickerPopover(props: {
     label: t(`app.datePicker.monthFull.${key}`),
   }));
 
-  const yearOptions = useMemo(() => {
-    const center = viewMonth.getFullYear();
-    const years: number[] = [];
+  const centerYear = viewMonth.getFullYear();
+  const yearOptions: number[] = [];
 
-    for (let y = center - 20; y <= center + 20; y++) {
-      years.push(y);
-    }
-
-    return years;
-  }, [viewMonth]);
+  for (let y = centerYear - 20; y <= centerYear + 20; y++) {
+    yearOptions.push(y);
+  }
 
   const monthLabel = `${t(
     `app.datePicker.monthFull.${monthKeys[viewMonth.getMonth()]}`
