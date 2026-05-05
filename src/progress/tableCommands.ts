@@ -349,3 +349,50 @@ export function outdentSelectedRows(
 
   return next;
 }
+
+export function isRowMilestone(row: RowData | null | undefined): boolean {
+  return String((row as any)?.cells?.__progressMilestone ?? "") !== "";
+}
+
+export function hasMilestoneInSelection(
+  rows: RowData[],
+  sel: Selection | null
+): boolean {
+  const range = selectionRange(sel, rows.length);
+  if (!range) return false;
+
+  for (let i = range.rMin; i <= range.rMax; i++) {
+    if (isRowMilestone(rows[i])) return true;
+  }
+
+  return false;
+}
+
+export function toggleSelectedRowsMilestone(
+  rows: RowData[],
+  sel: Selection | null
+): RowData[] {
+  const range = selectionRange(sel, rows.length);
+  if (!range) return rows;
+
+  const shouldRemove = hasMilestoneInSelection(rows, sel);
+
+  return rows.map((row, idx) => {
+    if (idx < range.rMin || idx > range.rMax) return row;
+
+    const cells = { ...(row.cells as any) };
+
+    if (shouldRemove) {
+      delete cells.__progressMilestone;
+      delete cells.__progressMilestoneAnchor;
+    } else {
+      cells.__progressMilestone = "1";
+      cells.__progressMilestoneAnchor = "start";
+    }
+
+    return {
+      ...row,
+      cells,
+    };
+  });
+}
