@@ -16,6 +16,7 @@ import {
   pasteTextIntoSelection,
   indentSelectedRows,
   outdentSelectedRows,
+  toggleSelectedRowsMilestone,
 } from "../tableCommands";
 
 type ParseActionResult = string;
@@ -107,6 +108,12 @@ export function useProgressActions({
         case "toggleTodayLine":
           setGanttTodayLine((v) => !v);
           return;
+
+        case "toggleMilestone": {
+          const nextRows = toggleSelectedRowsMilestone(rows, selection);
+          onRowsChange(nextRows);
+          return;
+        }
 
         default:
           console.warn("[Progress] Unknown gantt action:", a, action);
