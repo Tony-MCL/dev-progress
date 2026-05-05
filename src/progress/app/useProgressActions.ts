@@ -109,14 +109,6 @@ export function useProgressActions({
           setGanttTodayLine((v) => !v);
           return;
 
-        case "toggleMilestone": {
-          const nextCols = ensureAtLeastTitleVisible(appColumns);
-          const nextRows = toggleSelectedRowsMilestone(rows, selection);
-          setAppColumns(nextCols);
-          onRowsChange(applyColumnsToRows(nextCols, nextRows));
-          return;
-        }
-
         default:
           console.warn("[Progress] Unknown gantt action:", a, action);
           return;
@@ -269,6 +261,14 @@ export function useProgressActions({
               onRowsChange(nextRows);
             })
             .catch(() => {});
+          return;
+        }
+
+        case "toggleMilestone": {
+          const nextCols = ensureAtLeastTitleVisible(appColumns);
+          const nextRows = toggleSelectedRowsMilestone(rows, selection);
+          setAppColumns(nextCols);
+          onRowsChange(applyColumnsToRows(nextCols, nextRows));
           return;
         }
 
