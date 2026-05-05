@@ -52,6 +52,7 @@ import {
   ensureAtLeastTitleVisible,
   applyColumnsToRows,
   addCustomColumn,
+  hasMilestoneInSelection,
 } from "./progress/tableCommands";
 
 import { computeDerivedRows, defaultCalendar } from "./progress/ProgressCore";
@@ -516,7 +517,8 @@ export default function App() {
           handleFileAction("print");
           return;
   
-        case "milestoneDummy":
+        case "toggleMilestone":
+          handleTableAction("toggleMilestone");
           return;
   
         case "close":
@@ -1245,6 +1247,10 @@ export default function App() {
         state={tableContextMenu}
         onClose={closeTableContextMenu}
         onAction={handleMenuAction}
+        isMilestoneSelection={hasMilestoneInSelection(
+          rows,
+          tableContextMenu?.selection ?? selection
+        )}
       />
 
       <footer className="app-footer">
