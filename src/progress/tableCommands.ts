@@ -351,7 +351,21 @@ export function outdentSelectedRows(
 }
 
 export function isRowMilestone(row: RowData | null | undefined): boolean {
-  return String((row as any)?.cells?.__progressMilestone ?? "") !== "";
+  const cells = (row as any)?.cells ?? {};
+
+  const explicitMilestone =
+    String(cells.__progressMilestone ?? "").trim() !== "";
+
+  if (explicitMilestone) return true;
+
+  // Legacy/eksisterende milepæl-logikk:
+  // Gantt har tidligere tolket "startdato finnes, sluttdato mangler"
+  // som milepæl.
+  const title = String(cells.title ?? "").trim();
+  const start = String(cells.start ?? "").trim();
+  const end = String(cells.end ?? "").trim();
+
+  return title !== "" && start !== "" && end === "";
 }
 
 export function hasMilestoneInSelection(
