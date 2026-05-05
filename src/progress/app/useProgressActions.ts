@@ -110,8 +110,10 @@ export function useProgressActions({
           return;
 
         case "toggleMilestone": {
+          const nextCols = ensureAtLeastTitleVisible(appColumns);
           const nextRows = toggleSelectedRowsMilestone(rows, selection);
-          onRowsChange(nextRows);
+          setAppColumns(nextCols);
+          onRowsChange(applyColumnsToRows(nextCols, nextRows));
           return;
         }
 
