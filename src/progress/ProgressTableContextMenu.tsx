@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import type { TableCoreContextMenuRequest } from "../core/TableTypes";
 
 type MenuAction =
-  | "milestoneDummy"
+  | "toggleMilestone"
   | "indentRows"
   | "outdentRows"
   | "cutSelection"
@@ -18,6 +18,7 @@ type Props = {
   state: TableCoreContextMenuRequest | null;
   onClose: () => void;
   onAction: (action: MenuAction) => void | Promise<void>;
+  isMilestoneSelection?: boolean;
 };
 
 function MenuButton(props: {
@@ -74,6 +75,7 @@ export default function ProgressTableContextMenu({
   state,
   onClose,
   onAction,
+  isMilestoneSelection = false,
 }: Props) {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -199,8 +201,8 @@ export default function ProgressTableContextMenu({
       <Divider />
 
       <MenuButton
-        label="Gjør til milepæl"
-        onClick={() => onAction("milestoneDummy")}
+        label={isMilestoneSelection ? "Fjern milepæl" : "Gjør til milepæl"}
+        onClick={() => onAction("toggleMilestone")}
       />
       <MenuButton
         label="Radinnrykk / gjør til underaktivitet"
