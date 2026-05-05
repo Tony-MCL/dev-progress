@@ -5,7 +5,7 @@ import type {
 } from "../../core/TableTypes";
 
 type MenuAction =
-  | "milestoneDummy"
+  | "toggleMilestone"
   | "indentRows"
   | "outdentRows"
   | "cutSelection"
