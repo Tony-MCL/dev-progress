@@ -133,6 +133,39 @@ function isSelectColumn(col: ColumnDef) {
   return (col as any).type === "select";
 }
 
+function getSelectOptions(col: ColumnDef): Array<{ value: string; label: string }> {
+  const structured = (col as any).selectOptions;
+  if (Array.isArray(structured)) {
+    return structured
+      .map((x: any) => ({
+        value: String(x?.value ?? ""),
+        label: String(x?.label ?? x?.value ?? ""),
+      }))
+      .filter((x) => x.value !== "");
+  }
+
+  const simple = (col as any).options;
+  if (Array.isArray(simple)) {
+    return simple
+      .map((x: any) => String(x ?? ""))
+      .filter(Boolean)
+      .map((x: string) => ({
+        value: x,
+        label: x,
+      }));
+  }
+
+  return [];
+}
+
+function getSelectLabel(col: ColumnDef, value: CellValue): string {
+  const raw = String(value ?? "");
+  if (!raw) return "";
+
+  const match = getSelectOptions(col).find((x) => x.value === raw);
+  return match?.label ?? raw;
+}
+
 function rowHasContent(row: RowData, cols: ColumnDef[]) {
   return cols.some((c) => c.key !== "#" && row.cells[c.key]);
 }
@@ -1111,7 +1144,9 @@ export default function TableCore(props: TableCoreProps) {
                     : null;
 
                 const effectiveVal = (previewRaw ?? storedVal) as any;
-                const shownVal = displayValue(rVisibleIdx, col, effectiveVal);
+                const shownVal = isSelectColumn(col)
+                  ? getSelectLabel(col, effectiveVal)
+                  : displayValue(rVisibleIdx, col, effectiveVal);
 
                 const canEditThisCell = !isAggregatedCell(rVisibleIdx, col);
                 const editingHere =
@@ -1124,7 +1159,7 @@ export default function TableCore(props: TableCoreProps) {
                   classes.push("editing");
 
                   if (isSelectColumn(col)) {
-                    const options: string[] = ((col as any).options ?? []) as string[];
+                    const options = getSelectOptions(col);
 
                     return (
                       <div
@@ -1177,9 +1212,9 @@ export default function TableCore(props: TableCoreProps) {
                           }}
                         >
                           <option value=""></option>
-                          {options.map((name) => (
-                            <option key={name} value={name}>
-                              {name}
+                          {options.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
                             </option>
                           ))}
                         </select>
