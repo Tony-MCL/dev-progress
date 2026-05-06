@@ -270,12 +270,21 @@ export function useProgressActions({
 
         case "toggleMilestone": {
           if (hasLegacyMilestoneWithoutEndInSelection(rows, selection)) {
-            onUserNotice?.("Sett sluttdato for å gjøre milepælen om til en vanlig aktivitet.");
+            onUserNotice?.(
+              "Sett sluttdato for å gjøre milepælen om til en vanlig aktivitet."
+            );
             return;
           }
         
+          const anchorRaw =
+            typeof action === "object" && action
+              ? String((action as any).anchor ?? "start")
+              : "start";
+        
+          const anchor = anchorRaw === "end" ? "end" : "start";
+        
           const nextCols = ensureAtLeastTitleVisible(appColumns);
-          const nextRows = toggleSelectedRowsMilestone(rows, selection);
+          const nextRows = toggleSelectedRowsMilestone(rows, selection, anchor);
           setAppColumns(nextCols);
           onRowsChange(applyColumnsToRows(nextCols, nextRows));
           return;
