@@ -248,9 +248,9 @@ export default function App() {
       { key: "owner", title: t("app.columns.owner"), width: 140 },
       {
         key: "status",
-        title: "Status",
+        title: t("app.columns.status"),
         type: "select",
-        width: 160,
+        width: 170,
       },
       { key: "note", title: t("app.columns.comment"), width: 220 },
     ],
