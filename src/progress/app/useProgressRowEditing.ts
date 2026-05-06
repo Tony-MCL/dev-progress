@@ -27,6 +27,46 @@ function cloneRows(rows: RowData[]): RowData[] {
   }));
 }
 
+function parsePercentInput(value: any): number | null {
+  const raw = String(value ?? "").trim().replace("%", "").replace(",", ".");
+  if (!raw) return null;
+
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function syncProgressPercentCells(
+  rows: RowData[],
+  rowIndex: number,
+  editedKey: "percentComplete" | "percentRemaining",
+  rawValue: any
+): RowData[] {
+  const next = cloneRows(rows);
+  const row = next[rowIndex] as any;
+  if (!row) return rows;
+
+  if (isEmptyCellValue(rawValue)) {
+    row.cells.percentComplete = "";
+    row.cells.percentRemaining = "";
+    return next;
+  }
+
+  const parsed = parsePercentInput(rawValue);
+  if (parsed === null) return rows;
+
+  if (editedKey === "percentComplete") {
+    row.cells.percentComplete = parsed;
+    row.cells.percentRemaining = 100 - parsed;
+  } else {
+    row.cells.percentRemaining = parsed;
+    row.cells.percentComplete = 100 - parsed;
+  }
+
+  return next;
+}
+
 export function useProgressRowEditing({
   rows,
   setRows,
@@ -75,6 +115,19 @@ export function useProgressRowEditing({
 
   const onCellCommit = (evt: any) => {
     if (!evt) return;
+
+    if (
+      evt.columnKey === "percentComplete" ||
+      evt.columnKey === "percentRemaining"
+    ) {
+      const rowIndex: number = evt.row;
+      const key = evt.columnKey as "percentComplete" | "percentRemaining";
+
+      const next = syncProgressPercentCells(rows, rowIndex, key, evt.next);
+      const computed = recomputeAllRows(next, progressCalendar, rowIndex);
+      setRows(computed);
+      return;
+    }
 
     if (
       (evt.columnKey === "start" || evt.columnKey === "end") &&
