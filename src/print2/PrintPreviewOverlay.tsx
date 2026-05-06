@@ -62,6 +62,38 @@ function isAppVisibleColumn(c: ColumnDef): boolean {
   return true;
 }
 
+function getSelectPrintLabel(col: ColumnDef, value: unknown): string {
+  const raw = String(value ?? "");
+  if (!raw) return "";
+
+  const options = (col as any).selectOptions;
+  if (!Array.isArray(options)) return raw;
+
+  const match = options.find((x: any) => String(x?.value ?? "") === raw);
+  return String(match?.label ?? raw);
+}
+
+function applySelectLabelsForPrint(columns: ColumnDef[], rows: RowData[]): RowData[] {
+  const selectColumns = columns.filter(
+    (c: any) => c?.type === "select" && Array.isArray(c?.selectOptions)
+  );
+
+  if (!selectColumns.length) return rows;
+
+  return rows.map((row) => {
+    const nextCells = { ...(row.cells as any) };
+
+    for (const col of selectColumns) {
+      nextCells[col.key] = getSelectPrintLabel(col, nextCells[col.key]);
+    }
+
+    return {
+      ...row,
+      cells: nextCells,
+    };
+  });
+}
+
 export default function PrintPreviewOverlay({
   columns,
   rows,
@@ -137,6 +169,10 @@ export default function PrintPreviewOverlay({
     return rows.filter((r) => allowed.has(r.id));
   }, [rows, visibleRowIds]);
 
+  const printRows = useMemo(() => {
+    return applySelectLabelsForPrint(filteredColumns, shownRows);
+  }, [filteredColumns, shownRows]);
+
   const ownerColors = useMemo(() => {
     const out: Record<string, string> = {};
     const owners = projectInfo?.owners ?? [];
@@ -152,7 +188,7 @@ export default function PrintPreviewOverlay({
     return buildPrintModel(
       {
         columns: filteredColumns,
-        rows: shownRows,
+        rows: printRows,
         dependencies,
         ownerColors,
         defaultBarColor,
@@ -167,7 +203,7 @@ export default function PrintPreviewOverlay({
     );
   }, [
     filteredColumns,
-    shownRows,
+    printRows,
     dependencies,
     ownerColors,
     defaultBarColor,
