@@ -129,17 +129,47 @@ export function useProgressViewModel({
 
   const visibleColumns = useMemo(() => getVisibleColumns(appColumns), [appColumns]);
 
-  // owner -> select + options
+  const statusOptions = useMemo(
+    () => [
+      "Ikke påbegynt",
+      "Pågår",
+      "Utsatt",
+      "Fullført",
+      "Utgår",
+    ],
+    []
+  );
+
+  // app-owned select columns
   const visibleColumnsPatched = useMemo(() => {
     return visibleColumns.map((c) => {
-      if (c.key !== "owner") return c;
-      return {
-        ...(c as any),
-        type: "select",
-        options: ownerOptions,
-      } as any;
+      if (c.key === "owner") {
+        return {
+          ...(c as any),
+          type: "select",
+          options: ownerOptions,
+          selectOptions: ownerOptions.map((name) => ({
+            value: name,
+            label: name,
+          })),
+        } as any;
+      }
+
+      if (c.key === "status") {
+        return {
+          ...(c as any),
+          type: "select",
+          options: statusOptions,
+          selectOptions: statusOptions.map((name) => ({
+            value: name,
+            label: name,
+          })),
+        } as any;
+      }
+
+      return c;
     });
-  }, [visibleColumns, ownerOptions]);
+  }, [visibleColumns, ownerOptions, statusOptions]);
 
   // Print: Gantt trenger start/end i columns-lista for å bygge barer,
   // selv om de er skjult i tabellen.
