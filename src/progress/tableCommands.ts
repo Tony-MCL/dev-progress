@@ -410,3 +410,27 @@ export function toggleSelectedRowsMilestone(
     };
   });
 }
+export function hasLegacyMilestoneWithoutEndInSelection(
+  rows: RowData[],
+  sel: Selection | null
+): boolean {
+  const range = selectionRange(sel, rows.length);
+  if (!range) return false;
+
+  for (let i = range.rMin; i <= range.rMax; i++) {
+    const cells = (rows[i] as any)?.cells ?? {};
+
+    const explicitMilestone =
+      String(cells.__progressMilestone ?? "").trim() !== "";
+
+    const title = String(cells.title ?? "").trim();
+    const start = String(cells.start ?? "").trim();
+    const end = String(cells.end ?? "").trim();
+
+    const legacyMilestone = !explicitMilestone && title !== "" && start !== "" && end === "";
+
+    if (legacyMilestone) return true;
+  }
+
+  return false;
+}
