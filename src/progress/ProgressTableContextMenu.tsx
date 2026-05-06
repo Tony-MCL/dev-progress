@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { useI18n } from "../i18n";
 import type { TableCoreContextMenuRequest } from "../core/TableTypes";
 
 type MenuAction =
@@ -78,6 +79,7 @@ export default function ProgressTableContextMenu({
   isMilestoneSelection = false,
 }: Props) {
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!state) return;
@@ -121,12 +123,14 @@ export default function ProgressTableContextMenu({
   if (!state) return null;
 
   const rowLabel =
-    typeof state.row === "number" ? `Rad ${state.row + 1}` : "Ingen rad";
+    typeof state.row === "number"
+      ? `${t("contextMenu.row")} ${state.row + 1}`
+      : t("contextMenu.noRow");
 
   const colLabel =
     typeof state.col === "number" && state.column
-      ? `Kolonne: ${state.column.title}`
-      : "Ingen kolonne";
+      ? `${t("contextMenu.column")}: ${state.column.title}`
+      : t("contextMenu.noColumn");
 
   const sel = state.selection;
   const hasSelection =
@@ -137,14 +141,18 @@ export default function ProgressTableContextMenu({
     sel.c2 >= 0;
 
   const selectionLabel = hasSelection
-    ? `Markering: R${Math.min(sel.r1, sel.r2) + 1}–${Math.max(sel.r1, sel.r2) + 1}, K${Math.min(sel.c1, sel.c2) + 1}–${Math.max(sel.c1, sel.c2) + 1}`
-    : "Ingen markering";
+    ? `${t("contextMenu.selection")}: R${Math.min(sel.r1, sel.r2) + 1}–${
+        Math.max(sel.r1, sel.r2) + 1
+      }, ${t("contextMenu.columnShort")}${Math.min(sel.c1, sel.c2) + 1}–${
+        Math.max(sel.c1, sel.c2) + 1
+      }`
+    : t("contextMenu.noSelection");
 
   return (
     <div
       ref={menuRef}
       role="menu"
-      aria-label="Tabellmeny"
+      aria-label={t("contextMenu.ariaLabel")}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -182,7 +190,7 @@ export default function ProgressTableContextMenu({
           opacity: 0.8,
         }}
       >
-        Tabellmeny
+        {t("contextMenu.title")}
       </div>
 
       <div
@@ -201,43 +209,46 @@ export default function ProgressTableContextMenu({
       <Divider />
 
       <MenuButton
-        label={isMilestoneSelection ? "Fjern milepæl" : "Gjør til milepæl"}
+        label={
+          isMilestoneSelection
+            ? t("contextMenu.removeMilestone")
+            : t("contextMenu.makeMilestone")
+        }
         onClick={() => onAction("toggleMilestone")}
       />
       <MenuButton
-        label="Radinnrykk / gjør til underaktivitet"
+        label={t("contextMenu.indentRows")}
         onClick={() => onAction("indentRows")}
       />
       <MenuButton
-        label="Radutrykk / gjør til hovedaktivitet"
+        label={t("contextMenu.outdentRows")}
         onClick={() => onAction("outdentRows")}
       />
 
       <Divider />
 
-      <MenuButton label="Klipp ut" onClick={() => onAction("cutSelection")} />
-      <MenuButton label="Kopier" onClick={() => onAction("copySelection")} />
-      <MenuButton label="Lim inn" onClick={() => onAction("pasteClipboard")} />
+      <MenuButton label={t("contextMenu.cut")} onClick={() => onAction("cutSelection")} />
+      <MenuButton label={t("contextMenu.copy")} onClick={() => onAction("copySelection")} />
+      <MenuButton label={t("contextMenu.paste")} onClick={() => onAction("pasteClipboard")} />
 
       <Divider />
 
       <MenuButton
-        label="Sett inn rad over"
+        label={t("contextMenu.insertRowAbove")}
         onClick={() => onAction("insertRowAbove")}
       />
       <MenuButton
-        label="Sett inn rad under"
+        label={t("contextMenu.insertRowBelow")}
         onClick={() => onAction("insertRowBelow")}
       />
-      <MenuButton label="Slett rad(er)" onClick={() => onAction("deleteRows")} />
+      <MenuButton label={t("contextMenu.deleteRows")} onClick={() => onAction("deleteRows")} />
 
       <Divider />
 
-      <MenuButton label="Skriv ut" onClick={() => onAction("print")} />
+      <MenuButton label={t("contextMenu.print")} onClick={() => onAction("print")} />
 
       <Divider />
 
-      <MenuButton label="Lukk" onClick={() => onAction("close")} />
-    </div>
+      <MenuButton label={t("contextMenu.close")} onClick={() => onAction("close")} />
   );
 }
