@@ -85,7 +85,13 @@ import "./styles/watermark.css";
 const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 const PROGRESS_TAB_REGISTRY_KEY = "progress_open_tabs_v1";
 const PROGRESS_TAB_ID_KEY = "progress_tab_id_v1";
-
+const PROGRESS_STATUS_OPTIONS = [
+  "Ikke påbegynt",
+  "Pågår",
+  "Utsatt",
+  "Fullført",
+  "Utgår",
+];
 function readOpenTabRegistry(): Record<string, number> {
   try {
     const raw = localStorage.getItem(PROGRESS_TAB_REGISTRY_KEY);
@@ -240,6 +246,12 @@ export default function App() {
       { key: "dep", title: t("app.columns.dependency"), width: 140 },
       { key: "wbs", title: t("app.columns.wbs"), width: 110 },
       { key: "owner", title: t("app.columns.owner"), width: 140 },
+      {
+        key: "status",
+        title: "Status",
+        type: "select",
+        width: 160,
+      },
       { key: "note", title: t("app.columns.comment"), width: 220 },
     ],
     [t]
@@ -265,6 +277,7 @@ export default function App() {
           dep: "",
           wbs: "",
           owner: "",
+          status: "",
           note: "",
         },
       });
@@ -357,15 +370,37 @@ export default function App() {
     columns.map((c) => ({ ...c, visible: true, custom: false }))
   );
 
-  // i18n patch for base columns
+  // i18n/base patch for base columns
+  // Holder eksisterende prosjekter kompatible når vi legger til nye standardkolonner.
   useEffect(() => {
     setAppColumns((prev) => {
       const byKey = new Map(columns.map((c) => [c.key, c]));
-      return prev.map((c: any) => {
+      const seen = new Set<string>();
+
+      const patchedExisting = prev.map((c: any) => {
+        seen.add(c.key);
+
         const base = byKey.get(c.key);
         if (!base) return c;
-        return { ...c, title: base.title };
+
+        return {
+          ...c,
+          title: base.title,
+          type: base.type,
+          dateRole: base.dateRole,
+          isTitle: base.isTitle,
+        };
       });
+
+      const missingBaseColumns = columns
+        .filter((c) => !seen.has(c.key))
+        .map((c) => ({
+          ...c,
+          visible: true,
+          custom: false,
+        }));
+
+      return [...patchedExisting, ...missingBaseColumns];
     });
   }, [columns]);
 
