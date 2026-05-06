@@ -384,7 +384,8 @@ export function hasMilestoneInSelection(
 
 export function toggleSelectedRowsMilestone(
   rows: RowData[],
-  sel: Selection | null
+  sel: Selection | null,
+  anchor: "start" | "end" = "start"
 ): RowData[] {
   const range = selectionRange(sel, rows.length);
   if (!range) return rows;
@@ -401,7 +402,7 @@ export function toggleSelectedRowsMilestone(
       delete cells.__progressMilestoneAnchor;
     } else {
       cells.__progressMilestone = "1";
-      cells.__progressMilestoneAnchor = "start";
+      cells.__progressMilestoneAnchor = anchor;
     }
 
     return {
@@ -430,6 +431,64 @@ export function hasLegacyMilestoneWithoutEndInSelection(
     const legacyMilestone = !explicitMilestone && title !== "" && start !== "" && end === "";
 
     if (legacyMilestone) return true;
+  }
+
+  return false;
+}
+
+function parseProgressDateLoose(value: any): Date | null {
+  const s = String(value ?? "").trim();
+  if (!s) return null;
+
+  const dmy = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (dmy) {
+    const dd = Number(dmy[1]);
+    const mm = Number(dmy[2]);
+    const yyyy = Number(dmy[3]);
+    const d = new Date(yyyy, mm - 1, dd);
+    return Number.isNaN(+d) ? null : d;
+  }
+
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const yyyy = Number(iso[1]);
+    const mm = Number(iso[2]);
+    const dd = Number(iso[3]);
+    const d = new Date(yyyy, mm - 1, dd);
+    return Number.isNaN(+d) ? null : d;
+  }
+
+  return null;
+}
+
+function diffProgressDays(a: Date, b: Date): number {
+  const aa = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  const bb = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((+bb - +aa) / 86400000);
+}
+
+export function selectionNeedsMilestoneAnchorChoice(
+  rows: RowData[],
+  sel: Selection | null
+): boolean {
+  const range = selectionRange(sel, rows.length);
+  if (!range) return false;
+
+  for (let i = range.rMin; i <= range.rMax; i++) {
+    const row = rows[i];
+    const cells = (row as any)?.cells ?? {};
+
+    if (isRowMilestone(row)) continue;
+
+    const title = String(cells.title ?? "").trim();
+    const start = parseProgressDateLoose(cells.start);
+    const end = parseProgressDateLoose(cells.end);
+
+    if (!title || !start || !end) continue;
+
+    const durationDays = diffProgressDays(start, end) + 1;
+
+    if (durationDays > 1) return true;
   }
 
   return false;
