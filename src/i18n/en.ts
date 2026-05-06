@@ -516,6 +516,8 @@ A: These are the most helpful day-to-day shortcuts.
       wbs: "WBS",
       owner: "Owner",
       status: "Status",
+      percentComplete: "% complete",
+      percentRemaining: "% remaining",
       comment: "Comment",
     },
 
