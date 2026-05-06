@@ -129,18 +129,7 @@ export function useProgressViewModel({
 
   const visibleColumns = useMemo(() => getVisibleColumns(appColumns), [appColumns]);
 
-  const statusOptions = useMemo(
-    () => [
-      "Ikke påbegynt",
-      "Pågår",
-      "Utsatt",
-      "Fullført",
-      "Utgår",
-    ],
-    []
-  );
-
-  const statusOptions = useMemo(
+  const statusOptions = useMemo<Array<{ value: string; label: string }>>(
     () => [
       {
         value: "notStarted",
