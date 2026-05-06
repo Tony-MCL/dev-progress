@@ -304,6 +304,30 @@ A: These are the most helpful day-to-day shortcuts.
     },
   },
 
+  contextMenu: {
+    title: "Table menu",
+    ariaLabel: "Table menu",
+    row: "Row",
+    noRow: "No row",
+    column: "Column",
+    noColumn: "No column",
+    selection: "Selection",
+    noSelection: "No selection",
+    columnShort: "C",
+    makeMilestone: "Make milestone",
+    removeMilestone: "Remove milestone",
+    indentRows: "Indent row / make subtask",
+    outdentRows: "Outdent row / make main activity",
+    cut: "Cut",
+    copy: "Copy",
+    paste: "Paste",
+    insertRowAbove: "Insert row above",
+    insertRowBelow: "Insert row below",
+    deleteRows: "Delete row(s)",
+    print: "Print",
+    close: "Close",
+  },
+
   calendarModal: {
     title: "Calendar – holidays and vacation",
     intro:
