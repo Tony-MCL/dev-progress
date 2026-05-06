@@ -53,6 +53,7 @@ import {
   applyColumnsToRows,
   addCustomColumn,
   hasMilestoneInSelection,
+  isRowMilestone,
   selectionNeedsMilestoneAnchorChoice,
 } from "./progress/tableCommands";
 
@@ -698,6 +699,26 @@ export default function App() {
     startNewBlankProject,
     onUserNotice: setProgressNotice,
   });
+
+  const displayRows = useMemo(() => {
+    return rows.map((row) => {
+      if (!isRowMilestone(row)) return row;
+  
+      const nextCells = { ...(row as any).cells };
+  
+      const rawTitle = String(nextCells.title ?? "");
+  
+      // Unngå dobbel markering
+      if (!rawTitle.startsWith("◆ ")) {
+        nextCells.title = `◆ ${rawTitle}`;
+      }
+  
+      return {
+        ...row,
+        cells: nextCells,
+      };
+    });
+  }, [rows]);
   // ============================
   // BLOCK: ACTIONS (END)
   // ============================
@@ -978,7 +999,7 @@ export default function App() {
                       <div className="split-measure" ref={tableMeasureRef}>
                         <TableCore
                           columns={visibleColumnsPatched}
-                          rows={rows}
+                          rows={displayRows}
                           onChange={onRowsChange}
                           onCellCommit={onCellCommit}
                           onRequestDatePicker={onRequestDatePicker}
