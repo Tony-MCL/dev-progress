@@ -252,6 +252,18 @@ export default function App() {
         type: "select",
         width: 170,
       },
+      {
+        key: "percentComplete",
+        title: t("app.columns.percentComplete"),
+        type: "number",
+        width: 120,
+      },
+      {
+        key: "percentRemaining",
+        title: t("app.columns.percentRemaining"),
+        type: "number",
+        width: 120,
+      },
       { key: "note", title: t("app.columns.comment"), width: 220 },
     ],
     [t]
@@ -278,6 +290,8 @@ export default function App() {
           wbs: "",
           owner: "",
           status: "",
+          percentComplete: "",
+          percentRemaining: "",
           note: "",
         },
       });
