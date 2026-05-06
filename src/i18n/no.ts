@@ -519,7 +519,16 @@ A: Dette er de mest nyttige i daglig bruk.
       dependency: "Avhengighet",
       wbs: "WBS",
       owner: "Ansvar",
+      status: "Status",
       comment: "Kommentar",
+    },
+
+    progressStatus: {
+      notStarted: "Ikke startet",
+      inProgress: "Pågår",
+      delayed: "Utsatt",
+      completed: "Fullført",
+      cancelled: "Utgår",
     },
 
     demo: {
