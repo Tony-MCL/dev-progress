@@ -502,6 +502,7 @@ A: Dette er de mest nyttige i daglig bruk.
   },
 
   gantt: {
+    milestone: "milepæl",
     weekPrefix: "uke",
     monthShort: {
       jan: "Jan",
