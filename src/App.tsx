@@ -287,6 +287,16 @@ export default function App() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [print2Open, setPrint2Open] = useState(false);
+  const [progressNotice, setProgressNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!progressNotice) return;
+  
+    const id = window.setTimeout(() => {
+      setProgressNotice(null);
+    }, 3200);
+  
+    return () => window.clearTimeout(id);
+  }, [progressNotice]);
   const [openTabCount, setOpenTabCount] = useState(1);
 
   // CALENDAR
@@ -670,6 +680,7 @@ export default function App() {
 
     openFreeProject,
     startNewBlankProject,
+    onUserNotice: setProgressNotice,
   });
   // ============================
   // BLOCK: ACTIONS (END)
@@ -1241,6 +1252,29 @@ export default function App() {
           defaultBarColor={ganttDefaultBarColor}
           onClose={() => setPrint2Open(false)}
         />
+      ) : null}
+
+      {progressNotice ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            right: 18,
+            bottom: 18,
+            zIndex: 100001,
+            maxWidth: 360,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: "rgba(20, 20, 20, 0.92)",
+            color: "white",
+            boxShadow: "0 12px 28px rgba(0,0,0,0.25)",
+            fontSize: 14,
+            lineHeight: 1.35,
+          }}
+        >
+          {progressNotice}
+        </div>
       ) : null}
 
       <ProgressTableContextMenu
