@@ -53,6 +53,7 @@ import {
   applyColumnsToRows,
   addCustomColumn,
   hasMilestoneInSelection,
+  selectionNeedsMilestoneAnchorChoice,
 } from "./progress/tableCommands";
 
 import { computeDerivedRows, defaultCalendar } from "./progress/ProgressCore";
@@ -297,6 +298,10 @@ export default function App() {
   
     return () => window.clearTimeout(id);
   }, [progressNotice]);
+  const [milestoneAnchorPick, setMilestoneAnchorPick] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [openTabCount, setOpenTabCount] = useState(1);
 
   // CALENDAR
@@ -527,9 +532,20 @@ export default function App() {
           handleFileAction("print");
           return;
   
-        case "toggleMilestone":
+        case "toggleMilestone": {
+          const activeSelection = tableContextMenu?.selection ?? selection;
+        
+          if (selectionNeedsMilestoneAnchorChoice(rows, activeSelection)) {
+            setMilestoneAnchorPick({
+              x: tableContextMenu?.clientX ?? 24,
+              y: tableContextMenu?.clientY ?? 24,
+            });
+            return;
+          }
+        
           handleTableAction("toggleMilestone");
           return;
+        }
   
         case "close":
           return;
@@ -1274,6 +1290,92 @@ export default function App() {
           }}
         >
           {progressNotice}
+        </div>
+      ) : null}
+
+      {milestoneAnchorPick ? (
+        <div
+          role="dialog"
+          aria-modal="false"
+          style={{
+            position: "fixed",
+            left: Math.min(milestoneAnchorPick.x, window.innerWidth - 280),
+            top: Math.min(milestoneAnchorPick.y, window.innerHeight - 150),
+            zIndex: 100002,
+            width: 260,
+            padding: 12,
+            borderRadius: 12,
+            background: "var(--mcl-surface, #fff)",
+            color: "var(--mcl-text, #111)",
+            border: "1px solid rgba(0,0,0,0.16)",
+            boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
+          }}
+        >
+          <div style={{ fontWeight: 800, marginBottom: 8 }}>
+            Velg milepælsdato
+          </div>
+      
+          <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 12 }}>
+            Skal milepælen ligge på startdato eller sluttdato?
+          </div>
+      
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => {
+                handleTableAction({ id: "toggleMilestone", anchor: "start" });
+                setMilestoneAnchorPick(null);
+              }}
+              style={{
+                flex: 1,
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "none",
+                background: "#1e66ff",
+                color: "white",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Startdato
+            </button>
+      
+            <button
+              type="button"
+              onClick={() => {
+                handleTableAction({ id: "toggleMilestone", anchor: "end" });
+                setMilestoneAnchorPick(null);
+              }}
+              style={{
+                flex: 1,
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "none",
+                background: "#1e66ff",
+                color: "white",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Sluttdato
+            </button>
+          </div>
+      
+          <button
+            type="button"
+            onClick={() => setMilestoneAnchorPick(null)}
+            style={{
+              marginTop: 8,
+              width: "100%",
+              padding: "8px 10px",
+              borderRadius: 8,
+              border: "1px solid rgba(0,0,0,0.16)",
+              background: "transparent",
+              cursor: "pointer",
+            }}
+          >
+            Avbryt
+          </button>
         </div>
       ) : null}
 
