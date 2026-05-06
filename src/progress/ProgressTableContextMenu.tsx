@@ -122,32 +122,6 @@ export default function ProgressTableContextMenu({
 
   if (!state) return null;
 
-  const rowLabel =
-    typeof state.row === "number"
-      ? `${t("contextMenu.row")} ${state.row + 1}`
-      : t("contextMenu.noRow");
-
-  const colLabel =
-    typeof state.col === "number" && state.column
-      ? `${t("contextMenu.column")}: ${state.column.title}`
-      : t("contextMenu.noColumn");
-
-  const sel = state.selection;
-  const hasSelection =
-    sel &&
-    sel.r1 >= 0 &&
-    sel.r2 >= 0 &&
-    sel.c1 >= 0 &&
-    sel.c2 >= 0;
-
-  const selectionLabel = hasSelection
-    ? `${t("contextMenu.selection")}: R${Math.min(sel.r1, sel.r2) + 1}–${
-        Math.max(sel.r1, sel.r2) + 1
-      }, ${t("contextMenu.columnShort")}${Math.min(sel.c1, sel.c2) + 1}–${
-        Math.max(sel.c1, sel.c2) + 1
-      }`
-    : t("contextMenu.noSelection");
-
   return (
     <div
       ref={menuRef}
@@ -176,38 +150,13 @@ export default function ProgressTableContextMenu({
         border: "1px solid rgba(0,0,0,0.16)",
         borderRadius: 12,
         boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
-        padding: 8,
+        padding: 6,
         display: "flex",
         flexDirection: "column",
-        gap: 2,
+        gap: 1,
       }}
     >
-      <div
-        style={{
-          padding: "8px 12px 6px",
-          fontSize: 12,
-          fontWeight: 800,
-          opacity: 0.8,
-        }}
-      >
-        {t("contextMenu.title")}
-      </div>
-
-      <div
-        style={{
-          padding: "0 12px 8px",
-          fontSize: 11,
-          lineHeight: 1.4,
-          opacity: 0.7,
-        }}
-      >
-        <div>{rowLabel}</div>
-        <div>{colLabel}</div>
-        <div>{selectionLabel}</div>
-      </div>
-
-      <Divider />
-
+     
       <MenuButton
         label={
           isMilestoneSelection
