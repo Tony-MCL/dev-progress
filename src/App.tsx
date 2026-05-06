@@ -85,13 +85,19 @@ import "./styles/watermark.css";
 const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 const PROGRESS_TAB_REGISTRY_KEY = "progress_open_tabs_v1";
 const PROGRESS_TAB_ID_KEY = "progress_tab_id_v1";
-const PROGRESS_STATUS_OPTIONS = [
-  "Ikke påbegynt",
-  "Pågår",
-  "Utsatt",
-  "Fullført",
-  "Utgår",
-];
+
+const DEFAULT_HIDDEN_COLUMN_KEYS = new Set([
+  "wbs",
+  "owner",
+  "status",
+  "percentComplete",
+  "percentRemaining",
+]);
+
+function isDefaultColumnVisible(key: string): boolean {
+  return !DEFAULT_HIDDEN_COLUMN_KEYS.has(key);
+}
+  
 function readOpenTabRegistry(): Record<string, number> {
   try {
     const raw = localStorage.getItem(PROGRESS_TAB_REGISTRY_KEY);
@@ -381,7 +387,11 @@ export default function App() {
   );
 
   const [appColumns, setAppColumns] = useState<AppColumnDef[]>(
-    columns.map((c) => ({ ...c, visible: true, custom: false }))
+    columns.map((c) => ({
+      ...c,
+      visible: isDefaultColumnVisible(c.key),
+      custom: false,
+    }))
   );
 
   // i18n/base patch for base columns
@@ -410,7 +420,7 @@ export default function App() {
         .filter((c) => !seen.has(c.key))
         .map((c) => ({
           ...c,
-          visible: true,
+          visible: isDefaultColumnVisible(c.key),
           custom: false,
         }));
 
