@@ -17,6 +17,7 @@ import {
   indentSelectedRows,
   outdentSelectedRows,
   toggleSelectedRowsMilestone,
+  hasLegacyMilestoneWithoutEndInSelection,
 } from "../tableCommands";
 
 type ParseActionResult = string;
@@ -59,6 +60,8 @@ type Args = {
   // openProject (free/pro split)
   openFreeProject: () => boolean; // returns true if it loaded a project
   startNewBlankProject: () => void; // used when free has no project to open
+
+  onUserNotice?: (message: string) => void;
 };
 
 export function useProgressActions({
@@ -83,6 +86,7 @@ export function useProgressActions({
 
   openFreeProject,
   startNewBlankProject,
+  onUserNotice,
 }: Args) {
   const handleGanttAction = useCallback(
     (action: any) => {
@@ -265,6 +269,11 @@ export function useProgressActions({
         }
 
         case "toggleMilestone": {
+          if (hasLegacyMilestoneWithoutEndInSelection(rows, selection)) {
+            onUserNotice?.("Sett sluttdato for å gjøre milepælen om til en vanlig aktivitet.");
+            return;
+          }
+        
           const nextCols = ensureAtLeastTitleVisible(appColumns);
           const nextRows = toggleSelectedRowsMilestone(rows, selection);
           setAppColumns(nextCols);
