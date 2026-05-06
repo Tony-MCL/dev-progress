@@ -1392,11 +1392,11 @@ export default function App() {
           }}
         >
           <div style={{ fontWeight: 800, marginBottom: 8 }}>
-            Velg milepælsdato
+            {t("app.milestoneAnchor.title")}
           </div>
       
           <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 12 }}>
-            Skal milepælen ligge på startdato eller sluttdato?
+            {t("app.milestoneAnchor.title")}
           </div>
       
           <div style={{ display: "flex", gap: 8 }}>
@@ -1417,7 +1417,7 @@ export default function App() {
                 cursor: "pointer",
               }}
             >
-              Startdato
+              {t("app.milestoneAnchor.start")}
             </button>
       
             <button
@@ -1437,7 +1437,7 @@ export default function App() {
                 cursor: "pointer",
               }}
             >
-              Sluttdato
+              {t("app.milestoneAnchor.end")}
             </button>
           </div>
       
@@ -1454,7 +1454,7 @@ export default function App() {
               cursor: "pointer",
             }}
           >
-            Avbryt
+            {t("app.milestoneAnchor.cancel")}
           </button>
         </div>
       ) : null}
