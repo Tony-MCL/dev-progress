@@ -1014,7 +1014,7 @@ const pts = goesPositiveToTarget
                       <div
                         className="gv-ms"
                         style={msStyle}
-                        title={`${title}: milepæl`}
+                        title={`${title}: ${t("gantt.milestone")}`}
                       />
                     </div>
                   );
@@ -1056,7 +1056,7 @@ const pts = goesPositiveToTarget
                     <div
                       className="gv-ms"
                       style={msStyle}
-                      title={`${title}: milepæl`}
+                      title={`${title}: ${t("gantt.milestone")}`}
                     />
                   </div>
                 );
@@ -1089,7 +1089,7 @@ const pts = goesPositiveToTarget
                     <div
                       className="gv-ms"
                       style={msStyle}
-                      title={`${title}: milepæl`}
+                      title={`${title}: ${t("gantt.milestone")}`}
                     />
                   ) : null}
                 </div>
