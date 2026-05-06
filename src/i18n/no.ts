@@ -520,6 +520,8 @@ A: Dette er de mest nyttige i daglig bruk.
       wbs: "WBS",
       owner: "Ansvar",
       status: "Status",
+      percentComplete: "% fullført",
+      percentRemaining: "% gjenstår",
       comment: "Kommentar",
     },
 
