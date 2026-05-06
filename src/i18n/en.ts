@@ -515,7 +515,16 @@ A: These are the most helpful day-to-day shortcuts.
       dependency: "Dependency",
       wbs: "WBS",
       owner: "Owner",
+      status: "Status",
       comment: "Comment",
+    },
+
+    progressStatus: {
+      notStarted: "Not started",
+      inProgress: "In progress",
+      delayed: "Delayed",
+      completed: "Completed",
+      cancelled: "Cancelled",
     },
 
     demo: {
