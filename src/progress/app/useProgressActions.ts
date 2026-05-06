@@ -17,7 +17,6 @@ import {
   indentSelectedRows,
   outdentSelectedRows,
   toggleSelectedRowsMilestone,
-  hasLegacyMilestoneWithoutEndInSelection,
 } from "../tableCommands";
 
 type ParseActionResult = string;
@@ -269,12 +268,6 @@ export function useProgressActions({
         }
 
         case "toggleMilestone": {
-          if (hasLegacyMilestoneWithoutEndInSelection(rows, selection)) {
-            onUserNotice?.(
-              "Sett sluttdato for å gjøre milepælen om til en vanlig aktivitet."
-            );
-            return;
-          }
         
           const anchorRaw =
             typeof action === "object" && action
