@@ -308,6 +308,30 @@ A: Dette er de mest nyttige i daglig bruk.
     },
   },
 
+  contextMenu: {
+    title: "Tabellmeny",
+    ariaLabel: "Tabellmeny",
+    row: "Rad",
+    noRow: "Ingen rad",
+    column: "Kolonne",
+    noColumn: "Ingen kolonne",
+    selection: "Markering",
+    noSelection: "Ingen markering",
+    columnShort: "K",
+    makeMilestone: "Gjør til milepæl",
+    removeMilestone: "Fjern milepæl",
+    indentRows: "Radinnrykk / gjør til underaktivitet",
+    outdentRows: "Radutrykk / gjør til hovedaktivitet",
+    cut: "Klipp ut",
+    copy: "Kopier",
+    paste: "Lim inn",
+    insertRowAbove: "Sett inn rad over",
+    insertRowBelow: "Sett inn rad under",
+    deleteRows: "Slett rad(er)",
+    print: "Skriv ut",
+    close: "Lukk",
+  },
+
   calendarModal: {
     title: "Kalender – fridager og ferie",
     intro:
