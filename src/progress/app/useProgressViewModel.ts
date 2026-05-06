@@ -140,6 +140,32 @@ export function useProgressViewModel({
     []
   );
 
+  const statusOptions = useMemo(
+    () => [
+      {
+        value: "notStarted",
+        label: `⬜ ${t("app.progressStatus.notStarted")}`,
+      },
+      {
+        value: "inProgress",
+        label: `🟨 ${t("app.progressStatus.inProgress")}`,
+      },
+      {
+        value: "delayed",
+        label: `🟧 ${t("app.progressStatus.delayed")}`,
+      },
+      {
+        value: "completed",
+        label: `🟩 ${t("app.progressStatus.completed")}`,
+      },
+      {
+        value: "cancelled",
+        label: `🟥 ${t("app.progressStatus.cancelled")}`,
+      },
+    ],
+    [t]
+  );
+
   // app-owned select columns
   const visibleColumnsPatched = useMemo(() => {
     return visibleColumns.map((c) => {
@@ -159,11 +185,8 @@ export function useProgressViewModel({
         return {
           ...(c as any),
           type: "select",
-          options: statusOptions,
-          selectOptions: statusOptions.map((name) => ({
-            value: name,
-            label: name,
-          })),
+          options: statusOptions.map((x) => x.value),
+          selectOptions: statusOptions,
         } as any;
       }
 
