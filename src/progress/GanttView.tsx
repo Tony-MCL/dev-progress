@@ -636,6 +636,8 @@ export default function GanttView({
       const y = idx * rowH + barTop + barH / 2;
 
       if (!ed) {
+        if (!isExplicitMilestoneRow(it.row)) return;
+
         const x = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
         const half = 6;
         rectByRowId.set(it.row.id, { left: x - half, right: x + half, y });
@@ -988,45 +990,53 @@ const pts = goesPositiveToTarget
 
               const textColor = readableTextColor(barColor);
 
-              if (!ed) {
-                const left = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
-              
-                const msStyle: React.CSSProperties = {
-                  left,
-                  backgroundColor: barColor,
-                  color: textColor,
-                  zIndex: 5,
-                };
-              
-                return (
-                  <div key={it.row.id} className="gv-row">
-                    <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
-                    <div
-                      className="gv-ms"
-                      style={msStyle}
-                      title={`${title}: ${String((it.row as any).cells?.[startKey] ?? "")}`}
-                    />
-                  </div>
-                );
-              }
-
-              const durationDays = diffDays(sd, ed) + 1;
-
-              const milestoneDate = milestoneAnchor === "end" && ed ? ed : sd;
-              
-              const milestoneLeft =
-                diffDays(parsed.min, milestoneDate) * pxPerDay + pxPerDay / 2;
-              
-              let barStartDate = sd;
-              let barEndDate = ed;
-              
-              if (explicitMilestone && durationDays > 1) {
-                if (milestoneAnchor === "start") {
-                  barStartDate = addDays(sd, 1);
-                } else {
-                  barEndDate = addDays(ed, -1);
+                if (!ed) {
+                  if (!explicitMilestone) {
+                    return (
+                      <div key={it.row.id} className="gv-row">
+                        <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
+                      </div>
+                    );
+                  }
+  
+                  const left = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
+                
+                  const msStyle: React.CSSProperties = {
+                    left,
+                    backgroundColor: barColor,
+                    color: textColor,
+                    zIndex: 5,
+                  };
+                
+                  return (
+                    <div key={it.row.id} className="gv-row">
+                      <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
+                      <div
+                        className="gv-ms"
+                        style={msStyle}
+                        title={`${title}: milepæl`}
+                      />
+                    </div>
+                  );
                 }
-              }
+  
+                const durationDays = diffDays(sd, ed) + 1;
+  
+                const milestoneDate = milestoneAnchor === "end" && ed ? ed : sd;
+                
+                const milestoneLeft =
+                  diffDays(parsed.min, milestoneDate) * pxPerDay + pxPerDay / 2;
+                
+                let barStartDate = sd;
+                let barEndDate = ed;
+                
+                if (explicitMilestone && durationDays > 1) {
+                  if (milestoneAnchor === "start") {
+                    barStartDate = addDays(sd, 1);
+                  } else {
+                    barEndDate = addDays(ed, -1);
+                  }
+                }
               
               const left = diffDays(parsed.min, barStartDate) * pxPerDay;
               let width = (diffDays(barStartDate, barEndDate) + 1) * pxPerDay;
