@@ -487,6 +487,14 @@ A: Dette er de mest nyttige i daglig bruk.
       colorDefault: "Default farge",
     },
 
+    milestoneAnchor: {
+      title: "Velg milepælsdato",
+      text: "Skal milepælen ligge på startdato eller sluttdato?",
+      start: "Startdato",
+      end: "Sluttdato",
+      cancel: "Avbryt",
+    },
+
     footer: {
       next:
         "Neste steg: koble “Ansvarlig” i tabellen til denne listen + speile fargen i Gantt.",
