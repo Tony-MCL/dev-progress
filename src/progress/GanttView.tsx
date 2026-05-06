@@ -406,6 +406,15 @@ function getContrastTextColor(hex: string | undefined | null): string {
   return luminance > 0.6 ? "rgba(0,0,0,0.82)" : "rgba(255,255,255,0.92)";
 }
 
+function isExplicitMilestoneRow(row: RowData): boolean {
+  return String((row as any)?.cells?.__progressMilestone ?? "").trim() !== "";
+}
+
+function getMilestoneAnchor(row: RowData): "start" | "end" {
+  const raw = String((row as any)?.cells?.__progressMilestoneAnchor ?? "start");
+  return raw === "end" ? "end" : "start";
+}
+
 export default function GanttView({
   columns,
   rows,
@@ -959,6 +968,8 @@ const pts = goesPositiveToTarget
               const title = String((it.row as any).cells?.[titleKey] ?? "");
               const sd = it.sd ? startOfDay(it.sd) : null;
               const ed = it.ed ? startOfDay(it.ed) : null;
+              const explicitMilestone = isExplicitMilestoneRow(it.row);
+              const milestoneAnchor = getMilestoneAnchor(it.row);
 
               if (!sd || !title) {
                 return (
@@ -979,13 +990,14 @@ const pts = goesPositiveToTarget
 
               if (!ed) {
                 const left = diffDays(parsed.min, sd) * pxPerDay + pxPerDay / 2;
-
+              
                 const msStyle: React.CSSProperties = {
                   left,
                   backgroundColor: barColor,
                   color: textColor,
+                  zIndex: 5,
                 };
-
+              
                 return (
                   <div key={it.row.id} className="gv-row">
                     <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
@@ -1001,6 +1013,34 @@ const pts = goesPositiveToTarget
               const left = diffDays(parsed.min, sd) * pxPerDay;
               let width = (diffDays(sd, ed) + 1) * pxPerDay;
               width = Math.max(pxPerDay, width);
+
+              const durationDays = diffDays(sd, ed) + 1;
+
+              const milestoneDate =
+                milestoneAnchor === "end" && ed ? ed : sd;
+              
+              const milestoneLeft =
+                diffDays(parsed.min, milestoneDate) * pxPerDay + pxPerDay / 2;
+              
+              const msStyle: React.CSSProperties = {
+                left: milestoneLeft,
+                backgroundColor: barColor,
+                color: textColor,
+                zIndex: 5,
+              };
+              
+              if (explicitMilestone && durationDays <= 1) {
+                return (
+                  <div key={it.row.id} className="gv-row">
+                    <div className={`gv-row-grid ${layout.gridMode === "month" ? "is-off" : ""}`} />
+                    <div
+                      className="gv-ms"
+                      style={msStyle}
+                      title={`${title}: milepæl`}
+                    />
+                  </div>
+                );
+              }
 
               const hasRoomForText = width >= pxPerDay * 3;
               const allowText = showBarTextProp !== false;
@@ -1024,6 +1064,14 @@ const pts = goesPositiveToTarget
                   >
                     {allowText && hasRoomForText ? <span className="gv-bar-text">{title}</span> : null}
                   </div>
+              
+                  {explicitMilestone ? (
+                    <div
+                      className="gv-ms"
+                      style={msStyle}
+                      title={`${title}: milepæl`}
+                    />
+                  ) : null}
                 </div>
               );
             })}
