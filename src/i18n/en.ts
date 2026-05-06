@@ -498,6 +498,7 @@ A: These are the most helpful day-to-day shortcuts.
   },
 
   gantt: {
+    milestone: "milestone",
     weekPrefix: "week",
     monthShort: {
       jan: "Jan",
