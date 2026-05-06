@@ -1010,17 +1010,27 @@ const pts = goesPositiveToTarget
                 );
               }
 
-              const left = diffDays(parsed.min, sd) * pxPerDay;
-              let width = (diffDays(sd, ed) + 1) * pxPerDay;
-              width = Math.max(pxPerDay, width);
-
               const durationDays = diffDays(sd, ed) + 1;
 
-              const milestoneDate =
-                milestoneAnchor === "end" && ed ? ed : sd;
+              const milestoneDate = milestoneAnchor === "end" && ed ? ed : sd;
               
               const milestoneLeft =
                 diffDays(parsed.min, milestoneDate) * pxPerDay + pxPerDay / 2;
+              
+              let barStartDate = sd;
+              let barEndDate = ed;
+              
+              if (explicitMilestone && durationDays > 1) {
+                if (milestoneAnchor === "start") {
+                  barStartDate = addDays(sd, 1);
+                } else {
+                  barEndDate = addDays(ed, -1);
+                }
+              }
+              
+              const left = diffDays(parsed.min, barStartDate) * pxPerDay;
+              let width = (diffDays(barStartDate, barEndDate) + 1) * pxPerDay;
+              width = Math.max(pxPerDay, width);
               
               const msStyle: React.CSSProperties = {
                 left: milestoneLeft,
