@@ -250,5 +250,6 @@ export default function ProgressTableContextMenu({
       <Divider />
 
       <MenuButton label={t("contextMenu.close")} onClick={() => onAction("close")} />
+    </div>
   );
 }
