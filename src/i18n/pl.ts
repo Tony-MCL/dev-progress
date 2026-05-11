@@ -1,4 +1,3 @@
-// src/i18n/en.ts
 const pl = {
   header: {
     help: "Pomoc",
@@ -13,206 +12,203 @@ const pl = {
     logoTitle: "Otwórz ManageSystem.no (Progress)",
   },
 
-  // ============================
-  // ADD: PaywallModal
-  // ============================
   paywall: {
-    close: "Close",
+    close: "Zamknij",
 
     tabs: {
-      trial: "Trial",
-      buy: "Buy license",
+      trial: "Okres próbny",
+      buy: "Kup licencję",
     },
 
     labels: {
-      email: "Email address",
-      password: "Password",
+      email: "Adres e-mail",
+      password: "Hasło",
     },
 
     placeholders: {
-      email: "name@company.com",
-      password: "At least 6 characters",
-      orgName: "Company Ltd",
-      orgNr: "9 digits",
-      contactName: "Jane Doe",
+      email: "nazwa@firma.com",
+      password: "Co najmniej 6 znaków",
+      orgName: "Firma Sp. z o.o.",
+      orgNr: "9 cyfr",
+      contactName: "Jan Kowalski",
       phone: "+47 ...",
-      fullName: "Jane Doe",
-      country: "Norway",
+      fullName: "Jan Kowalski",
+      country: "Norwegia",
     },
 
     buyerType: {
-      company: "Company",
-      private: "Private",
+      company: "Firma",
+      private: "Osoba prywatna",
     },
 
     fields: {
-      orgName: "Company name",
-      orgNr: "Org number",
-      contactName: "Contact person",
-      phone: "Phone",
-      fullName: "Full name",
-      country: "Country",
+      orgName: "Nazwa firmy",
+      orgNr: "Numer organizacyjny",
+      contactName: "Osoba kontaktowa",
+      phone: "Telefon",
+      fullName: "Imię i nazwisko",
+      country: "Kraj",
     },
 
     trial: {
-      title: "Try Full version free for 10 days",
-      body: "Enter email and password to start the trial.",
-      action: "Start trial",
-      started: "Trial started. You can now use full-version features for 10 days.",
+      title: "Wypróbuj pełną wersję za darmo przez 10 dni",
+      body: "Wpisz e-mail i hasło, aby rozpocząć okres próbny.",
+      action: "Rozpocznij okres próbny",
+      started:
+        "Okres próbny został rozpoczęty. Możesz teraz korzystać z funkcji pełnej wersji przez 10 dni.",
     },
 
     buy: {
-      title: "Buy Full version license",
-      body: "Fill in the details once, choose license type, and proceed to checkout.",
+      title: "Kup licencję pełnej wersji",
+      body: "Wprowadź dane, wybierz typ licencji i przejdź do płatności.",
 
-      licenseType: "License type",
-      subscription: "Subscription",
-      oneTime: "One-time",
+      licenseType: "Typ licencji",
+      subscription: "Subskrypcja",
+      oneTime: "Jednorazowo",
 
-      payCadence: "With billing:",
-      month: "Monthly",
-      year: "Yearly",
+      payCadence: "Płatność:",
+      month: "Miesięcznie",
+      year: "Rocznie",
 
-      duration: "Duration",
-      oneMonth: "1 month",
-      oneYear: "1 year",
+      duration: "Okres",
+      oneMonth: "1 miesiąc",
+      oneYear: "1 rok",
 
       summary: {
-        price: "Price",
+        price: "Cena",
         vat: "VAT",
-        total: "Price incl. VAT",
-        perMonth: "NOK/mo",
-        perYear: "NOK/yr",
-        currency: "Currency",
+        total: "Cena z VAT",
+        perMonth: "NOK/mies.",
+        perYear: "NOK/rok",
+        currency: "Waluta",
       },
 
-      action: "Go to checkout",
+      action: "Przejdź do płatności",
     },
 
     validation: {
-      invalidEmail: "Enter a valid email address.",
-      invalidPassword: "Password must be at least 6 characters.",
-      missingFields: "Fill in all required fields.",
-      invalidOrgNr: "Org number looks wrong (9 digits).",
+      invalidEmail: "Wpisz prawidłowy adres e-mail.",
+      invalidPassword: "Hasło musi mieć co najmniej 6 znaków.",
+      missingFields: "Wypełnij wszystkie wymagane pola.",
+      invalidOrgNr: "Numer organizacyjny wygląda nieprawidłowo (9 cyfr).",
     },
 
     errors: {
-      network: "Something went wrong. Check that the Worker endpoints are correct.",
+      network:
+        "Coś poszło nie tak. Sprawdź, czy endpointy Workera są poprawne.",
       wrongEndpoint:
-        "It looks like the checkout call is hitting the wrong address (not the Worker). Check VITE_PROGRESS_WORKER_BASE_URL.",
-      noCheckoutUrl: "Worker returned no checkout url (expected { url }).",
+        "Wygląda na to, że żądanie checkout trafia pod zły adres (nie do Workera). Sprawdź VITE_PROGRESS_WORKER_BASE_URL.",
+      noCheckoutUrl:
+        "Worker nie zwrócił adresu checkout-url (oczekiwano { url }).",
     },
   },
-  // ============================
-  // END ADD
-  // ============================
 
   help: {
-    title: "Help",
-    closeAria: "Close help",
+    title: "Pomoc",
+    closeAria: "Zamknij pomoc",
 
     intro:
-      "This panel is designed for day-to-day use: when you need the plan to be correct right now. Open a question and use it as a quick reference.",
+      "Ten panel jest przeznaczony do codziennej pracy: gdy plan musi być poprawny od razu. Otwórz pytanie i użyj go jako szybkiej ściągi.",
 
-    faqText: `Q: How do the table and Gantt relate?
-A: The table is the source of truth where you enter activities, dates and data. Gantt renders the exact same rows as timeline bars.
-- Scrolling is synchronized: rows should line up perfectly.
-- If something looks “missing”, check if sub-rows are collapsed.
+    faqText: `Q: Jak tabela i Gantt są ze sobą powiązane?
+A: Tabela jest źródłem prawdy — wpisujesz w niej zadania, daty i dane. Gantt pokazuje te same wiersze jako paski na osi czasu.
+- Przewijanie jest zsynchronizowane: wiersze powinny być idealnie wyrównane.
+- Jeśli coś wygląda na „zniknięte”, sprawdź, czy podwiersze nie są zwinięte.
 
-Q: How do I edit a cell without messing up everything else?
-A: Click a cell and start typing. Enter commits the edit.
-- Esc cancels editing (and closes panels).
-- Use arrow keys/tab to navigate like a spreadsheet.
+Q: Jak edytować komórkę bez psucia reszty?
+A: Kliknij komórkę i zacznij pisać. Enter zapisuje zmianę.
+- Esc anuluje edycję (i zamyka panele).
+- Używaj strzałek/tabulatora, aby poruszać się jak w arkuszu kalkulacyjnym.
 
-Q: How do I add rows quickly?
-A: Use Table → Rows.
-- “Add row at end” creates a new row at the bottom.
-- “Add row below selection” inserts directly under the current row.
-- “Delete selected rows” removes what you selected.
+Q: Jak szybko dodać wiersze?
+A: Użyj Tabela → Wiersze.
+- „Dodaj wiersz na końcu” tworzy nowy wiersz na dole.
+- „Dodaj wiersz poniżej zaznaczenia” wstawia wiersz bezpośrednio pod aktywnym wierszem.
+- „Usuń zaznaczone wiersze” usuwa zaznaczone wiersze.
 
-Q: Hierarchy / sub-tasks: how does it work?
-A: Rows can be indented/outdented to create structure (a parent task with sub-tasks).
-- Alt + ArrowRight = indent (make it a sub-task).
-- Alt + ArrowLeft = outdent.
-- Use the toggle to collapse/expand sub-rows.
+Q: Hierarchia / podzadania: jak to działa?
+A: Wiersze można wcinać i cofać wcięcie, aby tworzyć strukturę (zadanie główne z podzadaniami).
+- Alt + strzałka w prawo = wcięcie (utwórz podzadanie).
+- Alt + strzałka w lewo = cofnięcie wcięcia.
+- Użyj przełącznika, aby zwijać i rozwijać podwiersze.
 
-Q: What do Activity / Start / End / Duration mean?
-A: Activity is the task name. Start/End are dates. Duration is how long the task lasts.
-- You can control the plan by entering Start+End, or using Duration where enabled.
-- The calendar (holidays/vacation) can affect workday-based calculations.
+Q: Co oznaczają Zadanie / Start / Koniec / Czas trwania?
+A: Zadanie to nazwa aktywności. Start/Koniec to daty. Czas trwania określa, jak długo trwa zadanie.
+- Możesz sterować planem, wpisując Start+Koniec albo używając Czasu trwania tam, gdzie jest dostępny.
+- Kalendarz (święta/urlop) może wpływać na obliczenia oparte na dniach roboczych.
 
-Q: What’s the easiest way to pick dates?
-A: Double-click a date cell to open the date picker.
-- You can also type common formats like 2026-01-17 (and many others).
+Q: Jaki jest najłatwiejszy sposób wyboru dat?
+A: Kliknij dwukrotnie komórkę daty, aby otworzyć selektor daty.
+- Możesz też wpisywać typowe formaty, np. 2026-01-17 (i wiele innych).
 
-Q: What is “Calendar — holidays and vacation” and why should I use it?
-A: The calendar lets you register non-working days (vacation, shutdowns, public holidays).
-- This affects workday-based duration/lag calculations (where used).
-- Quick add can insert public holidays for a selected year.
-- You can edit and delete entries later.
+Q: Czym jest „Kalendarz — święta i urlop” i dlaczego warto go używać?
+A: Kalendarz pozwala rejestrować dni wolne od pracy (święta, urlopy, przestoje itp.).
+- Wpływa to na obliczenia czasu trwania i dat oparte na dniach roboczych.
+- Szybkie dodawanie może wstawić święta publiczne dla wybranego roku.
+- Wpisy można później edytować i usuwać.
 
-Q: Columns: show/hide/move/resize — how?
-A: Table → Columns lets you choose visible columns and add custom ones.
-- Drag the header to reorder columns.
-- Drag the edge to resize.
-- You can add custom columns (Text, Number, Date).
+Q: Kolumny: pokaż/ukryj/przenieś/zmień szerokość — jak?
+A: Tabela → Kolumny pozwala wybrać widoczne kolumny i dodać własne.
+- Przeciągnij nagłówek, aby zmienić kolejność kolumn.
+- Przeciągnij krawędź, aby zmienić szerokość.
+- Możesz dodać własne kolumny (Tekst, Liczba, Data).
 
-Q: What is Project info and what should I fill in?
-A: Project info stores metadata: project name, customer, project number, start date, notes and owners.
-- Useful for professional sharing and later reporting/printing.
-- The right side shows the last saved preview.
+Q: Czym są informacje o projekcie i co należy wpisać?
+A: Informacje o projekcie przechowują metadane: nazwę projektu, klienta, numer projektu, datę startu, notatki i osoby odpowiedzialne.
+- Przydaje się to do profesjonalnego udostępniania i późniejszego raportowania/drukowania.
+- Po prawej stronie widać ostatnio zapisany podgląd.
 
-Q: How is my plan saved? (Save/Open/My saved projects)
-A: In this version, projects are stored locally in the browser database (IndexedDB).
-- File → Save stores the current plan.
-- File → Open loads locally saved projects.
-- “My saved projects” shows a list where you can open/duplicate/delete.
+Q: Jak zapisywany jest mój plan? (Zapisz/Otwórz/Moje zapisane projekty)
+A: W tej wersji projekty są przechowywane lokalnie w bazie przeglądarki (IndexedDB).
+- Plik → Zapisz zapisuje bieżący plan.
+- Plik → Otwórz wczytuje lokalnie zapisane projekty.
+- „Moje zapisane projekty” pokazuje listę, gdzie można otworzyć, skopiować lub usunąć projekt.
 
-Q: What does “free mode: one project at a time” mean?
-A: In free mode, the app may ask for confirmation before overwriting the current plan when starting a new one.
-- If you want to keep something, save or duplicate first.
+Q: Co oznacza „tryb darmowy: jeden projekt naraz”?
+A: W trybie darmowym aplikacja może poprosić o potwierdzenie przed nadpisaniem bieżącego planu przy tworzeniu nowego.
+- Jeśli chcesz coś zachować, najpierw zapisz albo utwórz kopię.
 
-Q: Import/Export — how do I share with Excel?
-A: Use TSV (tab-separated). It works very well with Excel.
-- File → Export → (TSV/CSV depending on your menu).
-- File → Import → TSV lets you bring data back in.
+Q: Import/Eksport — jak udostępnić dane do Excela?
+A: Użyj TSV (wartości rozdzielane tabulatorami). Bardzo dobrze działa z Excelem.
+- Plik → Eksport → (TSV/CSV zależnie od menu).
+- Plik → Import → TSV pozwala wczytać dane z powrotem.
 
-Q: Dependencies — what are they in practice?
-A: Dependencies say “this task can’t start/finish before another task”.
-- The most common is Finish-to-Start (FS): A must finish before B can start.
-- Lag (+/- days) lets you add wait time or overlap.
+Q: Zależności — co oznaczają w praktyce?
+A: Zależności oznaczają, że „to zadanie nie może rozpocząć się/zakończyć przed innym zadaniem”.
+- Najczęściej używany typ to Finish-to-Start (FS): A musi się zakończyć, zanim B może wystartować.
+- Opóźnienie (+/- dni) pozwala dodać czas oczekiwania lub nakładanie się zadań.
 
-Q: How do I write a dependency correctly?
-A: Enter it in the Dependency column.
-- Example: 6FS+2 means “after row 6 (FS) + 2 days lag”.
-- Multiple dependencies can be separated by comma/semicolon (if supported in your build).
+Q: Jak poprawnie wpisać zależność?
+A: Wpisz ją w kolumnie Zależność.
+- Przykład: 6FS+2 oznacza „po wierszu 6 (FS) + 2 dni opóźnienia”.
+- Kilka zależności można oddzielać przecinkiem lub średnikiem (jeśli obsługuje to dana wersja).
 
-Q: Why do dates move when I add dependencies?
-A: When dependencies are active, the app tries to enforce rules and may adjust dates to keep the plan consistent.
-- If you want to lock a task, enter both Start and End explicitly.
-- Make sure the predecessor has valid dates.
+Q: Dlaczego daty przesuwają się po dodaniu zależności?
+A: Gdy zależności są aktywne, aplikacja próbuje zachować reguły i może przesuwać daty, aby plan był spójny.
+- Jeśli chcesz zablokować zadanie, wpisz ręcznie zarówno Start, jak i Koniec.
+- Sprawdź, czy poprzednik ma prawidłowe daty.
 
-Q: Gantt: what are Zoom / weekend shading / today line for?
-A: Gantt is the overview — zoom controls the level of detail.
-- Zoom in/out/reset changes scale so bars/text are readable.
-- Weekend shading makes weekends visually obvious.
-- Today line shows where “today” is on the timeline.
+Q: Gantt: do czego służą Zoom / cieniowanie weekendów / linia dzisiejsza?
+A: Gantt daje przegląd planu — zoom kontroluje poziom szczegółowości.
+- Zoom in/out/reset zmienia skalę, aby paski i tekst były czytelne.
+- Cieniowanie weekendów ułatwia zauważenie weekendów.
+- Linia dzisiejsza pokazuje, gdzie „dziś” znajduje się w planie.
 
-Q: Print… (if it doesn’t work)
-A: The Print menu item may be visible even if the print module is disabled in this version.
-- If nothing happens, use export (TSV/CSV) as sharing/backup for now.
+Q: Drukuj… (jeśli nie działa)
+A: Pozycja Drukuj może być widoczna nawet wtedy, gdy moduł druku jest wyłączony w tej wersji.
+- Jeśli nic się nie dzieje, użyj eksportu (TSV/CSV) jako tymczasowego udostępniania/kopii.
 
-Q: Most useful shortcuts
-A: These are the most helpful day-to-day shortcuts.
-- Ctrl+S: save
-- Ctrl+O: open
-- Ctrl+N: new plan
-- Esc: close panels / cancel
-- Alt + ArrowLeft/ArrowRight: outdent/indent (hierarchy)
+Q: Najważniejsze skróty klawiaturowe
+A: To najbardziej przydatne skróty w codziennej pracy.
+- Ctrl+S: zapisz
+- Ctrl+O: otwórz
+- Ctrl+N: nowy plan
+- Esc: zamknij panele / anuluj
+- Alt + strzałka w lewo/prawo: cofnij wcięcie / wcięcie (hierarchia)
 `,
 
     outro:
-      "If something looks off: 1) check collapsed rows, 2) check dependencies, 3) check calendar/holidays. Test big changes in a copy before committing.",
+      "Jeśli coś wygląda nieprawidłowo: 1) sprawdź zwinięte wiersze, 2) sprawdź zależności, 3) sprawdź kalendarz/święta. Większe zmiany testuj najpierw na kopii.",
 
     text1: "",
     text2: "",
@@ -220,482 +216,483 @@ A: These are the most helpful day-to-day shortcuts.
   },
 
   lang: {
-    aria: "Language selection",
+    aria: "Wybór języka",
   },
 
   theme: {
-    switchToDark: "Switch to dark mode",
-    switchToLight: "Switch to light mode",
+    switchToDark: "Przełącz na tryb ciemny",
+    switchToLight: "Przełącz na tryb jasny",
   },
 
   toolbar: {
     top: {
-      file: "File",
-      table: "Table",
+      file: "Plik",
+      table: "Tabela",
       gantt: "Gantt",
-      calendar: "Calendar",
-      project: "Project",
+      calendar: "Kalendarz",
+      project: "Projekt",
     },
 
     file: {
-      new: "New",
-      newPlan: "New plan",
-      fromTemplate: "From template…",
-      open: "Open",
-      openEllipsis: "Open…",
-      openRecent: "Open recent",
+      new: "Nowy",
+      newPlan: "Nowy plan",
+      fromTemplate: "Z szablonu…",
+      open: "Otwórz",
+      openEllipsis: "Otwórz…",
+      openRecent: "Ostatnie",
 
-      openProject: "Open project",
-      openFromCloud: "Open from cloud",
-      openFile: "Open from file",
+      openProject: "Otwórz projekt",
+      openFromCloud: "Otwórz z chmury",
+      openFile: "Otwórz plik",
 
-      save: "Save",
-      saveAs: "Save as…",
+      save: "Zapisz",
+      saveAs: "Zapisz jako…",
 
-      saveProject: "Save project",
-      saveToCloud: "Save to cloud",
-      saveToFile: "Save to file",
+      saveProject: "Zapisz projekt",
+      saveToCloud: "Zapisz w chmurze",
+      saveToFile: "Zapisz do pliku",
 
-      print: "Print…",
-      export: "Export",
-      import: "Import",
+      print: "Drukuj…",
+      export: "Eksportuj",
+      import: "Importuj",
     },
 
     table: {
-      columns: "Columns",
-      chooseVisibleColumns: "Choose visible columns…",
-      rows: "Rows",
-      addRowEnd: "Add row at end",
-      addRowBelow: "Add row below selection",
-      deleteSelectedRows: "Delete selected rows",
+      columns: "Kolumny",
+      chooseVisibleColumns: "Wybierz widoczne kolumny…",
+      rows: "Wiersze",
+      addRowEnd: "Dodaj wiersz na końcu",
+      addRowBelow: "Dodaj wiersz poniżej zaznaczenia",
+      deleteSelectedRows: "Usuń zaznaczone wiersze",
     },
 
     gantt: {
       zoom: "Zoom",
-      zoomIn: "Zoom in",
-      zoomOut: "Zoom out",
+      zoomIn: "Powiększ",
+      zoomOut: "Pomniejsz",
       zoomReset: "Reset (100%)",
-      view: "View",
-      toggleWeekend: "Toggle weekend shading",
-      toggleTodayLine: "Toggle today line",
-    
+      view: "Widok",
+      toggleWeekend: "Przełącz cieniowanie weekendów",
+      toggleTodayLine: "Przełącz linię dzisiejszą",
+
       colorPicker: {
-        label: "Color",
-        title: "Choose color for Gantt bars",
+        label: "Kolor",
+        title: "Wybierz kolor pasków Gantta",
       },
     },
 
     calendar: {
-      manage: "Holidays and vacation…",
+      manage: "Święta i urlopy…",
     },
 
     project: {
-      manage: "Project info…",
+      manage: "Informacje o projekcie…",
     },
 
     confirmOverwrite: {
-      title: "Replace current project?",
+      title: "Zastąpić bieżący projekt?",
       textFree:
-        "In free mode, you can work on one project at a time. Do you want to overwrite your saved project?",
+        "W trybie darmowym możesz pracować nad jednym projektem naraz. Czy chcesz nadpisać zapisany projekt?",
       textPro:
-        "This action will replace the content of the project currently open in this tab. Do you want to continue?",
-      cancel: "Cancel",
-      confirm: "Overwrite",
+        "Ta operacja zastąpi zawartość projektu otwartego w tej karcie. Czy chcesz kontynuować?",
+      cancel: "Anuluj",
+      confirm: "Zastąp",
     },
 
     multiTab: {
-      title: "Number of open Progress tabs",
-      openTabs: "Open tabs",
+      title: "Liczba otwartych kart Progress",
+      openTabs: "Otwarte karty",
     },
 
     a11y: {
-      submenuAriaPrefix: "Submenu: ",
+      submenuAriaPrefix: "Podmenu: ",
     },
   },
 
   contextMenu: {
-    title: "Table menu",
-    ariaLabel: "Table menu",
-    row: "Row",
-    noRow: "No row",
-    column: "Column",
-    noColumn: "No column",
-    selection: "Selection",
-    noSelection: "No selection",
-    columnShort: "C",
-    makeMilestone: "Make milestone",
-    removeMilestone: "Remove milestone",
-    indentRows: "Indent row / make subtask",
-    outdentRows: "Outdent row / make main activity",
-    cut: "Cut",
-    copy: "Copy",
-    paste: "Paste",
-    insertRowAbove: "Insert row above",
-    insertRowBelow: "Insert row below",
-    deleteRows: "Delete row(s)",
-    print: "Print",
-    close: "Close",
+    title: "Menu tabeli",
+    ariaLabel: "Menu tabeli",
+    row: "Wiersz",
+    noRow: "Brak wiersza",
+    column: "Kolumna",
+    noColumn: "Brak kolumny",
+    selection: "Zaznaczenie",
+    noSelection: "Brak zaznaczenia",
+    columnShort: "K",
+    makeMilestone: "Ustaw jako kamień milowy",
+    removeMilestone: "Usuń kamień milowy",
+    indentRows: "Wcięcie wiersza / utwórz podzadanie",
+    outdentRows: "Cofnij wcięcie / utwórz zadanie główne",
+    cut: "Wytnij",
+    copy: "Kopiuj",
+    paste: "Wklej",
+    insertRowAbove: "Wstaw wiersz powyżej",
+    insertRowBelow: "Wstaw wiersz poniżej",
+    deleteRows: "Usuń wiersz(e)",
+    print: "Drukuj",
+    close: "Zamknij",
   },
 
   calendarModal: {
-    title: "Calendar – holidays and vacation",
+    title: "Kalendarz – święta i urlopy",
     intro:
-      "Add dates that are not working days (public holidays, vacation, shutdowns, etc.). This affects duration and date calculations.",
+      "Dodaj daty, które nie są dniami roboczymi (święta, urlopy, przestoje itp.). Wpływa to na obliczenia czasu trwania i dat.",
 
     left: {
-      title: "Add holidays / vacation",
+      title: "Dodaj święta / urlop",
     },
 
     fields: {
-      from: "From",
-      to: "To",
-      nameOptional: "Name (optional)",
-      namePlaceholder: "E.g. Easter, Summer vacation, Shutdown",
-      name: "Name",
-      nameEditPlaceholder: "Optional name",
+      from: "Od",
+      to: "Do",
+      nameOptional: "Nazwa (opcjonalnie)",
+      namePlaceholder: "Np. Wielkanoc, urlop letni, przestój",
+      name: "Nazwa",
+      nameEditPlaceholder: "Opcjonalna nazwa",
     },
 
     quick: {
-      title: "Quick add – public holidays",
-      year: "Year",
-      addAll: "Add all",
-      addPicked: "Add selected",
-      resetPick: "Reset selection",
+      title: "Szybkie dodawanie – święta publiczne",
+      year: "Rok",
+      addAll: "Dodaj wszystkie",
+      addPicked: "Dodaj wybrane",
+      resetPick: "Wyczyść wybór",
     },
 
     right: {
-      title: "Registered dates / periods",
-      countSuffix: "items",
-      empty: "No holidays registered yet.",
+      title: "Zarejestrowane daty / okresy",
+      countSuffix: "pozycji",
+      empty: "Nie dodano jeszcze świąt.",
     },
 
     actions: {
-      addPeriod: "Add period",
-      edit: "Edit",
-      delete: "Delete",
-      save: "Save",
-      cancel: "Cancel",
-      close: "Close",
+      addPeriod: "Dodaj okres",
+      edit: "Edytuj",
+      delete: "Usuń",
+      save: "Zapisz",
+      cancel: "Anuluj",
+      close: "Zamknij",
     },
 
     tip:
-      "Tip: Choose a year and add public holidays. Each holiday is added as a single date entry.",
+      "Wskazówka: Wybierz rok i dodaj święta publiczne. Każde święto zostanie dodane jako osobny wpis daty.",
   },
 
   holidays: {
-    newYearsDay: "New Year's Day",
-    labourDay: "Labour Day",
-    constitutionDay: "Constitution Day",
-    christmasDay1: "Christmas Day",
-    christmasDay2: "Boxing Day",
-    maundyThursday: "Maundy Thursday",
-    goodFriday: "Good Friday",
-    easterSunday: "Easter Sunday",
-    easterMonday: "Easter Monday",
-    ascensionDay: "Ascension Day",
-    whitSunday: "Whit Sunday",
-    whitMonday: "Whit Monday",
+    newYearsDay: "Nowy Rok",
+    labourDay: "Święto Pracy",
+    constitutionDay: "Święto Konstytucji",
+    christmasDay1: "Boże Narodzenie",
+    christmasDay2: "Drugi dzień Świąt Bożego Narodzenia",
+    maundyThursday: "Wielki Czwartek",
+    goodFriday: "Wielki Piątek",
+    easterSunday: "Niedziela Wielkanocna",
+    easterMonday: "Poniedziałek Wielkanocny",
+    ascensionDay: "Wniebowstąpienie Pańskie",
+    whitSunday: "Zesłanie Ducha Świętego",
+    whitMonday: "Poniedziałek Zielonoświątkowy",
   },
 
   columnManagerModal: {
-    title: "Columns",
-    intro: "Choose which columns are visible, or add your own columns.",
+    title: "Kolumny",
+    intro: "Wybierz widoczne kolumny albo dodaj własne kolumny.",
 
     list: {
-      custom: "Custom",
+      custom: "Własna",
     },
 
     add: {
-      title: "New custom column",
-      namePlaceholder: "Column name…",
+      title: "Nowa kolumna własna",
+      namePlaceholder: "Nazwa kolumny…",
       types: {
-        text: "Text",
-        number: "Number",
-        date: "Date",
+        text: "Tekst",
+        number: "Liczba",
+        date: "Data",
       },
     },
 
     actions: {
-      add: "Add",
-      close: "Close",
+      add: "Dodaj",
+      close: "Zamknij",
     },
   },
 
   projectModal: {
-    title: "Project – information",
+    title: "Projekt – informacje",
     intro:
-      "The right side shows the last saved state. Project info and owners are saved separately.",
+      "Prawa strona pokazuje ostatnio zapisany stan. Informacje o projekcie i osoby odpowiedzialne są zapisywane osobno.",
 
     left: {
-      projectDraftTitle: "Project data (draft)",
-      ownersDraftTitle: "Owners (draft)",
+      projectDraftTitle: "Dane projektu (wersja robocza)",
+      ownersDraftTitle: "Odpowiedzialni (wersja robocza)",
     },
 
     fields: {
-      projectName: "Project name",
-      customer: "Customer",
-      projectNo: "Project no.",
-      start: "Project start",
-      notesOptional: "Notes (optional)",
-      onePerLine: "One name per line",
-      name: "Name",
-      ganttColorOptional: "Gantt color (optional)",
+      projectName: "Nazwa projektu",
+      customer: "Klient",
+      projectNo: "Nr projektu",
+      start: "Start projektu",
+      notesOptional: "Notatki (opcjonalnie)",
+      onePerLine: "Jedno nazwisko w wierszu",
+      name: "Nazwa",
+      ganttColorOptional: "Kolor Gantta (opcjonalnie)",
     },
 
     placeholders: {
-      projectName: "E.g. Power plant rehabilitation",
-      customer: "E.g. Example Ltd.",
-      projectNo: "E.g. 24-1033",
-      notes: "E.g. assumptions, scope, milestone notes...",
-      ownersList: "John\nOscar\nNina\nHeidi",
+      projectName: "Np. modernizacja elektrowni",
+      customer: "Np. Example Ltd.",
+      projectNo: "Np. 24-1033",
+      notes: "Np. założenia, zakres, notatki o kamieniach milowych...",
+      ownersList: "Jan\nOscar\nNina\nHeidi",
     },
 
     actions: {
-      reset: "Reset",
-      saveProject: "Save project info",
-      saveOwners: "Save owners",
-      edit: "Edit",
-      delete: "Delete",
-      save: "Save",
-      cancel: "Cancel",
-      close: "Close",
-      default: "Default",
-      useDefault: "Use default",
+      reset: "Resetuj",
+      saveProject: "Zapisz informacje o projekcie",
+      saveOwners: "Zapisz odpowiedzialnych",
+      edit: "Edytuj",
+      delete: "Usuń",
+      save: "Zapisz",
+      cancel: "Anuluj",
+      close: "Zamknij",
+      default: "Domyślnie",
+      useDefault: "Użyj domyślnego",
     },
 
     tips: {
       ownerColor:
-        "Tip: Set color via Edit on the right. Empty color = default Gantt color.",
+        "Wskazówka: Kolor ustawiasz przez Edytuj po prawej stronie. Pusty kolor = domyślny kolor Gantta.",
     },
 
     right: {
-      previewTitle: "Preview (last saved)",
-      ownersTitle: "Owners (last saved)",
-      ownersEmpty: "No owners added yet.",
+      previewTitle: "Podgląd (ostatnio zapisany)",
+      ownersTitle: "Odpowiedzialni (ostatnio zapisani)",
+      ownersEmpty: "Nie dodano jeszcze osób odpowiedzialnych.",
     },
 
     preview: {
       labels: {
-        customer: "Customer:",
-        projectNo: "Project no.:",
+        customer: "Klient:",
+        projectNo: "Nr projektu:",
         start: "Start:",
       },
       defaults: {
-        projectName: "Project name",
-        notes: "Notes…",
+        projectName: "Nazwa projektu",
+        notes: "Notatki…",
         dash: "—",
       },
     },
 
     owner: {
-      colorCustom: "Custom color",
-      colorDefault: "Default color",
+      colorCustom: "Kolor własny",
+      colorDefault: "Kolor domyślny",
     },
 
     milestoneAnchor: {
-      title: "Choose milestone date",
-      text: "Should the milestone be placed on the start date or end date?",
-      start: "Start date",
-      end: "End date",
-      cancel: "Cancel",
+      title: "Wybierz datę kamienia milowego",
+      text: "Czy kamień milowy ma być umieszczony na dacie startu czy zakończenia?",
+      start: "Data startu",
+      end: "Data zakończenia",
+      cancel: "Anuluj",
     },
 
     footer: {
       next:
-        "Next: connect the “Owner” column in the table to this list + mirror colors in Gantt.",
+        "Dalej: połącz kolumnę „Odpowiedzialny” w tabeli z tą listą i odzwierciedl kolory w Gantcie.",
     },
   },
 
   gantt: {
-    milestone: "milestone",
-    weekPrefix: "week",
+    milestone: "kamień milowy",
+    weekPrefix: "tydzień",
     monthShort: {
-      jan: "Jan",
-      feb: "Feb",
+      jan: "Sty",
+      feb: "Lut",
       mar: "Mar",
-      apr: "Apr",
-      may: "May",
-      jun: "Jun",
-      jul: "Jul",
-      aug: "Aug",
-      sep: "Sep",
-      oct: "Oct",
-      nov: "Nov",
-      dec: "Dec",
+      apr: "Kwi",
+      may: "Maj",
+      jun: "Cze",
+      jul: "Lip",
+      aug: "Sie",
+      sep: "Wrz",
+      oct: "Paź",
+      nov: "Lis",
+      dec: "Gru",
     },
     weekdayShort: {
-        mon: "Mon.",
-        tue: "Tue.",
-        wed: "Wed.",
-        thu: "Thu.",
-        fri: "Fri.",
-        sat: "Sat.",
-        sun: "Sun.",
-      },
+      mon: "Pon.",
+      tue: "Wt.",
+      wed: "Śr.",
+      thu: "Czw.",
+      fri: "Pt.",
+      sat: "Sob.",
+      sun: "Nd.",
+    },
   },
 
   tableCore: {
-    summaryTitle: "Summary",
+    summaryTitle: "Podsumowanie",
     headerInfoDemo:
-      "Demo Project • Jan 2026 • Local draft (later: DB) • Split-view ready",
-    dragToMoveColumn: "Drag to move column",
-    dragToResizeColumn: "Drag to resize",
-    dragToMoveRow: "Drag to move row",
-    chooseDate: "Choose date",
-    chooseDateFor: "Choose date for",
-    datePickerFor: "Date picker for",
-    showSubRows: "Show sub-rows",
-    hideSubRows: "Hide sub-rows",
+      "Projekt demo • Sty 2026 • Lokalna wersja robocza (później: DB) • Widok podzielony gotowy",
+    dragToMoveColumn: "Przeciągnij, aby przenieść kolumnę",
+    dragToResizeColumn: "Przeciągnij, aby zmienić szerokość",
+    dragToMoveRow: "Przeciągnij, aby przenieść wiersz",
+    chooseDate: "Wybierz datę",
+    chooseDateFor: "Wybierz datę dla",
+    datePickerFor: "Selektor daty dla",
+    showSubRows: "Pokaż podwiersze",
+    hideSubRows: "Ukryj podwiersze",
   },
 
   app: {
     columns: {
-      activity: "Activity",
+      activity: "Zadanie",
       start: "Start",
-      end: "End",
-      duration: "Duration",
-      dependency: "Dependency",
+      end: "Koniec",
+      duration: "Czas trwania",
+      dependency: "Zależność",
       wbs: "WBS",
-      owner: "Owner",
+      owner: "Odpowiedzialny",
       status: "Status",
-      percentComplete: "% complete",
-      percentRemaining: "% remaining",
-      comment: "Comment",
+      percentComplete: "% wykonane",
+      percentRemaining: "% pozostało",
+      comment: "Komentarz",
     },
 
     progressStatus: {
-      notStarted: "Not started",
-      inProgress: "In progress",
-      delayed: "Delayed",
-      completed: "Completed",
-      cancelled: "Cancelled",
+      notStarted: "Nie rozpoczęto",
+      inProgress: "W toku",
+      delayed: "Opóźnione",
+      completed: "Zakończone",
+      cancelled: "Anulowane",
     },
 
     demo: {
-      phase1Title: "PHASE 1 – PLANNING",
-      defineScope: "Define scope",
-      stakeholderAlignment: "Stakeholder alignment",
-      riskAssessment: "Risk assessment",
-      planSignOff: "Plan sign-off",
+      phase1Title: "FAZA 1 – PLANOWANIE",
+      defineScope: "Zdefiniuj zakres",
+      stakeholderAlignment: "Uzgodnienia z interesariuszami",
+      riskAssessment: "Ocena ryzyka",
+      planSignOff: "Zatwierdzenie planu",
     },
 
     header: {
-      project: "Project",
-      customer: "Customer",
-      projectStart: "Project start",
+      project: "Projekt",
+      customer: "Klient",
+      projectStart: "Start projektu",
       fallback:
-        "Project: Progress Demo • Customer: Example AS • Plan: v0 • Jan 2026",
+        "Projekt: Progress Demo • Klient: Example AS • Plan: v0 • Sty 2026",
     },
 
     split: {
-      dragToResize: "Drag to resize",
+      dragToResize: "Przeciągnij, aby zmienić rozmiar",
     },
 
     aria: {
-      tableHorizontalScroll: "Table horizontal scroll",
-      ganttHorizontalScroll: "Gantt horizontal scroll",
+      tableHorizontalScroll: "Poziome przewijanie tabeli",
+      ganttHorizontalScroll: "Poziome przewijanie Gantta",
     },
 
     datePicker: {
-      ariaLabel: "Date picker",
-      prevMonthAria: "Previous month",
-      nextMonthAria: "Next month",
-    
+      ariaLabel: "Selektor daty",
+      prevMonthAria: "Poprzedni miesiąc",
+      nextMonthAria: "Następny miesiąc",
+
       weekdayShort: {
-        mon: "Mon",
-        tue: "Tue",
-        wed: "Wed",
-        thu: "Thu",
-        fri: "Fri",
-        sat: "Sat",
-        sun: "Sun",
+        mon: "Pon",
+        tue: "Wt",
+        wed: "Śr",
+        thu: "Czw",
+        fri: "Pt",
+        sat: "Sob",
+        sun: "Nd",
       },
-    
+
       monthFull: {
-        jan: "January",
-        feb: "February",
-        mar: "March",
-        apr: "April",
-        may: "May",
-        jun: "June",
-        jul: "July",
-        aug: "August",
-        sep: "September",
-        oct: "October",
-        nov: "November",
-        dec: "December",
+        jan: "Styczeń",
+        feb: "Luty",
+        mar: "Marzec",
+        apr: "Kwiecień",
+        may: "Maj",
+        jun: "Czerwiec",
+        jul: "Lipiec",
+        aug: "Sierpień",
+        sep: "Wrzesień",
+        oct: "Październik",
+        nov: "Listopad",
+        dec: "Grudzień",
       },
-    
-      clear: "Clear",
-      clearTitle: "Clear date",
+
+      clear: "Wyczyść",
+      clearTitle: "Wyczyść datę",
       ok: "OK",
-      okTitle: "Commit",
-      today: "Today",
-      todayTitle: "Select today",
+      okTitle: "Zatwierdź",
+      today: "Dziś",
+      todayTitle: "Wybierz dzisiejszą datę",
     },
 
     durationPopover: {
-      title: "Adjust duration",
-      moveStart: "Move start",
-      moveEnd: "Move end",
-      keepEndMoveStartTitle: "Keep end, move start",
-      keepStartMoveEndTitle: "Keep start, move end",
+      title: "Dostosuj czas trwania",
+      moveStart: "Przesuń start",
+      moveEnd: "Przesuń koniec",
+      keepEndMoveStartTitle: "Zachowaj koniec, przesuń start",
+      keepStartMoveEndTitle: "Zachowaj start, przesuń koniec",
     },
 
     weekendPopover: {
-      title: "The date you chose falls on a weekend. Move it to a workday?",
-      prevWorkday: "Use previous workday",
-      nextWorkday: "Use next workday",
-      cancel: "Cancel",
+      title: "Wybrana data wypada w weekend. Przenieść ją na dzień roboczy?",
+      prevWorkday: "Użyj poprzedniego dnia roboczego",
+      nextWorkday: "Użyj następnego dnia roboczego",
+      cancel: "Anuluj",
     },
 
     footer: {
       copyright: "© 2025 Morning Coffee Labs",
-      terms: "Terms",
-      privacy: "Privacy",
+      terms: "Warunki",
+      privacy: "Prywatność",
     },
   },
 
   printPreview: {
-    topTitle: "Print / PDF",
-    paperLabel: "Paper",
-    includeDeps: "Dependencies",
-    printBtn: "Print / Save as PDF",
-    closeBtn: "Close",
-  
-    layoutModeLabel: "Print type",
-    modeFull: "Complete",
-    modeTable: "Table only",
-    modeGantt: "Gantt only",
-  
-    customerLabel: "Customer:",
-    projectPeriodLabel: "Project period:",
-    notSet: "(not set)",
-    projectNameNotSet: "Project name (not set)",
+    topTitle: "Druk / PDF",
+    paperLabel: "Papier",
+    includeDeps: "Zależności",
+    printBtn: "Drukuj / zapisz jako PDF",
+    closeBtn: "Zamknij",
+
+    layoutModeLabel: "Typ wydruku",
+    modeFull: "Kompletny",
+    modeTable: "Tylko tabela",
+    modeGantt: "Tylko Gantt",
+
+    customerLabel: "Klient:",
+    projectPeriodLabel: "Okres projektu:",
+    notSet: "(nie ustawiono)",
+    projectNameNotSet: "Nazwa projektu (nie ustawiono)",
   },
 
   projectLibrary: {
-    title: "My saved projects",
-    intro: "Projects are stored locally in the browser database (IndexedDB).",
-    current: "Current",
-    refresh: "Refresh",
-    close: "Close",
-    loading: "Loading…",
-    empty: "No saved projects yet. Use File → Save to create one.",
-    colTitle: "Project",
-    colUpdated: "Updated",
-    colActions: "Actions",
-    open: "Open",
-    duplicate: "Duplicate",
-    delete: "Delete",
-    deleteTip: "Deletes this project from local database",
-    activeTip: "Currently loaded project",
-    notFound: "Project not found.",
-    openConflictTitle: "This tab already contains a project",
-    openConflictText: "Do you want to overwrite the current project in this tab, open the project in a new tab, or cancel?",
-    cancel: "Cancel",
-    openInNewTab: "Open in new tab",
-    overwriteCurrent: "Overwrite current",
+    title: "Moje zapisane projekty",
+    intro: "Projekty są przechowywane lokalnie w bazie przeglądarki (IndexedDB).",
+    current: "Bieżący",
+    refresh: "Odśwież",
+    close: "Zamknij",
+    loading: "Ładowanie…",
+    empty: "Brak zapisanych projektów. Użyj Plik → Zapisz, aby utworzyć projekt.",
+    colTitle: "Projekt",
+    colUpdated: "Zaktualizowano",
+    colActions: "Akcje",
+    open: "Otwórz",
+    duplicate: "Duplikuj",
+    delete: "Usuń",
+    deleteTip: "Usuwa ten projekt z lokalnej bazy danych",
+    activeTip: "Aktualnie wczytany projekt",
+    notFound: "Nie znaleziono projektu.",
+    openConflictTitle: "Ta karta zawiera już projekt",
+    openConflictText:
+      "Czy chcesz nadpisać bieżący projekt w tej karcie, otworzyć projekt w nowej karcie, czy anulować?",
+    cancel: "Anuluj",
+    openInNewTab: "Otwórz w nowej karcie",
+    overwriteCurrent: "Nadpisz bieżący",
   },
 };
 
