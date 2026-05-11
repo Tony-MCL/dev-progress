@@ -92,7 +92,7 @@ export default function Header({ onToggleHelp, account, openTabCount = 1 }: Head
       );
     }
     return parts.join(" · ");
-  }, [account.userEmail, upsellText, planLabel, account.expiresAt, isNo]);
+  }, [account.userEmail, upsellText, planLabel, account.expiresAt, t]);
 
   const pillTitle = useMemo(() => {
   if (!account.userEmail) return upsellText;
