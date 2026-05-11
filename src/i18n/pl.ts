@@ -1,7 +1,16 @@
 // src/i18n/en.ts
 const pl = {
   header: {
-    help: "Help",
+    help: "Pomoc",
+    account: "Konto",
+    accountLoading: "Konto…",
+    upsell: "Kliknij Konto, aby rozpocząć okres próbny lub uaktualnić",
+    plan: "Plan",
+    expires: "Wygasa",
+    statusError: "Błąd statusu",
+    planStatusTitle:
+      "Status planu pochodzi z Workera (Firestore jest źródłem prawdy). Aplikacja nie podejmuje decyzji dotyczących płatności.",
+    logoTitle: "Otwórz ManageSystem.no (Progress)",
   },
 
   // ============================
