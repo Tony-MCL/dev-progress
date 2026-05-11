@@ -2,6 +2,15 @@
 const en = {
   header: {
     help: "Help",
+    account: "Account",
+    accountLoading: "Account…",
+    upsell: "Click Account for a free trial or upgrade",
+    plan: "Plan",
+    expires: "Expires",
+    statusError: "Status error",
+    planStatusTitle:
+      "Plan status comes from Worker (Firestore is source of truth). The app makes no payment decisions.",
+    logoTitle: "Open ManageSystem.no (Progress)",
   },
 
   // ============================
