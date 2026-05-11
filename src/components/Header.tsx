@@ -95,14 +95,16 @@ export default function Header({ onToggleHelp, account, openTabCount = 1 }: Head
   }, [account.userEmail, upsellText, planLabel, account.expiresAt, isNo]);
 
   const pillTitle = useMemo(() => {
-    if (!account.userEmail) return upsellText;
-    if (account.errorText) {
-      return `${t("header.statusError")}: ${account.errorText}`;
-    }
+  if (!account.userEmail) return upsellText;
 
-    return t("header.planStatusTitle");
+  if (account.errorText) {
+    return `${t("header.statusError")}: ${account.errorText}`;
+  }
 
-  const pillIcon = useMemo(() => {
+  return t("header.planStatusTitle");
+}, [account.userEmail, account.errorText, upsellText, t]);
+
+const pillIcon = useMemo(() => {
     if (!account.userEmail) return "✨";
     if (account.errorText) return "⚠️";
     if (planLabel === "pro") return "✅";
