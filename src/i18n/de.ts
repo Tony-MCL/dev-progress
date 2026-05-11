@@ -1,7 +1,16 @@
 // src/i18n/en.ts
 const de = {
   header: {
-    help: "Help",
+    help: "Hilfe",
+    account: "Konto",
+    accountLoading: "Konto…",
+    upsell: "Klicke auf Konto für eine Testphase oder ein Upgrade",
+    plan: "Plan",
+    expires: "Läuft ab",
+    statusError: "Statusfehler",
+    planStatusTitle:
+      "Der Planstatus kommt vom Worker (Firestore ist die Datenquelle). Die App trifft keine Zahlungsentscheidungen.",
+    logoTitle: "ManageSystem.no öffnen (Progress)",
   },
 
   // ============================
