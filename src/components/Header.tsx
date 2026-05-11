@@ -67,13 +67,11 @@ export default function Header({ onToggleHelp, account, openTabCount = 1 }: Head
     (i18nAny?.currentLang as string) ||
     "no";
 
-  const isNo = String(lang).toLowerCase().startsWith("no");
-
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [paywallMode, setPaywallMode] = useState<"trial" | "buy">("trial");
 
   const helpLabel = t("header.help");
-  const accountBtnLabel = isNo ? "Konto" : "Account";
+  const accountBtnLabel = t("header.account");
   const openTabsTitle = t("toolbar.multiTab.title");
   const openTabsLabel = t("toolbar.multiTab.openTabs");
 
@@ -81,18 +79,16 @@ export default function Header({ onToggleHelp, account, openTabCount = 1 }: Head
     return normalizePlanLabel(account.plan);
   }, [account.plan]);
 
-  const upsellText = isNo
-    ? "Trykk på Konto for prøveperiode eller oppgradering"
-    : "Click Account for a free trial or upgrade";
+  const upsellText = t("header.upsell");
 
   const pillText = useMemo(() => {
     if (!account.userEmail) return upsellText;
 
     const parts: string[] = [];
-    parts.push(`Plan: ${planLabel}`);
+    parts.push(`${t("header.plan")}: ${planLabel}`);
     if (account.expiresAt) {
       parts.push(
-        isNo ? `Utløper: ${account.expiresAt}` : `Expires: ${account.expiresAt}`
+        `${t("header.expires")}: ${account.expiresAt}`
       );
     }
     return parts.join(" · ");
@@ -100,14 +96,11 @@ export default function Header({ onToggleHelp, account, openTabCount = 1 }: Head
 
   const pillTitle = useMemo(() => {
     if (!account.userEmail) return upsellText;
-    if (account.errorText)
-      return isNo
-        ? `Statusfeil: ${account.errorText}`
-        : `Status error: ${account.errorText}`;
-    return isNo
-      ? "Planstatus kommer fra Worker (Firestore er sannhetskilde). Appen tar ingen betalingsbeslutninger."
-      : "Plan status comes from Worker (Firestore is source of truth). The app makes no payment decisions.";
-  }, [account.userEmail, account.errorText, upsellText, isNo]);
+    if (account.errorText) {
+      return `${t("header.statusError")}: ${account.errorText}`;
+    }
+
+    return t("header.planStatusTitle");
 
   const pillIcon = useMemo(() => {
     if (!account.userEmail) return "✨";
@@ -118,11 +111,11 @@ export default function Header({ onToggleHelp, account, openTabCount = 1 }: Head
   }, [account.userEmail, account.errorText, planLabel]);
 
   const accountTitle = useMemo(() => {
-    if (!account.authReady) return isNo ? "Konto…" : "Account…";
-    if (!account.userEmail) return isNo ? "Konto" : "Account";
+    if (!account.authReady) return t("header.accountLoading");
+    if (!account.userEmail) return t("header.account");
     const plan = String(account.plan || "").toUpperCase();
     return `${plan || "ACCOUNT"} · ${account.userEmail}`;
-  }, [account.authReady, account.userEmail, account.plan, isNo]);
+  }, [account.authReady, account.userEmail, account.plan, t]);
 
   // ✅ wrappers som alltid gir Promise<void>
   const signOut = async () => {
@@ -164,9 +157,7 @@ export default function Header({ onToggleHelp, account, openTabCount = 1 }: Head
     setPaywallOpen(true);
   }
 
-  const logoTitle = isNo
-    ? "Åpne ManageSystem.no (Progress)"
-    : "Open ManageSystem.no (Progress)";
+  const logoTitle = t("header.logoTitle");
 
   return (
     <header className="mcl-header">
