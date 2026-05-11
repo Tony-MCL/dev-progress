@@ -2,17 +2,23 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import no from "./no";
 import en from "./en";
+import pl from "./pl";
+import de from "./de";
 
-export type Lang = "no" | "en";
+export type Lang = "no" | "en" | "pl" | "de";
 
 type Dict = Record<string, any>;
 
 const STORAGE_KEY = "mcl-progress-lang";
 
+function isSupportedLang(value: string | null): value is Lang {
+  return value === "no" || value === "en" || value === "pl" || value === "de";
+}
+
 function getInitialLang(): Lang {
   if (typeof window === "undefined") return "no";
   const v = window.localStorage.getItem(STORAGE_KEY);
-  return v === "en" ? "en" : "no";
+  return isSupportedLang(v) ? v : "no";
 }
 
 function getByPath(obj: Dict, path: string): unknown {
@@ -33,17 +39,15 @@ function makeT(dict: Dict, lang: Lang) {
 
     if (typeof v === "string") return v;
 
-    // Dev-only logging (once per key)
     if (typeof import.meta !== "undefined" && (import.meta as any).env?.DEV) {
       const id = `${lang}:${key}`;
       if (!missingLogged.has(id)) {
         missingLogged.add(id);
-        // eslint-disable-next-line no-console
         console.warn(`[i18n] Missing key: ${key} (lang=${lang})`);
       }
     }
 
-    return key; // fallback shows the key
+    return key;
   };
 }
 
@@ -64,7 +68,12 @@ export function I18nProvider(props: { children: React.ReactNode }) {
     }
   }, [lang]);
 
-  const dict = useMemo(() => (lang === "en" ? en : no), [lang]);
+  const dict = useMemo(() => {
+    if (lang === "en") return en;
+    if (lang === "pl") return pl;
+    if (lang === "de") return de;
+    return no;
+  }, [lang]);
 
   const value = useMemo<I18nCtx>(() => {
     return {
@@ -74,7 +83,6 @@ export function I18nProvider(props: { children: React.ReactNode }) {
     };
   }, [dict, lang]);
 
-  // IMPORTANT: no JSX in .ts files
   return React.createElement(I18nContext.Provider, { value }, props.children);
 }
 
