@@ -2,6 +2,15 @@
 const no = {
   header: {
     help: "Hjelp",
+    account: "Konto",
+    accountLoading: "Konto…",
+    upsell: "Trykk på Konto for prøveperiode eller oppgradering",
+    plan: "Plan",
+    expires: "Utløper",
+    statusError: "Statusfeil",
+    planStatusTitle:
+      "Planstatus kommer fra Worker (Firestore er sannhetskilde). Appen tar ingen betalingsbeslutninger.",
+    logoTitle: "Åpne ManageSystem.no (Progress)",
   },
 
   // ============================
