@@ -690,4 +690,4 @@ A: These are the most helpful day-to-day shortcuts.
   },
 };
 
-export default en;
+export default de;
