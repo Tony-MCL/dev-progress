@@ -488,14 +488,6 @@ A: To najbardziej przydatne skróty w codziennej pracy.
       colorDefault: "Kolor domyślny",
     },
 
-    milestoneAnchor: {
-      title: "Wybierz datę kamienia milowego",
-      text: "Czy kamień milowy ma być umieszczony na dacie startu czy zakończenia?",
-      start: "Data startu",
-      end: "Data zakończenia",
-      cancel: "Anuluj",
-    },
-
     footer: {
       next:
         "Dalej: połącz kolumnę „Odpowiedzialny” w tabeli z tą listą i odzwierciedl kolory w Gantcie.",
@@ -565,6 +557,14 @@ A: To najbardziej przydatne skróty w codziennej pracy.
       delayed: "Opóźnione",
       completed: "Zakończone",
       cancelled: "Anulowane",
+    },
+
+    milestoneAnchor: {
+      title: "Wybierz datę kamienia milowego",
+      text: "Czy kamień milowy ma być umieszczony na dacie startu czy zakończenia?",
+      start: "Data startu",
+      end: "Data zakończenia",
+      cancel: "Anuluj",
     },
 
     demo: {
