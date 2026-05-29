@@ -488,14 +488,6 @@ A: Das sind die nützlichsten Kürzel im Alltag.
       colorDefault: "Standardfarbe",
     },
 
-    milestoneAnchor: {
-      title: "Meilensteindatum wählen",
-      text: "Soll der Meilenstein auf dem Start- oder Enddatum liegen?",
-      start: "Startdatum",
-      end: "Enddatum",
-      cancel: "Abbrechen",
-    },
-
     footer: {
       next:
         "Nächster Schritt: Die Spalte „Verantwortlich“ in der Tabelle mit dieser Liste verbinden und Farben in Gantt spiegeln.",
@@ -565,6 +557,14 @@ A: Das sind die nützlichsten Kürzel im Alltag.
       delayed: "Verzögert",
       completed: "Abgeschlossen",
       cancelled: "Entfällt",
+    },
+
+    milestoneAnchor: {
+      title: "Meilensteindatum wählen",
+      text: "Soll der Meilenstein auf dem Start- oder Enddatum liegen?",
+      start: "Startdatum",
+      end: "Enddatum",
+      cancel: "Abbrechen",
     },
 
     demo: {
