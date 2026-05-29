@@ -32,6 +32,62 @@ import { saveProgressProjectToCloud } from "../../cloud/cloudProjects";
 const OPEN_PROJECT_HANDOFF_KEY = "progress_open_project_handoff_v1";
 const OPEN_IMPORT_HANDOFF_KEY = "progress_open_import_handoff_v1";
 const OPEN_FILE_HANDOFF_KEY = "progress_open_file_handoff_v1";
+const DEFAULT_HIDDEN_COLUMN_KEYS = new Set([
+  "wbs",
+  "owner",
+  "status",
+  "percentComplete",
+  "percentRemaining",
+]);
+
+function isDefaultColumnVisible(key: string): boolean {
+  return !DEFAULT_HIDDEN_COLUMN_KEYS.has(key);
+}
+
+function mergeAppColumnsWithBase(
+  savedColumns: AppColumnDef[],
+  baseColumns: ColumnDef[]
+): AppColumnDef[] {
+  const saved = Array.isArray(savedColumns) ? savedColumns : [];
+  const baseByKey = new Map(baseColumns.map((c) => [c.key, c]));
+  const seen = new Set<string>();
+
+  const mergedExisting = saved
+    .filter((c: any) => c && typeof c.key === "string")
+    .map((c: any) => {
+      seen.add(c.key);
+
+      const base = baseByKey.get(c.key);
+      if (!base) return c;
+
+      return {
+        ...c,
+        title: base.title,
+        type: (base as any).type,
+        dateRole: (base as any).dateRole,
+        isTitle: (base as any).isTitle,
+        width: c.width ?? base.width,
+        visible:
+          typeof c.visible === "boolean"
+            ? c.visible
+            : isDefaultColumnVisible(c.key),
+        custom: c.custom ?? false,
+      };
+    });
+
+  const missingBaseColumns = baseColumns
+    .filter((c) => !seen.has(c.key))
+    .map((c) => ({
+      ...(c as any),
+      visible: isDefaultColumnVisible(c.key),
+      custom: false,
+    }));
+
+  return ensureAtLeastTitleVisible([
+    ...mergedExisting,
+    ...missingBaseColumns,
+  ]);
+}
 
 type IndexedDbStore = {
   upsert: (x: {
@@ -445,7 +501,7 @@ export function useProgressProjectIO(args: {
         nonWorkingDates: nonWorking,
       };
 
-      setAppColumns(ensureAtLeastTitleVisible(nextAppCols));
+      setAppColumns(mergeAppColumnsWithBase(nextAppCols, columns));
       setProjectInfo(nextProjectInfo);
       setCalendarEntries(nextCalendarEntries);
       setRows(recomputeAllRows(nextRows, cal as any, null));
