@@ -111,7 +111,6 @@ export default function ProgressTableContextMenu({
       el.style.visibility = "visible";
     };
 
-    // Vent én frame så faktisk størrelse er på plass
     el.style.visibility = "hidden";
     el.style.left = `${state.clientX}px`;
     el.style.top = `${state.clientY}px`;
@@ -121,6 +120,9 @@ export default function ProgressTableContextMenu({
   }, [state]);
 
   if (!state) return null;
+
+  const columnKey = String((state.column as any)?.key ?? "");
+  const isActivityColumn = columnKey === "title";
 
   return (
     <div
@@ -156,15 +158,20 @@ export default function ProgressTableContextMenu({
         gap: 1,
       }}
     >
-     
-      <MenuButton
-        label={
-          isMilestoneSelection
-            ? t("contextMenu.removeMilestone")
-            : t("contextMenu.makeMilestone")
-        }
-        onClick={() => onAction("toggleMilestone")}
-      />
+      {isActivityColumn ? (
+        <>
+          <MenuButton
+            label={
+              isMilestoneSelection
+                ? t("contextMenu.removeMilestone")
+                : t("contextMenu.makeMilestone")
+            }
+            onClick={() => onAction("toggleMilestone")}
+          />
+          <Divider />
+        </>
+      ) : null}
+
       <MenuButton
         label={t("contextMenu.indentRows")}
         onClick={() => onAction("indentRows")}
