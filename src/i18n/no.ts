@@ -575,6 +575,14 @@ A: Dette er de mest nyttige i daglig bruk.
       cancelled: "Utgår",
     },
 
+    milestoneAnchor: {
+      title: "Velg milepælsdato",
+      text: "Skal milepælen ligge på startdato eller sluttdato?",
+      start: "Startdato",
+      end: "Sluttdato",
+      cancel: "Avbryt",
+    },
+
     demo: {
       phase1Title: "FASE 1 – PLANLEGGING",
       defineScope: "Definer scope",
