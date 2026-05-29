@@ -168,20 +168,17 @@ export default function ProgressTableContextMenu({
             }
             onClick={() => onAction("toggleMilestone")}
           />
+          <MenuButton
+            label={t("contextMenu.indentRows")}
+            onClick={() => onAction("indentRows")}
+          />
+          <MenuButton
+            label={t("contextMenu.outdentRows")}
+            onClick={() => onAction("outdentRows")}
+          />
           <Divider />
         </>
       ) : null}
-
-      <MenuButton
-        label={t("contextMenu.indentRows")}
-        onClick={() => onAction("indentRows")}
-      />
-      <MenuButton
-        label={t("contextMenu.outdentRows")}
-        onClick={() => onAction("outdentRows")}
-      />
-
-      <Divider />
 
       <MenuButton label={t("contextMenu.cut")} onClick={() => onAction("cutSelection")} />
       <MenuButton label={t("contextMenu.copy")} onClick={() => onAction("copySelection")} />
