@@ -492,14 +492,6 @@ A: These are the most helpful day-to-day shortcuts.
       colorDefault: "Default color",
     },
 
-    milestoneAnchor: {
-      title: "Choose milestone date",
-      text: "Should the milestone be placed on the start date or end date?",
-      start: "Start date",
-      end: "End date",
-      cancel: "Cancel",
-    },
-
     footer: {
       next:
         "Next: connect the “Owner” column in the table to this list + mirror colors in Gantt.",
@@ -569,6 +561,14 @@ A: These are the most helpful day-to-day shortcuts.
       delayed: "Delayed",
       completed: "Completed",
       cancelled: "Cancelled",
+    },
+
+    milestoneAnchor: {
+      title: "Choose milestone date",
+      text: "Should the milestone be placed on the start date or end date?",
+      start: "Start date",
+      end: "End date",
+      cancel: "Cancel",
     },
 
     demo: {
