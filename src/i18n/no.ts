@@ -337,6 +337,8 @@ A: Dette er de mest nyttige i daglig bruk.
     clearEndDate: "Tøm sluttdato",
     setDuration: "Sett varighet…",
     clearDuration: "Tøm varighet",
+    editDependency: "Legg til / rediger avhengighet…",
+    clearDependency: "Fjern avhengighet",
     cut: "Klipp ut",
     copy: "Kopier",
     paste: "Lim inn",
