@@ -335,6 +335,8 @@ A: Dette er de mest nyttige i daglig bruk.
     clearStartDate: "Tøm startdato",
     chooseEndDate: "Velg sluttdato…",
     clearEndDate: "Tøm sluttdato",
+    setDuration: "Sett varighet…",
+    clearDuration: "Tøm varighet",
     cut: "Klipp ut",
     copy: "Kopier",
     paste: "Lim inn",
