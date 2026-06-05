@@ -12,6 +12,8 @@ type MenuAction =
   | "clearEndDate"
   | "setDuration"
   | "clearDuration"
+  | "editDependency"
+  | "clearDependency"
   | "cutSelection"
   | "copySelection"
   | "pasteClipboard"
@@ -132,6 +134,7 @@ export default function ProgressTableContextMenu({
   const isStartColumn = columnKey === "start";
   const isEndColumn = columnKey === "end";
   const isDurationColumn = columnKey === "dur";
+  const isDependencyColumn = columnKey === "dep";
 
   return (
     <div
@@ -227,6 +230,21 @@ export default function ProgressTableContextMenu({
           <MenuButton
             label={t("contextMenu.clearDuration")}
             onClick={() => onAction("clearDuration")}
+          />
+          <Divider />
+        </>
+      ) : null}
+
+      {isDependencyColumn ? (
+        <>
+          <MenuButton
+            label={t("contextMenu.editDependency")}
+            onClick={() => onAction("editDependency")}
+            disabled
+          />
+          <MenuButton
+            label={t("contextMenu.clearDependency")}
+            onClick={() => onAction("clearDependency")}
           />
           <Divider />
         </>
