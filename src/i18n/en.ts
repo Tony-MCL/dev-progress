@@ -331,6 +331,8 @@ A: These are the most helpful day-to-day shortcuts.
     clearStartDate: "Clear start date",
     chooseEndDate: "Choose end date…",
     clearEndDate: "Clear end date",
+    setDuration: "Set duration…",
+    clearDuration: "Clear duration",
     cut: "Cut",
     copy: "Copy",
     paste: "Paste",
