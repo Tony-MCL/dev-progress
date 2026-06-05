@@ -14,6 +14,8 @@ type MenuAction =
   | "clearEndDate"
   | "setDuration"
   | "clearDuration"
+  | "editDependency"
+  | "clearDependency"
   | "cutSelection"
   | "copySelection"
   | "pasteClipboard"
