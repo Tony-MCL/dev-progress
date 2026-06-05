@@ -240,7 +240,6 @@ export default function ProgressTableContextMenu({
           <MenuButton
             label={t("contextMenu.editDependency")}
             onClick={() => onAction("editDependency")}
-            disabled
           />
           <MenuButton
             label={t("contextMenu.clearDependency")}
