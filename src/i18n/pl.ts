@@ -329,6 +329,8 @@ A: To najbardziej przydatne skróty w codziennej pracy.
     clearEndDate: "Wyczyść datę zakończenia",
     setDuration: "Ustaw czas trwania…",
     clearDuration: "Wyczyść czas trwania",
+    editDependency: "Dodaj / edytuj zależność…",
+    clearDependency: "Wyczyść zależność",
     cut: "Wytnij",
     copy: "Kopiuj",
     paste: "Wklej",
