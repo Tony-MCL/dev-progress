@@ -333,6 +333,8 @@ A: These are the most helpful day-to-day shortcuts.
     clearEndDate: "Clear end date",
     setDuration: "Set duration…",
     clearDuration: "Clear duration",
+    editDependency: "Add / edit dependency…",
+    clearDependency: "Clear dependency",
     cut: "Cut",
     copy: "Copy",
     paste: "Paste",
