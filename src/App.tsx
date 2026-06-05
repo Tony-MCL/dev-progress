@@ -587,6 +587,39 @@ export default function App() {
         case "pasteClipboard":
           handleTableAction("pasteClipboard");
           return;
+
+        case "chooseStartDate":
+        case "chooseEndDate": {
+          if (tableContextMenu) {
+            onRequestDatePicker(tableContextMenu as any);
+          }
+          return;
+        }
+
+        case "clearStartDate":
+        case "clearEndDate": {
+          const activeSelection = tableContextMenu?.selection ?? selection;
+          const rowIndex = activeSelection?.r1;
+
+          if (typeof rowIndex !== "number") return;
+
+          const key = action === "clearStartDate" ? "start" : "end";
+
+          const nextRows = rows.map((row, idx) => {
+            if (idx !== rowIndex) return row;
+
+            return {
+              ...row,
+              cells: {
+                ...(row as any).cells,
+                [key]: "",
+              },
+            };
+          });
+
+          onRowsChange(nextRows);
+          return;
+        }
   
         case "print":
           handleFileAction("print");
