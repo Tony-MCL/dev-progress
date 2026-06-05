@@ -327,6 +327,8 @@ A: Das sind die nützlichsten Kürzel im Alltag.
     clearStartDate: "Startdatum leeren",
     chooseEndDate: "Enddatum wählen…",
     clearEndDate: "Enddatum leeren",
+    setDuration: "Dauer festlegen…",
+    clearDuration: "Dauer leeren",
     cut: "Ausschneiden",
     copy: "Kopieren",
     paste: "Einfügen",
