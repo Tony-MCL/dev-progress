@@ -646,6 +646,32 @@ export default function App() {
           onRowsChange(nextRows);
           return;
         }
+
+          case "editDependency": {
+          return;
+        }
+
+        case "clearDependency": {
+          const activeSelection = tableContextMenu?.selection ?? selection;
+          const rowIndex = activeSelection?.r1;
+
+          if (typeof rowIndex !== "number") return;
+
+          const nextRows = rows.map((row, idx) => {
+            if (idx !== rowIndex) return row;
+
+            return {
+              ...row,
+              cells: {
+                ...(row as any).cells,
+                dep: "",
+              },
+            };
+          });
+
+          onRowsChange(nextRows);
+          return;
+        }
   
         case "print":
           handleFileAction("print");
