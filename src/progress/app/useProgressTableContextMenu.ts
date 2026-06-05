@@ -12,6 +12,8 @@ type MenuAction =
   | "clearStartDate"
   | "chooseEndDate"
   | "clearEndDate"
+  | "setDuration"
+  | "clearDuration"
   | "cutSelection"
   | "copySelection"
   | "pasteClipboard"
