@@ -647,7 +647,8 @@ export default function App() {
           return;
         }
 
-          case "editDependency": {
+        case "editDependency": {
+          console.log("Edit dependency", tableContextMenu?.selection);
           return;
         }
 
