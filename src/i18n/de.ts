@@ -329,6 +329,8 @@ A: Das sind die nützlichsten Kürzel im Alltag.
     clearEndDate: "Enddatum leeren",
     setDuration: "Dauer festlegen…",
     clearDuration: "Dauer leeren",
+    editDependency: "Abhängigkeit hinzufügen / bearbeiten…",
+    clearDependency: "Abhängigkeit entfernen",
     cut: "Ausschneiden",
     copy: "Kopieren",
     paste: "Einfügen",
