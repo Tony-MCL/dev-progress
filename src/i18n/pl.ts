@@ -327,6 +327,8 @@ A: To najbardziej przydatne skróty w codziennej pracy.
     clearStartDate: "Wyczyść datę startu",
     chooseEndDate: "Wybierz datę zakończenia…",
     clearEndDate: "Wyczyść datę zakończenia",
+    setDuration: "Ustaw czas trwania…",
+    clearDuration: "Wyczyść czas trwania",
     cut: "Wytnij",
     copy: "Kopiuj",
     paste: "Wklej",
