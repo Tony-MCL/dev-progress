@@ -6,6 +6,10 @@ type MenuAction =
   | "toggleMilestone"
   | "indentRows"
   | "outdentRows"
+  | "chooseStartDate"
+  | "clearStartDate"
+  | "chooseEndDate"
+  | "clearEndDate"
   | "cutSelection"
   | "copySelection"
   | "pasteClipboard"
@@ -123,6 +127,8 @@ export default function ProgressTableContextMenu({
 
   const columnKey = String((state.column as any)?.key ?? "");
   const isActivityColumn = columnKey === "title";
+  const isStartColumn = columnKey === "start";
+  const isEndColumn = columnKey === "end";
 
   return (
     <div
@@ -175,6 +181,34 @@ export default function ProgressTableContextMenu({
           <MenuButton
             label={t("contextMenu.outdentRows")}
             onClick={() => onAction("outdentRows")}
+          />
+          <Divider />
+        </>
+      ) : null}
+
+      {isStartColumn ? (
+        <>
+          <MenuButton
+            label={t("contextMenu.chooseStartDate")}
+            onClick={() => onAction("chooseStartDate")}
+          />
+          <MenuButton
+            label={t("contextMenu.clearStartDate")}
+            onClick={() => onAction("clearStartDate")}
+          />
+          <Divider />
+        </>
+      ) : null}
+
+      {isEndColumn ? (
+        <>
+          <MenuButton
+            label={t("contextMenu.chooseEndDate")}
+            onClick={() => onAction("chooseEndDate")}
+          />
+          <MenuButton
+            label={t("contextMenu.clearEndDate")}
+            onClick={() => onAction("clearEndDate")}
           />
           <Divider />
         </>
